@@ -1,0 +1,19 @@
+name: Run tests
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    name: Tests
+    runs-on: ubuntu-20.04
+    container:
+      image: ghcr.io/day8/chrome-latest:2
+    steps:
+      - uses: actions/checkout@v2
+      - name: npm install
+        run: 'npm install'
+      - name: run tests
+        run: |
+          nohup npm run watch &
+          sleep 180
+          karma start --single-run
