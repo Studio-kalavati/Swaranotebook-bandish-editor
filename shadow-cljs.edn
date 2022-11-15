@@ -27,7 +27,7 @@
    :output-dir "resources/public/js/compiled"
    :asset-path "/js/compiled"
    :modules
-   {:app {:init-fn bhatkhande-svg-viewer.core/init}}
+   {:app {:init-fn bhatkhande-editor.core/init}}
    :devtools
    {:preloads []}
    :dev
