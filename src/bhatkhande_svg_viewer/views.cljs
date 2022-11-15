@@ -1,11 +1,38 @@
 (ns bhatkhande-svg-viewer.views
   (:require
    [re-frame.core :as re-frame :refer [subscribe dispatch dispatch-sync]]
-   [re-com.core :as re-com :refer [at]]
+   [re-com.core :as re-com :refer [title
+                                   hyperlink v-box h-box
+                                   single-dropdown
+                                   border
+                                   input-textarea
+                                   typeahead
+                                   checkbox
+                                   line
+                                   radio-button
+                                   label
+                                   slider
+                                   box
+                                   input-text
+                                   info-button
+                                   md-icon-button
+                                   md-circle-icon-button
+                                   ;;simple-v-table
+                                   at
+                                   button
+                                   gap
+                                   throbber
+                                   modal-panel]]
    [breaking-point.core :as bp]
+   [sargam.ragas :refer [varjit-map]]
+   [sargam.talas :refer [bhaags sam-khali num-beats]]
+   [sargam.languages :refer [lang-labels]]
+
    [reagent.core :as reagent]
+   [cognitect.transit :as t]
    [bhatkhande-svg-viewer.events :as events]
    [bhatkhande-svg-viewer.routes :as routes]
+   [bhatkhande-svg-viewer.db :as db :refer [note-seq mswaras]]
    [bhatkhande-svg-viewer.subs :as subs]))
 
 (def img-path "images/swaras/")
@@ -24,86 +51,65 @@
                #(str img-path langpath "/png/" % ".png" )
                (range 1 38))))))
 
-(defn svara-wav-display-panel
-  []
-  (let [loaded? (reagent/atom false)
-        dim (reagent/atom nil)
-        font-size (reagent/atom 20)]
-    (fn []
-      (let [{:keys [length ] :as midi-data} @(subscribe [::subs/midi-data])
-            comp-data @(subscribe [::subs/compdata])
-            mid-seq (-> comp-data :midi-data :midi-seq de-serialize-midi-seq)
-            bandish-mode true 
-            taal-def (when bandish-mode
-                       (-> comp-data :viz-metadata :taal keyword taal-map))
-            lang (or @(subscribe [::subs/lang]) :cdef)
-            langpath (name lang)
-            sa-pitch @(subscribe [::subs/sa-pitch])
-            img-map (get-image-map langpath sa-pitch)
-            path-fn (path-xform img-map)
-            svara-lines @(subscribe [::subs/svara-disp-seq])
-            newline-on-bhaag? @(subscribe [::subs/newline-on-bhaag?])
-            viz-props {:taal-def taal-def
-                       :newline-on-bhaag? newline-on-bhaag?}
-            svara-xy (->> svara-lines
-                          path-fn
-                          add-index-by-group
-                          (remove #(#{"[" "]"} (:t %)))
-                          add-group-keys-display
-                          (add-xy-to-vizseq viz-props))
-            xy-pos (->> svara-xy (mapv :xy))
-            start-offset 0
-            sv-time (mapv second mid-seq)
-            note-dur (mapv last mid-seq)
-            m-space @(subscribe [::subs/min-space])
-            hw {:height m-space :width m-space}
-            last-y (-> svara-xy last :xy last)
-            max-x (->> svara-xy (map (comp first :xy)) (apply max))
-            imgs (add-svg-images hw svara-xy)
-            textseq (if bandish-mode
-                      (bandish-svg-decorators taal-def svara-xy)
-                      (add-concatenated-text svara-xy))
-            svg-width (+ (* 2 m-space) max-x)]
-        [:div {:class "choose-song-area inner"
-               :ref
-               #(if (identity %)
-                 (let [dim (client-dim %)]
-                   (when-not @loaded?
-                     (dispatch [::events/set-dim dim])
-                     (reset! loaded? true))))}
-         [:div {:class "music-notes"
-                :ref #(when (and (not (vector? @dim)) (identity %))
-                          (dispatch [::events/set-music-notes-element %])
-                          (let [cdim (client-dim %)]
-                            (reset! dim cdim)))}
-          (let [[w h] @(subscribe [::subs/dim])
-                svg-height (+ (* 10 m-space) last-y)]
-              (-> [:svg {:height svg-height
-                         :width svg-width
-                         ;;:viewBox (str "0 200 " svg-width " " svg-height)
-                         :xmlns "http://www.w3.org/2000/svg"}]
-                  (into imgs)
-                  (into textseq)))]
-         [gap :size "1vh"]
-         [h-box
-          :gap "2vw"
-          :justify :center
-          :children [[button :label "Change Language"
-                      :style {:width "10vw"}
-                            :on-click
-                      #(dispatch [::events/toggle-lang])]
-                     [button :label "Font ++"
-                      :style {:width "10vw"}
-                      :on-click
-                      #(do (dispatch [::events/set-min-space  (fn[i] (+ i 5))]))]
-                     [button :label "Font --"
-                      :style {:width "10vw"}
-                      :on-click
-                      #(do (dispatch [::events/set-min-space  (fn[i] (- i 5))]))]
-                     [button :label "Download"
-                      :style {:width "10vw"}
-                      :class    "btn btn-primary"
-                      :on-click (fn[_] (download-link comp-data))]]]]))))
+(defn box-size-padding
+  [viewwidth]
+  (cond (< 800 viewwidth)
+        ["40vw" "5vw"]
+        (and (< 320 viewwidth)
+             (> 600 viewwidth))
+        ["70vw" "3vw"]
+        (and (< 600 viewwidth)
+             (> 800 viewwidth))
+        ["50vw" "5vw"]
+        :default
+        ["80vw" "2vw"]))
+
+(defn swar36
+  "generate a vector of size 3, one each for base middle and top octaves.
+  It generates the swaras for a given raga id"
+  [raga-id]
+  (let [varjit-set (varjit-map raga-id)
+        _ (println " raga id " raga-id " - " varjit-set )
+        com (remove varjit-set mswaras) 
+        fnx (fn[saptak] (mapv #(assoc {} :note (vector saptak %)) com))
+        res [(fnx :mandra) (fnx :madhyam) (fnx :taar)]]
+    res))
+
+(defn butn2
+  ([text on-click-fn] (butn2 text on-click-fn {}))
+  ([text on-click-fn {:keys [style class]
+                      :or {style {} class "btn btn-lg swarabuttons btn-sm"}}]
+   [box
+    :size "auto"
+    :align-self :stretch
+    :style {:flex "1 1 0px"} 
+    :child [:button {:style (merge style {:width "100%"}) :class class 
+                     :on-click on-click-fn}
+            [:span text]]]))
+
+(defn mk-button
+  ([beat-mode swaralem] (mk-button {} beat-mode swaralem))
+  ([style beat-mode {:keys [note] :as swaralem}]
+   (let [msmap @(subscribe [::subs/swaramap])]
+     (butn2 (msmap (second note))
+            #(do 
+               (if (> @beat-mode 1)
+                 (dispatch [::events/conj-part-swara {:swara swaralem
+                                                 :parts @beat-mode}])
+                 (dispatch [::events/conj-single-swara [swaralem]])))
+            {:style (merge style {:width "100%"})}))))
+
+(defn box-button
+  [label {:keys [disp-fn state]}]
+  [box :size "1"
+   :justify :center
+   :align-self :stretch
+   :child
+   [button
+    :label [:span label]
+    :style {:padding "10px"}
+    :class (if (true? (state)) "btn-lg swarabuttons btn-sm btn-primary btn-highlight" "btn-lg swarabuttons btn-sm btn-default")
+    :on-click #(disp-fn)]])
 
 (defn alternating-color-background
   "returns svg data with alternating colours for the background"
@@ -129,123 +135,256 @@
         url (.createObjectURL js/URL blob)]
     (.assign (.-location js/window) url)))
 
-(defn svara-wav-display-panel
+(defn swara-buttons
   []
-  (let [loaded? (reagent/atom false)
-        dim (reagent/atom nil)
-        audio-element-set? (reagent/atom false)
-        font-size (reagent/atom 20)]
+  (let [raga-info
+        [v-box
+         :children
+         [[:p.info-heading "Choose your raga"]
+          [:p "Only notes for the selected raga will be displayed for easy swara entry "]]]
+        taal-info [v-box
+                   :children [[:p.info-heading "Choose your taal"]
+                              [:p "Enter swaras in the selected taal"]]]
+        octave-info
+        [v-box
+         :children [[:p.info-heading "Select octaves"]
+                    [:p "Choose the lower and middle octaves, or the middle and higher octaves"]]]
+        dugun-info [v-box
+                    :children [[:p.info-heading "Select number of notes per beat"]
+                               [:p "Select one beat to have 1, 2 or 3 notes in it."]]]
+        octave-switch (reagent/atom false)
+        show-partname-popup (reagent/atom false)
+        show-raga-popup (reagent/atom false)
+        part-name (reagent/atom "")
+        x-switch (reagent/atom 1)]
     (fn []
-      (let [{:keys [length ] :as midi-data} @(subscribe [::subs/midi-data])
-            comp-data @(subscribe [::subs/compdata])
-            mid-seq (-> comp-data :midi-data :midi-seq de-serialize-midi-seq)
-            bandish-mode (when-let [vz (-> comp-data :viz-metadata)]
-                           (= "bandish" (name (get vz :mode))))
-            taal-def (when bandish-mode
-                       (-> comp-data :viz-metadata :taal keyword taal-map))
-            lang (or @(subscribe [::subs/lang]) :cdef)
-            langpath (name lang)
-            sa-pitch @(subscribe [::subs/sa-pitch])
-            img-map (get-image-map langpath sa-pitch)
-            path-fn (path-xform img-map)
-            svara-lines @(subscribe [::subs/svara-disp-seq])
-            newline-on-bhaag? @(subscribe [::subs/newline-on-bhaag?])
-            viz-props {:taal-def taal-def
-                       :newline-on-bhaag? newline-on-bhaag?}
-            _ (println " wav-props viz-props  " viz-props " mode " bandish-mode
-                       " viz-meta "(-> comp-data :viz-metadata))
-            svara-xy (if bandish-mode
-                       (->> svara-lines
-                            path-fn
-                            add-index-by-group
-                            (remove #(#{"[" "]"} (:t %)))
-                            add-group-keys-display
-                            (add-xy-to-vizseq viz-props))
-                       (->> svara-lines path-fn
-                            add-xy))
-            xy-pos (->> svara-xy (mapv :xy))
-            start-offset 0
-            sv-time (mapv second mid-seq)
-            note-dur (mapv last mid-seq)
-            m-space @(subscribe [::subs/min-space])
-            hw {:height m-space :width m-space}
-            last-y (-> svara-xy last :xy last)
-            max-x (->> svara-xy (map (comp first :xy)) (apply max))
-            imgs (add-svg-images hw svara-xy)
-            textseq (if bandish-mode
-                      (bandish-svg-decorators taal-def svara-xy)
-                      (add-concatenated-text svara-xy))
-            svg-width (+ (* 2 m-space) max-x)
-            color-lines (alternating-color-background svg-width hw svara-xy)]
-        [:div {:class "choose-song-area inner"
-               :ref
-               #(if (identity %)
-                 (let [dim (client-dim %)]
-                   (when-not @loaded?
-                     (dispatch [::events/set-dim dim])
-                     (reset! loaded? true))))}
-         [:div {:class "music-notes"
-                :ref #(when (and (not (vector? @dim)) (identity %))
-                          (dispatch [::events/set-music-notes-element %])
-                          (let [cdim (client-dim %)]
-                            (reset! dim cdim)))
-                  :style {:max-height "75vh"
-                          :scroll-behavior "smooth"
-                          :scrollbar-width "none"
-                          ;:background-image "url('images/backgrounds/mountain.jpg')"
-                          ;:background-size "cover"
-                          :overflow-y "auto"}}
-          (let [[w h] @(subscribe [::subs/dim])
-                svg-height (+ (* 10 m-space) last-y)]
-              (dispatch [::events/save-svara-timeseq (vec sv-time) xy-pos note-dur])
-              (dispatch [::events/reset-sv-pos-map])
-              (-> [:svg {:height svg-height
-                         :width svg-width
-                         ;;:viewBox (str "0 200 " svg-width " " svg-height)
-                         :xmlns "http://www.w3.org/2000/svg"}]
-                  (into color-lines)
-                  (into imgs)
-                  (into textseq)))]
-         [gap :size "1vh"]
-         [h-box
-          :justify :center
-          :children
-          [[:div [:audio
-                  {:ref #(when (and (identity %) (not @audio-element-set?))
-                           (do
-                             (reset! audio-element-set? true)
-                             (dispatch [::events/set-audio-elem %])))
-                   :controls true
-                   :src @(subscribe [::subs/audio-buffer])}]]]]
-         [gap :size "1vh"]
-         [h-box
-          :gap "2vw"
-          :justify :center
-          :children [[button :label "Change Language"
-                      :style {:width "10vw"}
-                            :on-click
-                      #(dispatch [::events/toggle-lang])]
-                     [button :label "Font ++"
-                      :style {:width "10vw"}
-                      :on-click
-                      #(do (dispatch [::events/set-min-space  (fn[i] (+ i 5))]))]
-                     [button :label "Font --"
-                      :style {:width "10vw"}
-                      :on-click
-                      #(do (dispatch [::events/set-min-space  (fn[i] (- i 5))]))]
-                     [button :label "Download"
-                      :style {:width "10vw"}
-                      :class    "btn btn-primary"
-                      :on-click (fn[_] (download-link comp-data))]
-                     [button :label "Submit"
-                      :style {:width "10vw"}
-                      :class "btn btn-primary"
-                      :on-click
-                      #(do
-                         (dispatch [::events/mark-editing-complete])
-                         (dispatch [::events/goto-page :list-comps-panel]))]]]]))))
+      (let [sbp (vec (repeat 21 (reagent/atom false)))
+            speed-switch-fn (fn[i] {:disp-fn #(do (dispatch-sync [:x-switch i])
+                                                  (reset! x-switch i))
+                                    :state #(= i @x-switch)})]
+        [v-box
+         :gap      "0.5vh"
+         :children [[h-box
+                     :justify :between
+                     :class "first-bar"
+                     :align :center
+                     :children [[h-box
+                                 :align :center
+                                 :children
+                                 [[h-box
+                                   :children
+                                   [[box-button "⬆"
+                                     {:disp-fn
+                                      #(do (dispatch-sync [:octave-switch :upper])
+                                           (reset! octave-switch (not @octave-switch)))
+                                      :state #(true? @octave-switch)}]
+                                    (box-button "⬇"
+                                                {:disp-fn
+                                                 #(do (dispatch-sync [:octave-switch :lower])
+                                                      (reset! octave-switch (not @octave-switch)))
+                                                 :state #(false? @octave-switch)})]]
+                                  [info-button :info octave-info :position :left-center]]]
+                                [h-box :align :center
+                                 :min-width "15vw"
+                                 :children [(box-button "en" ;;(:raga @(subscribe [:lang-data]))
+                                                        {:disp-fn
+                                                         #(do (reset! show-raga-popup (not @show-raga-popup)))
+                                                         :state #(true? @show-raga-popup)})
+                                            [info-button :info raga-info]]]
+                                [h-box
+                                 :align :center
+                                 :children [[h-box
+                                             :children [(box-button "1" (speed-switch-fn 1))
+                                                        (box-button "2" (speed-switch-fn 2))
+                                                        (box-button "3" (speed-switch-fn 3))]]
+                                            [info-button :info dugun-info]]]]]
+                    (let [swaras-3oct (swar36 @(subscribe [::subs/raga]))]
+                      [v-box
+                       :gap "0.5vh"
+                       :class "middle-buttons"
+                       :children
+                       (into
+                        (let [octave-mode (subscribe [::subs/octave-disp])
+                              raga-id (subscribe [::subs/raga])
+                              vres (swaras-3oct 1)
+                              buttons (mapv (partial mk-button x-switch) vres )
+                              default-display [[h-box
+                                                :gap      "0.5vw"
+                                                :align :stretch
+                                                :children buttons]
+                                               [h-box
+                                                :gap      "0.5vw"
+                                                :align :stretch
+                                                :children (mapv (partial mk-button
+                                                                         {:justify :start :border-bottom
+                                                                          "5px solid black"}
+                                                                         x-switch)
+                                                                (swaras-3oct 0))]]]
+                          (cond (= :lower @octave-mode)
+                                default-display
+                                (= :upper @octave-mode)
+                                [[h-box
+                                  :gap      "0.5vw"
+                                  :children (mapv (partial mk-button
+                                                           {:border-top
+                                                            "5px solid black"}
+                                                           x-switch)
+                                                  (swaras-3oct 2))]
+                                 [h-box
+                                  :gap      "0.5vw"
+                                  :children (mapv (partial mk-button
+                                                           x-switch)
+                                                  (swaras-3oct 1))]]
+                                :default default-display))
+                        [[h-box
+                          :gap      "0.5vw"
+                          :style {:flex-flow "row wrap"}
+                          :class "middle-buttons"
+                          :children [(mk-button x-switch {:note [:madhyam :-]})
+                                     (mk-button x-switch {:note [:madhyam :a]})
+                                     (butn2 "⌫" #(dispatch [::events/delete-single-swara]))
+                                     ]]
+                         [h-box
+                          :gap      "0.5vw"
+                          :style {:flex-flow "row wrap"}
+                          :class "last-bar"
+                          :children [(butn2 "💾"
+                                            #(do
+                                               ;;write the current part
+                                               ;;(dispatch [:append-part])
+                                               (download-link nil)))]]
+                         (when @show-raga-popup
+                           (let [raga-labels (mapv (fn[[a b]] {:id a  :label b})
+                                                   (:raga-labels @(subscribe [:lang-data])))
 
-(defmethod routes/panels :home-panel [] [svara-wav-display-panel])
+                                 box-fn (fn[{:keys [id label]}]
+                                          [button
+                                           :label label
+                                           :style {:width (let [iw (.-innerWidth js/window)]
+                                                            (if (> iw 200)
+                                                              200 "50vw"))}
+                                           :on-click
+                                           #(do
+                                              (dispatch [:set-raga id])
+                                              (reset! show-raga-popup
+                                                      (not @show-raga-popup)))
+                                           :class "btn btn-default"])
+                                 children (mapv box-fn raga-labels)]
+
+                             [modal-panel
+                              :backdrop-on-click #(reset! show-raga-popup false)
+                              :child [:div {:class "popup" :style {:overflow-y :scroll
+                                                                   :max-height "80vh"}}
+                                      [v-box
+                                       :gap "2vh"
+                                       :class "body"
+                                       :children
+                                       [[box
+                                         :align :center
+                                         :child [title :level :level3
+                                                 :label "Show Swaras from Raga"]]
+                                        [v-box
+                                         :align :center
+                                         :children children]]]]]))
+                         (when @show-partname-popup
+                           (let [viewwidth  (.-innerWidth js/window)
+                                 [box-size padding] (box-size-padding viewwidth)]
+                             [modal-panel
+                              :backdrop-on-click #(reset! show-partname-popup false)
+                              :child [v-box
+                                      :gap "2vh"
+                                      :width box-size
+                                      :children
+                                      [[h-box :justify :end
+                                        :children [[md-circle-icon-button
+                                                    :md-icon-name "zmdi zmdi-hc-lg zmdi-close mdc-text-red-700"
+                                                    :size :smaller
+                                                    :on-click #(reset! show-partname-popup false)]]]
+                                       [v-box
+                                        :style {:padding (str "2vh " padding " 2vh " padding)}
+                                        :children [[h-box
+                                                    :justify :center
+                                                    :children
+                                                    [[box :width "100%"
+                                        ;:style {:background-color "lightgray"}
+                                                      :class "form-control"
+                                                      :justify :center
+                                                      :child
+                                                      [title :level :level3 :label "Add new part"
+                                                       :style {:font-weight "bold"}]]]]
+                                                   [gap :size "5vh"]
+                                                   [v-box :gap "2px"
+                                                    :children [[title :level :level3 :label "Part Name"]
+                                                               [input-text
+                                                                :model           part-name
+                                                                :style {:flex "1"}
+                                                                :width            "100%"
+                                                                :placeholder      "yaman-chota-khyal"
+                                                                :on-change
+                                                                #(reset! part-name %)]
+                                                               [gap :size "2vh"]]]
+                                                   [gap :size "3vh"]
+                                                   [button
+                                                    :label "Continue"
+                                                    :on-click
+                                                    #(do
+                                                       (dispatch [:add-new-part (clojure.string/replace
+                                                                                 @part-name " " "_")])
+                                                       (reset! show-partname-popup false))
+                                                    :class "btn btn-default"
+                                                    :style (let [s {:width "100%"
+                                                                    :background-color "#d4aaa0"}]
+                                                             s)]]]]]]))])])]]))))
+
+(def editor-height (reagent/atom 0))
+(defn swara-display-area
+  []
+  (fn []
+      (let [winhgt (.-innerHeight js/window)
+            myhgt (- winhgt 
+                     @editor-height)]
+        [:div 
+         [:div {:class "edit-composition"
+                :style {:overflow-y "scroll"
+                        :max-height myhgt
+                        :height myhgt
+                        :min-height myhgt
+                        :flex-flow "column" :flex "1 0 0px"}
+                ;;this code sets the scroll bar to the bottom, so that the last type text is seen.
+                :ref #(if (identity %)
+                        (let [iel (.querySelector js/document ".edit-composition")
+                              padding (.-padding (js->clj (.getComputedStyle js/window iel)))
+                              intpadding (int (if padding (first (.split (first (.split padding " ")) "px")) " is nil"))]
+                          (when (> (.-scrollHeight % ) myhgt)
+                            (let [sctop (- (.-scrollHeight % ) myhgt)]
+                              (set! (.-scrollTop %) sctop)))))}
+          [:div {:class "com-edit"
+                 ;;:ref #(when (identity %) (set-scroll-top %))
+                 }
+           (let [div-id "editor"
+                 ;;di @(subscribe [::esubs/dispinfo])
+                 ;;mdi @(subscribe [::esubs/m-dispinfo])
+                 ;;[wd hgt] @(subscribe [::esubs/div-dim :editor])
+                 ]
+
+             ;;(dispatch [::e/set-div-dim [:editor [(:x-end di) (:y mdi)]]])
+             )]]])))
+
+(defn show-editor-keyboard
+  []
+  [:div
+   [:div {:class "keyboard wow fadeInUp"
+          :ref #(if (identity %)
+                  (let [ch (.-offsetHeight %)] 
+                    (reset! editor-height ch)))}
+    [swara-buttons]]
+   ;;editor height is 0 by default, so the canvas is first drawn too large in height
+   
+   (when (> @editor-height 0)
+     [swara-display-area]
+     )])
+
+(defmethod routes/panels :home-panel [] [show-editor-keyboard])
 
 (defn main-panel []
   (let [active-panel (re-frame/subscribe [::subs/active-panel])]
