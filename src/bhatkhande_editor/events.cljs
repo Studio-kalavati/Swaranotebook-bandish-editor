@@ -34,3 +34,9 @@
  ::delete-single-swara
  (fn [{:keys [db]} [_ _]]
    {:db db}))
+
+(reg-event-fx
+ ::set-raga
+ (fn [{:keys [db]} [_ raga]]
+   {:db (update-in db [:edit-props :raga] (constantly raga))}))
+

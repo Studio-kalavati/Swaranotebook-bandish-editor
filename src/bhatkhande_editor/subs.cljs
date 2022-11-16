@@ -5,24 +5,32 @@
     :refer [reg-sub]]))
 
 (reg-sub
- ::name
+ ::lang-data
  (fn [db]
-   (:name db)))
+   (lang-labels (:language db))))
+
+(reg-sub
+ ::lang
+ (fn [db]
+   (:language db)))
 
 (reg-sub
  ::active-panel
  (fn [db _]
    (:active-panel db)))
 
-(reg-sub
- ::raga
- (fn [db _]
-   (:raga db)))
+
 
 (reg-sub
  ::edit-props 
  (fn [db _]     
    (-> db :edit-props)))
+
+(reg-sub
+ ::raga
+ :<- [::edit-props]
+ (fn [edit-props _]     
+   (-> edit-props :raga)))
 
 (reg-sub
  ::x-switch
@@ -35,18 +43,6 @@
  :<- [::edit-props]
  (fn [edit-props _]     
    (-> edit-props :error-message)))
-
-(reg-sub
- ::raga
- :<- [::edit-props]
- (fn [edit-props _]     
-   (-> edit-props :raga)))
-
-(reg-sub
- ::octave-disp
- :<- [::edit-props]
- (fn [edit-props _]
-   (-> edit-props :octave-switch)))
 
 (reg-sub
  ::swaramap

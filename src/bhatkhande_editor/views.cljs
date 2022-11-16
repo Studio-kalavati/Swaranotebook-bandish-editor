@@ -186,7 +186,13 @@
                                   [info-button :info octave-info :position :left-center]]]
                                 [h-box :align :center
                                  :min-width "15vw"
-                                 :children [(box-button "en" ;;(:raga @(subscribe [:lang-data]))
+                                 :children
+                                 [(box-button
+                                   (let [lang @(subscribe [::subs/lang])
+                                         ragas (get-in lang-labels [lang :raga-labels])
+                                         raga @(subscribe [::subs/raga])]
+                                     (println " lang " lang " - " ragas " raga " raga " fin "(ragas raga))
+                                     (ragas raga))
                                                         {:disp-fn
                                                          #(do (reset! show-raga-popup (not @show-raga-popup)))
                                                          :state #(true? @show-raga-popup)})
@@ -204,58 +210,40 @@
                        :class "middle-buttons"
                        :children
                        (into
-                        (let [octave-mode (subscribe [::subs/octave-disp])
-                              raga-id (subscribe [::subs/raga])
-                              vres (swaras-3oct 1)
-                              buttons (mapv (partial mk-button x-switch) vres )
-                              default-display [[h-box
-                                                :gap      "0.5vw"
-                                                :align :stretch
-                                                :children buttons]
-                                               [h-box
-                                                :gap      "0.5vw"
-                                                :align :stretch
-                                                :children (mapv (partial mk-button
-                                                                         {:justify :start :border-bottom
-                                                                          "5px solid black"}
-                                                                         x-switch)
-                                                                (swaras-3oct 0))]]]
-                          (cond (= :lower @octave-mode)
-                                default-display
-                                (= :upper @octave-mode)
-                                [[h-box
-                                  :gap      "0.5vw"
-                                  :children (mapv (partial mk-button
-                                                           {:border-top
-                                                            "5px solid black"}
-                                                           x-switch)
-                                                  (swaras-3oct 2))]
-                                 [h-box
-                                  :gap      "0.5vw"
-                                  :children (mapv (partial mk-button
-                                                           x-switch)
-                                                  (swaras-3oct 1))]]
-                                :default default-display))
+                        (let [raga-id (subscribe [::subs/raga])]
+                          [[h-box
+                            :gap      "0.5vw"
+                            :children (mapv (partial mk-button
+                                                     {:border-top
+                                                      "5px solid black"}
+                                                     x-switch)
+                                            (swaras-3oct 2))]
+                           [h-box
+                            :gap      "0.5vw"
+                            :children (mapv (partial mk-button
+                                                     x-switch)
+                                            (swaras-3oct 1))]
+                           [h-box
+                            :gap      "0.5vw"
+                            :children (mapv (partial mk-button
+                                                     {:border-bottom "5px solid black"}
+                                                     x-switch)
+                                            (swaras-3oct 0))]])
                         [[h-box
                           :gap      "0.5vw"
                           :style {:flex-flow "row wrap"}
-                          :class "middle-buttons"
+                          :class "last-bar"
                           :children [(mk-button x-switch {:note [:madhyam :-]})
                                      (mk-button x-switch {:note [:madhyam :a]})
                                      (butn2 "⌫" #(dispatch [::events/delete-single-swara]))
-                                     ]]
-                         [h-box
-                          :gap      "0.5vw"
-                          :style {:flex-flow "row wrap"}
-                          :class "last-bar"
-                          :children [(butn2 "💾"
+                                     (butn2 "💾"
                                             #(do
                                                ;;write the current part
                                                ;;(dispatch [:append-part])
                                                (download-link nil)))]]
                          (when @show-raga-popup
                            (let [raga-labels (mapv (fn[[a b]] {:id a  :label b})
-                                                   (:raga-labels @(subscribe [:lang-data])))
+                                                   (:raga-labels @(subscribe [::subs/lang-data])))
 
                                  box-fn (fn[{:keys [id label]}]
                                           [button
@@ -265,7 +253,7 @@
                                                               200 "50vw"))}
                                            :on-click
                                            #(do
-                                              (dispatch [:set-raga id])
+                                              (dispatch [::events/set-raga id])
                                               (reset! show-raga-popup
                                                       (not @show-raga-popup)))
                                            :class "btn btn-default"])

@@ -43,7 +43,7 @@
    :font-size 20 :spacing 10 :text-align :left})
 
 
-(def default-edit-props {:raga :bilawal :octave-mode :lower})
+(def default-edit-props {:raga :todi :octave-mode :lower})
 (def default-db
   {
    ;;properties for display of current part, from bhatkhande editor
