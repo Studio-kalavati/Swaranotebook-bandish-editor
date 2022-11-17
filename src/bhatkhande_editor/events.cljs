@@ -22,8 +22,20 @@
 
 (reg-event-fx
  ::conj-part-swara
- (fn [{:keys [db]} [_ _]]
-   {:db db}))
+ (fn [{:keys [db]} [_ {:keys [swara notes-per-beat]}]]
+   (let [ln (last (get-in db [:composition :m-noteseq]))
+         ndb
+         (if (:part (first ln))
+           (if (= notes-per-beat (count ln))
+             ;;add a new note
+             (update-in db [:composition :m-noteseq] conj [(assoc swara :part true)])
+             (let [mnoteseq (get-in db [:composition :m-noteseq])
+                   irest (-> mnoteseq butlast vec)]
+               ;;replace the last note and conj the new note
+               (update-in db [:composition :m-noteseq]
+                          (constantly (conj irest (conj ln swara))))))
+           (update-in db [:composition :m-noteseq] conj [(assoc swara :part true)]))]
+     {:db ndb})))
 
 (reg-event-fx
  ::conj-single-swara

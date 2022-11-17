@@ -89,13 +89,13 @@
 
 (defn mk-button
   ([beat-mode swaralem] (mk-button {} beat-mode swaralem))
-  ([style beat-mode {:keys [note] :as swaralem}]
+  ([style notes-per-beat {:keys [note] :as swaralem}]
    (let [msmap @(subscribe [::subs/swaramap])]
      (butn2 (msmap (second note))
-            #(do 
-               (if (> @beat-mode 1)
-                 (dispatch [::events/conj-part-swara {:swara swaralem
-                                                 :parts @beat-mode}])
+            #(do
+               (if (> @notes-per-beat 1)
+                 (dispatch [::events/conj-part-swara
+                            {:swara swaralem :notes-per-beat @notes-per-beat}])
                  (dispatch [::events/conj-single-swara [swaralem]])))
             {:style (merge style {:width "100%"})}))))
 
@@ -156,12 +156,11 @@
         show-partname-popup (reagent/atom false)
         show-raga-popup (reagent/atom false)
         part-name (reagent/atom "")
-        x-switch (reagent/atom 1)]
+        notes-per-beat (reagent/atom 1)]
     (fn []
       (let [sbp (vec (repeat 21 (reagent/atom false)))
-            speed-switch-fn (fn[i] {:disp-fn #(do (dispatch-sync [:x-switch i])
-                                                  (reset! x-switch i))
-                                    :state #(= i @x-switch)})]
+            speed-switch-fn (fn[i] {:disp-fn #(reset! notes-per-beat i)
+                                    :state #(= i @notes-per-beat)})]
         [v-box
          :gap      "0.5vh"
          :children [[h-box
@@ -173,16 +172,7 @@
                                  :children
                                  [[h-box
                                    :children
-                                   [[box-button "⬆"
-                                     {:disp-fn
-                                      #(do (dispatch-sync [:octave-switch :upper])
-                                           (reset! octave-switch (not @octave-switch)))
-                                      :state #(true? @octave-switch)}]
-                                    (box-button "⬇"
-                                                {:disp-fn
-                                                 #(do (dispatch-sync [:octave-switch :lower])
-                                                      (reset! octave-switch (not @octave-switch)))
-                                                 :state #(false? @octave-switch)})]]
+                                   []]
                                   [info-button :info octave-info :position :left-center]]]
                                 [h-box :align :center
                                  :min-width "15vw"
@@ -216,25 +206,25 @@
                             :children (mapv (partial mk-button
                                                      {:border-top
                                                       "5px solid black"}
-                                                     x-switch)
+                                                     notes-per-beat)
                                             (swaras-3oct 2))]
                            [h-box
                             :gap      "0.5vw"
                             :children (mapv (partial mk-button
-                                                     x-switch)
+                                                     notes-per-beat)
                                             (swaras-3oct 1))]
                            [h-box
                             :gap      "0.5vw"
                             :children (mapv (partial mk-button
                                                      {:border-bottom "5px solid black"}
-                                                     x-switch)
+                                                     notes-per-beat)
                                             (swaras-3oct 0))]])
                         [[h-box
                           :gap      "0.5vw"
                           :style {:flex-flow "row wrap"}
                           :class "last-bar"
-                          :children [(mk-button x-switch {:note [:madhyam :-]})
-                                     (mk-button x-switch {:note [:madhyam :a]})
+                          :children [(mk-button notes-per-beat {:note [:madhyam :-]})
+                                     (mk-button notes-per-beat {:note [:madhyam :a]})
                                      (butn2 "⌫" #(dispatch [::events/delete-single-swara]))
                                      (butn2 "💾"
                                             #(do
