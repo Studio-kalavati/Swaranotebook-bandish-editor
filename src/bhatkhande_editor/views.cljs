@@ -358,11 +358,14 @@
                im1 (fn[note-map-seq]
                      (mapv
                       (fn[n indx]
-                        (let [note (:note (first n))
-                              ival (db/image-map note)]
-                          [:image {:height 32 :width 32
-                                   :href ival
-                                   :x (* indx 20) :y 5}]))
+                        (let [note (:note (first n))]
+                          (if-let [ival (db/image-map note)]
+                            [:image {:height 32 :width 32
+                                     :href ival
+                                     :x (* indx 20) :y 5}]
+                            ;;- and S
+                            [:text {:x (+ 10 (* indx 20)) :y 25} (name (second note))])
+                          ))
                       note-map-seq (range)))
                ;;returns  list of lists
                ;;each element is one avartan
@@ -388,7 +391,6 @@
                      (reduce conj
                              [:div {:class "box-row"}]
                              (mapv (fn[i]
-                                     (println " bfn " i)
                                      [:div {:class "bhaag-item"}
                                       (reduce conj
                                               [:svg {:xmlns "http://www.w3.org/2000/svg" }]

@@ -27,13 +27,13 @@
 
 (reg-event-fx
  ::conj-single-swara
- (fn [{:keys [db]} [_ _]]
-   {:db db}))
+ (fn [{:keys [db]} [_ svara]]
+   {:db (update-in db [:composition :m-noteseq] conj svara)}))
 
 (reg-event-fx
  ::delete-single-swara
  (fn [{:keys [db]} [_ _]]
-   {:db db}))
+   {:db (update-in db [:composition :m-noteseq] #(-> % butlast vec))}))
 
 (reg-event-fx
  ::set-raga
