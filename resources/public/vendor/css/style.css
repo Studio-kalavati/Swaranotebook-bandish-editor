@@ -36,7 +36,7 @@ h6,.h6
     font-family: 'Merriweather', serif;
     font-weight: 900;
 }
-.btn
+.btn-old
 {
     background-color: #FFFFFF;
     border-radius: 100px;
@@ -682,7 +682,7 @@ h6,.h6
 
 
 
-.composition .body .btn
+.composition .body .btn-old
 {
     background-color: #6e0f13;
     color: #FFFFFF;
@@ -807,7 +807,7 @@ h6,.h6
 {
     font-weight: bold;
 }
-.popup .body .btn
+.popup .body .btn-old
 {
     font-family: 'Merriweather', serif;
     text-transform: none;

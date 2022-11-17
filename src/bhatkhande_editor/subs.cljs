@@ -1,8 +1,7 @@
 (ns bhatkhande-editor.subs
   (:require
    [sargam.languages :refer [lang-labels]]
-   [re-frame.core :as re-frame
-    :refer [reg-sub]]))
+   [re-frame.core :as re-frame :refer [reg-sub]]))
 
 (reg-sub
  ::lang-data
@@ -18,8 +17,6 @@
  ::active-panel
  (fn [db _]
    (:active-panel db)))
-
-
 
 (reg-sub
  ::edit-props 
@@ -48,3 +45,8 @@
  ::swaramap
  (fn [db _]
    (get-in lang-labels [(:language db) :swara-labels])))
+
+(reg-sub
+ ::composition
+ (fn [db _]
+   (:composition db)))

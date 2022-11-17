@@ -328,47 +328,88 @@
 (defn swara-display-area
   []
   (fn []
-      (let [winhgt (.-innerHeight js/window)
-            myhgt (- winhgt 
-                     @editor-height)]
-        [:div 
-         [:div {:class "edit-composition"
-                :style {:overflow-y "scroll"
-                        :max-height myhgt
-                        :height myhgt
-                        :min-height myhgt
-                        :flex-flow "column" :flex "1 0 0px"}
-                ;;this code sets the scroll bar to the bottom, so that the last type text is seen.
-                :ref #(if (identity %)
-                        (let [iel (.querySelector js/document ".edit-composition")
-                              padding (.-padding (js->clj (.getComputedStyle js/window iel)))
-                              intpadding (int (if padding (first (.split (first (.split padding " ")) "px")) " is nil"))]
-                          (when (> (.-scrollHeight % ) myhgt)
-                            (let [sctop (- (.-scrollHeight % ) myhgt)]
-                              (set! (.-scrollTop %) sctop)))))}
-          [:div {:class "com-edit"
-                 ;;:ref #(when (identity %) (set-scroll-top %))
-                 }
-           (let [div-id "editor"
-                 ;;di @(subscribe [::esubs/dispinfo])
-                 ;;mdi @(subscribe [::esubs/m-dispinfo])
-                 ;;[wd hgt] @(subscribe [::esubs/div-dim :editor])
-                 ]
-
-             ;;(dispatch [::e/set-div-dim [:editor [(:x-end di) (:y mdi)]]])
-             )]]])))
+    (let [winhgt (.-innerHeight js/window)
+          myhgt (- winhgt 
+                   @editor-height)]
+      [:div 
+       [:div
+        {:class "edit-composition"
+         :style {:overflow-y "scroll"
+                 :max-height myhgt
+                 :height myhgt
+                 :min-height myhgt
+                 :flex-flow "column" :flex "1 0 0px"}
+         ;;this code sets the scroll bar to the bottom, so that the last type text is seen.
+         :ref
+         #(if (identity %)
+            (let [iel (.querySelector js/document ".edit-composition")
+                  padding (.-padding (js->clj (.getComputedStyle js/window iel)))
+                  intpadding (int (if padding
+                                    (first (.split (first (.split padding " ")) "px")) " is nil"))]
+              (when (> (.-scrollHeight % ) myhgt)
+                (let [sctop (- (.-scrollHeight % ) myhgt)]
+                  (set! (.-scrollTop %) sctop)))))}
+        [:div {:class "com-edit"
+               ;;:ref #(when (identity %) (set-scroll-top %))
+               }
+         (let [div-id "editor"
+               comp @(subscribe [::subs/composition])
+               noteseq (:m-noteseq comp)
+               im1 (fn[note-map-seq]
+                     (mapv
+                      (fn[n indx]
+                        (let [note (:note (first n))
+                              ival (db/image-map note)]
+                          [:image {:height 32 :width 32
+                                   :href ival
+                                   :x (* indx 20) :y 5}]))
+                      note-map-seq (range)))
+               ;;returns  list of lists
+               ;;each element is one avartan
+               ;;each subelement is one bhaag.
+               list-of-bhaags
+               (->> noteseq
+                    (partition-all (-> comp :taal :num-beats))
+                    (mapv (fn[i]
+                            (let [{:keys [fin acc] :as ac}
+                                  (reduce
+                                   (fn[ac bhaag-len]
+                                     (let [[a b] (split-at bhaag-len (:acc ac))
+                                           r1
+                                           (if (= 0 (count a)) ac
+                                               (update-in ac [:fin] conj a))
+                                           r2 (update-in r1 [:acc] (constantly b))]
+                                       r2))
+                                   {:fin [] :acc i}
+                                   (-> comp :taal :bhaags))]
+                              fin))))
+               _ (println "iseq " (map count list-of-bhaags) " - " (first list-of-bhaags))
+               bfn (fn[bhaag]
+                     (reduce conj
+                             [:div {:class "box-row"}]
+                             (mapv (fn[i]
+                                     (println " bfn " i)
+                                     [:div {:class "bhaag-item"}
+                                      (reduce conj
+                                              [:svg {:xmlns "http://www.w3.org/2000/svg" }]
+                                              (im1 i))])
+                                   bhaag)
+                             ))
+               b1 (mapv bfn list-of-bhaags)
+               fin (reduce conj [:div {:class "wrapper"}] b1)]
+           fin)]]])))
 
 (defn show-editor-keyboard
   []
   [:div
+   ;;editor height is 0 by default, so the canvas is first drawn too large in height
+   [swara-display-area]
    [:div {:class "keyboard wow fadeInUp"
           :ref #(if (identity %)
                   (let [ch (.-offsetHeight %)] 
                     (reset! editor-height ch)))}
     [swara-buttons]]
-   ;;editor height is 0 by default, so the canvas is first drawn too large in height
-   
-   (when (> @editor-height 0)
+   #_(when (> @editor-height 0)
      [swara-display-area]
      )])
 

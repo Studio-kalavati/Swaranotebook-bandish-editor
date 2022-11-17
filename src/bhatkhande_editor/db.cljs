@@ -1,8 +1,36 @@
 (ns bhatkhande-editor.db
-  (:require [sargam.spec :as us]))
+  (:require
+   [sargam.spec :as us]
+   [sargam.talas :as talas
+    :refer [teentaal jhaptaal ektaal rupak dadra kehrwa]]))
 
 (def init-comp
-  {:default {:part-1 {:taal :teentaal, :swaras [[{:swara "-", :enabled true, :x :x1, :cp [0 0]}] [{:swara "-", :enabled true, :x :x1, :cp [1 0]}] [{:swara "-", :enabled true, :x :x1, :cp [2 0]}] [{:swara "-", :enabled true, :x :x1, :cp [3 0]}] [{:swara "-", :enabled true, :x :x1, :cp [4 0]}] [{:swara "-", :enabled true, :x :x1, :cp [5 0]}] [{:swara "सा", :enabled true, :saptak :madhyam, :x :x1, :cp [6 0]}] [{:swara "रे॒", :enabled true, :saptak :madhyam, :x :x1, :cp [7 0]}] [{:swara "ग॒", :enabled true, :saptak :madhyam, :x :x1, :cp [8 0]}] [{:swara "रे॒", :enabled true, :saptak :madhyam, :x :x1, :cp [9 0]}] [{:swara "ग॒", :enabled true, :saptak :madhyam, :x :x2, :cp [10 0]} {:swara "रे॒", :enabled true, :saptak :madhyam, :x :x2, :cp [10 1]}] [{:swara "म॑", :enabled true, :saptak :madhyam, :x :x1, :cp [11 0]}] [{:swara -, :enabled true, :x :x1, :cp [12 0]}] [{:swara "प", :enabled true, :saptak :madhyam, :x :x1, :cp [13 0]}] [{:swara "ध॒", :enabled true, :saptak :madhyam, :x :x1, :cp [14 0]}] [{:swara "सा", :enabled true, :saptak :taar, :x :x1, :cp [15 0]}] [{:swara "सा", :enabled true, :saptak :taar, :x :x1, :cp [16 0]}] [{:swara "सा", :enabled true, :saptak :taar, :x :x1, :cp [17 0]}]], :cursor-position [25 0], :x-switch :x1, :octave-switch :lower, :part-name 1, :raga :bilawal}}})
+  (let [m-noteseq
+        [
+         [{:note [:madhyam :s]}]
+         [{:note [:madhyam :r]}]
+         [{:note [:madhyam :g]}]
+         [{:note [:madhyam :m]}]
+         [{:note [:madhyam :p]}]
+         [{:note [:madhyam :d]}]
+         [{:note [:madhyam :n]}]
+         [{:note [:taar :s]}]
+         [{:note [:madhyam :s]}]
+         [{:note [:madhyam :r]}]
+         [{:note [:madhyam :g]}]
+         [{:note [:madhyam :m]}]
+         [{:note [:madhyam :p]}]
+         [{:note [:madhyam :d]}]
+         [{:note [:madhyam :n]}]
+         [{:note [:taar :s]}]
+         [{:note [:madhyam :s]}]
+         [{:note [:madhyam :r]}]
+         [{:note [:madhyam :g]}]
+         [{:note [:madhyam :m]}]
+
+         ]]
+    {:m-noteseq m-noteseq
+     :taal teentaal}))
 
 (def mswaras (subvec us/i-note-seq 0 (- (count us/i-note-seq) 2)))
 
@@ -13,7 +41,7 @@
 (def image-map (zipmap (conj (vec (for [i [:mandra :madhyam :taar] j (take 12 us/i-note-seq)]
                                     [i j])) [:ati-taar :s])
                        (mapv
-                        #(str "/images/swaras/hindi/png/Vector_" % ".png" )
+                        #(str "/images/swaras/hindi/png/" % ".png" )
                                         ;#(str "/images/swaras/hindi/svg/Vector_" % ".svg" )
                         (range 1 38))))
 (defn percentage-95
@@ -57,10 +85,7 @@
    :dim {:editor (mapv dispinfo [:x-end :y-end])}
 
    ;;properties for this application
-   :compositions init-comp
-   :composition-name :default
-   :part-name :part-1
-   :composition-id :default
+   :composition init-comp
    :comp-metadata {:default {:name "Todi "}}
    :edit-props default-edit-props 
    :user-state {}
