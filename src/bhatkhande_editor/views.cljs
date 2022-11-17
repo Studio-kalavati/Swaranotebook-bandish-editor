@@ -355,44 +355,65 @@
          (let [div-id "editor"
                comp @(subscribe [::subs/composition])
                noteseq (:m-noteseq comp)
-               im1 (fn[bhaag-index note-map-seq]
-                     (let [r3
-                           (->>
-                            note-map-seq
-                            (reduce
-                             (fn[{:keys [x images] :as acc} note]
-                               (let [r2
-                                     (->>
-                                      note
-                                      (reduce
-                                       (fn[{:keys [x1 images1] :as acc1} i]
-                                         (let [note (:note i)
-                                               ith-note
-                                               (if-let [ival (db/image-map note)]
-                                                 [:image {:height 32 :width 32
-                                                          :href ival
-                                                          :x x1 :y 5}]
-                                                 ;;- and S
-                                                 [:text {:x (+ 10 x1) :y 25} (name (second note))])
-                                               r3 (-> acc1 
-                                                   (update-in [:images1] conj ith-note)
-                                                   (update-in [:x1] + 20))]
-                                           (println note " r3 " r3)
-                                           r3))
-                                       {:x1 x :images1 []}))]
-                                 (-> acc
-                                     (update-in [:x] (constantly (:x1 r2)))
-                                     (update-in [:images] into (:images1 r2)))))
-                             {:x 5 :images []}))
-                           images (:images r3)
-                           x-end (:x r3)
-                           rect-style {:width 2 :height 30 :y 10}]
-                       {:images (if (= 0 bhaag-index)
-                                  (into images
-                                        [[:rect (assoc rect-style :x 0)]
-                                         [:rect (assoc rect-style :x 3)]])
-                                  (conj images [:rect (assoc rect-style :x 0)]))
-                        :x x-end}))
+               draw-bhaag
+               (fn[bhaag-index note-map-seq]
+                 (let [r3
+                       (->>
+                        note-map-seq
+                        (reduce
+                         (fn[{:keys [x images] :as acc} note]
+                           (let [r2
+                                 (->>
+                                  note
+                                  (reduce
+                                   (fn[{:keys [x1 images1] :as acc1} i]
+                                     ;;create all notes in a single beat.
+                                     (let [note (:note i)
+                                           ith-note
+                                           (if-let [ival (db/image-map note)]
+                                             [:image {:height 32 :width 32
+                                                      :href ival
+                                                      :x x1 :y 5}]
+                                             ;;- and S
+                                             [:text {:x (+ 10 x1) :y 25} (name (second note))])
+                                           r3 (-> acc1 
+                                                  (update-in [:images1] conj ith-note)
+                                                  (update-in [:x1] + 20))]
+                                       r3))
+                                   {:x1 x :images1 []}))]
+                             (let [img-count (count (:images1 r2))
+                                   r5(-> acc
+                                         (update-in [:x] (constantly (:x1 r2)))
+                                         (update-in [:images] into (:images1 r2)))]
+                               ;;if more than 1 note in a single beat,
+                               ;;draw the ellipse under the notes
+                               (if (> img-count 1)
+                                 (update-in r5 [:images]
+                                            conj
+                                            [:polyline
+                                             {:points
+                                              (let [y0 40
+                                                    sl 5]
+                                                ;;line with ends curved up
+                                                (str (+ sl x) "," y0 " "
+                                                     (+ x ( * 2 sl)) "," (+ y0 sl) " "
+                                                     (:x1 r2) "," (+ y0 sl) " "
+                                                     (+ sl (:x1 r2)) "," y0))
+                                              :stroke "black"
+                                              :fill "none"}])
+                                 r5))))
+                         {:x 5 :images []}))
+                       images (:images r3)
+                       x-end (:x r3)
+                       rect-style {:width 2 :height 30 :y 10}]
+                   ;;add vertical bars for bhaag
+                   ;;2 bars if the avartan starts
+                   {:images (if (= 0 bhaag-index)
+                              (into images
+                                    [[:rect (assoc rect-style :x 0)]
+                                     [:rect (assoc rect-style :x 3)]])
+                              (conj images [:rect (assoc rect-style :x 0)]))
+                    :x x-end}))
                ;;returns  list of lists
                ;;each element is one avartan
                ;;each subelement is one bhaag.
@@ -417,7 +438,7 @@
                      (->> bhaag
                           (map vector (range))
                           (mapv (fn[[indx i]]
-                                  (let [{:keys [images x]} (im1 indx i )]
+                                  (let [{:keys [images x]} (draw-bhaag indx i )]
                                     [:div {:class "bhaag-item" :style  {:max-width (+ x 20)}}
                                      (reduce conj
                                              [:svg {:xmlns "http://www.w3.org/2000/svg" }]
