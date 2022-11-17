@@ -355,18 +355,44 @@
          (let [div-id "editor"
                comp @(subscribe [::subs/composition])
                noteseq (:m-noteseq comp)
-               im1 (fn[note-map-seq]
-                     (mapv
-                      (fn[n indx]
-                        (let [note (:note (first n))]
-                          (if-let [ival (db/image-map note)]
-                            [:image {:height 32 :width 32
-                                     :href ival
-                                     :x (* indx 20) :y 5}]
-                            ;;- and S
-                            [:text {:x (+ 10 (* indx 20)) :y 25} (name (second note))])
-                          ))
-                      note-map-seq (range)))
+               im1 (fn[bhaag-index note-map-seq]
+                     (let [r3
+                           (->>
+                            note-map-seq
+                            (reduce
+                             (fn[{:keys [x images] :as acc} note]
+                               (let [r2
+                                     (->>
+                                      note
+                                      (reduce
+                                       (fn[{:keys [x1 images1] :as acc1} i]
+                                         (let [note (:note i)
+                                               ith-note
+                                               (if-let [ival (db/image-map note)]
+                                                 [:image {:height 32 :width 32
+                                                          :href ival
+                                                          :x x1 :y 5}]
+                                                 ;;- and S
+                                                 [:text {:x (+ 10 x1) :y 25} (name (second note))])
+                                               r3 (-> acc1 
+                                                   (update-in [:images1] conj ith-note)
+                                                   (update-in [:x1] + 20))]
+                                           (println note " r3 " r3)
+                                           r3))
+                                       {:x1 x :images1 []}))]
+                                 (-> acc
+                                     (update-in [:x] (constantly (:x1 r2)))
+                                     (update-in [:images] into (:images1 r2)))))
+                             {:x 5 :images []}))
+                           images (:images r3)
+                           x-end (:x r3)
+                           rect-style {:width 2 :height 30 :y 10}]
+                       {:images (if (= 0 bhaag-index)
+                                  (into images
+                                        [[:rect (assoc rect-style :x 0)]
+                                         [:rect (assoc rect-style :x 3)]])
+                                  (conj images [:rect (assoc rect-style :x 0)]))
+                        :x x-end}))
                ;;returns  list of lists
                ;;each element is one avartan
                ;;each subelement is one bhaag.
@@ -388,15 +414,15 @@
                               fin))))
                _ (println "iseq " (map count list-of-bhaags) " - " (first list-of-bhaags))
                bfn (fn[bhaag]
-                     (reduce conj
-                             [:div {:class "box-row"}]
-                             (mapv (fn[i]
-                                     [:div {:class "bhaag-item"}
-                                      (reduce conj
-                                              [:svg {:xmlns "http://www.w3.org/2000/svg" }]
-                                              (im1 i))])
-                                   bhaag)
-                             ))
+                     (->> bhaag
+                          (map vector (range))
+                          (mapv (fn[[indx i]]
+                                  (let [{:keys [images x]} (im1 indx i )]
+                                    [:div {:class "bhaag-item" :style  {:max-width (+ x 20)}}
+                                     (reduce conj
+                                             [:svg {:xmlns "http://www.w3.org/2000/svg" }]
+                                             images)])))
+                          (reduce conj [:div {:class "box-row"}])))
                b1 (mapv bfn list-of-bhaags)
                fin (reduce conj [:div {:class "wrapper"}] b1)]
            fin)]]])))

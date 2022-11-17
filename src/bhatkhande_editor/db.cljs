@@ -9,11 +9,17 @@
         [
          [{:note [:madhyam :s]}]
          [{:note [:madhyam :r]}]
-         [{:note [:madhyam :g]}]
+         [{:note [:madhyam :g]}
+          {:note [:madhyam :m]}]
          [{:note [:madhyam :m]}]
+
+         [{:note [:madhyam :g]}
+          {:note [:taar :s]}
+          {:note [:madhyam :m]}]
          [{:note [:madhyam :p]}]
          [{:note [:madhyam :d]}]
          [{:note [:madhyam :n]}]
+
          [{:note [:taar :s]}]
          [{:note [:madhyam :s]}]
          [{:note [:madhyam :r]}]
@@ -22,6 +28,9 @@
          [{:note [:madhyam :p]}]
          [{:note [:madhyam :d]}]
          [{:note [:madhyam :n]}]
+         [{:note [:madhyam :g]}
+          {:note [:taar :s]}
+          {:note [:madhyam :m]}]
          [{:note [:taar :s]}]
          [{:note [:madhyam :s]}]
          [{:note [:madhyam :r]}]
