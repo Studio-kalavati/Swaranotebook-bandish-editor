@@ -50,3 +50,14 @@
  ::composition
  (fn [db _]
    (:composition db)))
+
+(reg-sub
+ ::get-click-index
+ (fn [db [_ _]]
+   (get-in db [:edit-props :cursor-pos])))
+
+(reg-sub
+ ::get-note-pos
+ (fn [db [_ [bhaag-row-index bhaag-index note-index]]]
+   (println "sub "[bhaag-row-index bhaag-index note-index])
+   (get-in db [:edit-props :note-pos bhaag-row-index bhaag-index note-index])))

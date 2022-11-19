@@ -52,3 +52,16 @@
  (fn [{:keys [db]} [_ raga]]
    {:db (update-in db [:edit-props :raga] (constantly raga))}))
 
+(reg-event-fx
+ ::set-click-index
+ (fn [{:keys [db]} [_ {:keys [bhaag-row-index bhaag-index note-index ] :as click-index}]]
+   {:db (update-in db [:edit-props :cursor-pos] (constantly click-index))}))
+
+(reg-event-fx
+ ::set-note-pos
+ (fn [{:keys [db]} [_ {:keys [bhaag-row-index bhaag-index note-index x y ]}]]
+   (let [ndb (update-in
+              db
+              [:edit-props :note-pos bhaag-row-index bhaag-index note-index]
+              assoc :x x :y y)]
+     {:db ndb})))
