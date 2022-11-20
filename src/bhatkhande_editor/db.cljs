@@ -4,42 +4,75 @@
    [sargam.talas :as talas
     :refer [teentaal jhaptaal ektaal rupak dadra kehrwa]]))
 
+(defn get-noteseq-index
+  "given a multi-index of row,bhaag and note,
+  returns the index of the note in m-noteseq.  "
+  [{:keys [row-index bhaag-index note-index] :as click-index} taal-def]
+  (let [num-beats (:num-beats taal-def)
+        a1 (* row-index num-beats)
+        a2 (apply + (take bhaag-index (:bhaags taal-def)))]
+    (+ a1 a2 note-index)))
+
+(defn split-bhaags
+  [noteseq taal-def]
+  (->> noteseq
+       (partition-all (-> taal-def :num-beats))
+       (map vec)
+       (mapv (fn[i]
+               (let [{:keys [fin acc] :as ac}
+                     (reduce
+                      (fn[ac bhaag-len]
+                        (let [[a b] (split-at bhaag-len (:acc ac))
+                              r1
+                              (if (= 0 (count a)) ac
+                                  (update-in ac [:fin] conj (vec a)))
+                              r2 (update-in r1 [:acc] (constantly (vec b)))]
+                          r2))
+                      {:fin [] :acc i}
+                      (-> taal-def :bhaags))]
+                 fin)))))
+
 (def init-comp
   (let [m-noteseq
         [
-         [{:note [:madhyam :s]}]
-         [{:note [:madhyam :r]}]
-         [{:note [:madhyam :g]}
-          {:note [:madhyam :m]}]
-         [{:note [:madhyam :m]}]
+         [{:note [:mandra :s]}]
+         [{:note [:mandra :r]}]
+         [{:note [:mandra :g]}
+          {:note [:mandra :m]}]
+         [{:note [:mandra :m+]}]
 
-         [{:note [:madhyam :g]}
-          {:note [:taar :s]}
-          {:note [:madhyam :m]}]
-         [{:note [:madhyam :p]}]
-         [{:note [:madhyam :d]}]
-         [{:note [:madhyam :n]}]
+         [{:note [:mandra :p]}
+          {:note [:mandra :-d]}
+          {:note [:mandra :d]}]
 
-         [{:note [:taar :s]}]
+         [{:note [:mandra :-n]}]
+         [{:note [:mandra :n]}]
+
          [{:note [:madhyam :s]}]
+         [{:note [:madhyam :-r]}]
          [{:note [:madhyam :r]}]
+         [{:note [:madhyam :-g]}]
          [{:note [:madhyam :g]}]
          [{:note [:madhyam :m]}]
+         [{:note [:madhyam :m+]}]
          [{:note [:madhyam :p]}]
+         [{:note [:madhyam :-d]}]
          [{:note [:madhyam :d]}]
-         [{:note [:madhyam :n]}]
-         [{:note [:madhyam :g]}
-          {:note [:taar :s]}
-          {:note [:madhyam :m]}]
-         [{:note [:taar :s]}]
-         [{:note [:madhyam :s]}]
-         [{:note [:madhyam :r]}]
-         [{:note [:madhyam :g]}]
-         [{:note [:madhyam :m]}]
-
-         ]]
-    {:m-noteseq m-noteseq
-     :taal teentaal}))
+         [
+          {:note [:madhyam :-n]}
+          {:note [:madhyam :n]}
+          {:note [:taar :s]}]
+         [{:note [:taar :-r]}]
+         [{:note [:taar :r]}]
+         [{:note [:taar :-g]}]
+         [{:note [:taar :g]}]
+         [{:note [:taar :m]}]
+         ]
+        res
+        {:m-noteseq m-noteseq
+         :taal teentaal
+         :indexed-noteseq (split-bhaags m-noteseq teentaal)}]
+    res))
 
 (def mswaras (subvec us/i-note-seq 0 (- (count us/i-note-seq) 2)))
 
@@ -81,14 +114,12 @@
 
 
 (def default-edit-props {:raga :todi :octave-mode :lower
-                         :note-pos {}})
+                         :note-pos {}
+                         :note-index []})
 (def default-db
   {
    ;;properties for display of current part, from bhatkhande editor
-   :cursor {:cursor-index [0]
-            :cursor-position [-1 -1]}
    :swaras-changed true
-   :draw-cursor? true
    :init-state {:cursor-color 0}
    :dispinfo (merge dispinfo m-dispinfo)
    :m-dispinfo m-dispinfo

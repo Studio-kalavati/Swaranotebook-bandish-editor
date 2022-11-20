@@ -345,10 +345,10 @@
                  }
            (let [div-id "editor"
                  comp @(subscribe [::subs/composition])
-                 noteseq (:m-noteseq comp)
+                 _ (dispatch [::events/reset-note-index])
                  rect-style {:width 2 :height 30 :y 10}
                  draw-bhaag
-                 (fn[bhaag-row-index bhaag-index note-map-seq]
+                 (fn[row-index bhaag-index note-map-seq]
                    (let [r3
                          (->>
                           note-map-seq
@@ -363,7 +363,7 @@
                                      (fn[{:keys [x1 images1] :as acc1} [ni i]]
                                        ;;create all notes in a single beat.
                                        (let [cur-note (:note i)
-                                             note-xy-map {:bhaag-row-index bhaag-row-index
+                                             note-xy-map {:row-index row-index
                                                           :bhaag-index bhaag-index
                                                           :note-index note-index
                                                           :ni ni}
@@ -378,32 +378,23 @@
                                                  :href ival
                                                  :on-click
                                                  (fn[i]
-                                                   (let []
+                                                   (do
+                                                     (println " on click "note-xy-map)
                                                      (dispatch [::events/set-click-index
-                                                                note-xy-map])
-                                                     (println " on-click " note-xy-map)))
-                                                 :ref
-                                                 #(when (identity %)
-                                                    (dispatch
-                                                     [::events/set-note-pos
-                                                      (assoc note-xy-map :x x1 :y 5)]))
+                                                                note-xy-map])))
                                                  :x x1 :y 5}]
                                                ;;- and S
-                                               [:text {:x (+ 10 x1) :y 25
-                                                       :ref
-                                                       #(when (identity %)
-                                                          (dispatch
-                                                           [::events/set-note-pos
-                                                            (assoc note-xy-map :svgelem %)]))}
+                                               [:text {:x (+ 10 x1) :y 25}
                                                 (name (second cur-note))])
                                              r3 (-> acc1
                                                     (update-in [:images1] conj ith-note)
                                                     (update-in [:x1] + 20))
                                              r3 (if (= note-xy-map
                                                      @(subscribe [::subs/get-click-index]))
-                                                  (do (println " showing cursor ")
-                                                      (update-in r3 [:images1] conj cursor-rect))
+                                                  (update-in r3 [:images1] conj cursor-rect)
                                                   r3)]
+                                         (dispatch [::events/conj-note-index
+                                                    note-xy-map])
                                          r3))
                                      {:x1 x :images1 []}))]
                                (let [img-count (count (filter #{:text :image}
@@ -430,9 +421,7 @@
                                    r5))))
                            {:x 5 :images []}))
                          images (:images r3)
-                         x-end (:x r3)
-                         
-                         ]
+                         x-end (:x r3)]
                      ;;add vertical bars for bhaag
                      ;;2 bars if the avartan starts
                      {:images (if (= 0 bhaag-index)
@@ -444,35 +433,19 @@
                  ;;returns  list of lists
                  ;;each element is one avartan
                  ;;each subelement is one bhaag.
-                 list-of-bhaags
-                 (->> noteseq
-                      (partition-all (-> comp :taal :num-beats))
-                      (mapv (fn[i]
-                              (let [{:keys [fin acc] :as ac}
-                                    (reduce
-                                     (fn[ac bhaag-len]
-                                       (let [[a b] (split-at bhaag-len (:acc ac))
-                                             r1
-                                             (if (= 0 (count a)) ac
-                                                 (update-in ac [:fin] conj a))
-                                             r2 (update-in r1 [:acc] (constantly b))]
-                                         r2))
-                                     {:fin [] :acc i}
-                                     (-> comp :taal :bhaags))]
-                                fin))))
-                 _ (println "iseq " (map count list-of-bhaags) " - " (first list-of-bhaags))
-                 bfn (fn[[bhaag-row-index bhaag]]
+                 bfn (fn[[row-index bhaag]]
                        (->> bhaag
                             (map vector (range))
                             (mapv (fn[[indx i]]
-                                    (let [{:keys [images x]} (draw-bhaag bhaag-row-index indx i )]
+                                    (let [{:keys [images x]} (draw-bhaag row-index indx i )]
                                       [:div {:class "bhaag-item" :style  {:max-width (+ x 20)}}
                                        (reduce conj
                                                [:svg {:xmlns "http://www.w3.org/2000/svg" }]
                                                images)])))
                             (reduce conj [:div {:class "box-row"}])))
                  b1
-                 (->> list-of-bhaags
+                 (->> comp
+                      :indexed-noteseq
                       (map vector (range))
                       (mapv bfn))
                  fin (reduce conj [:div {:class "wrapper"}] b1)]
