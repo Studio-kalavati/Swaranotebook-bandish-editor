@@ -1,6 +1,8 @@
 (ns bhatkhande-editor.db
   (:require
    [sargam.spec :as us]
+   [clojure.zip :as z]
+   [clojure.walk :as w]
    [sargam.talas :as talas
     :refer [teentaal jhaptaal ektaal rupak dadra kehrwa]]))
 
@@ -12,6 +14,40 @@
         a1 (* row-index num-beats)
         a2 (apply + (take bhaag-index (:bhaags taal-def)))]
     (+ a1 a2 note-index)))
+
+(defn make-index-seq
+  [indexed-ns]
+  (let [bi
+        (fn[row-index bhaag-index note-map-seq]
+          (->>
+           note-map-seq
+           (map vector (range))
+           (reduce
+            (fn[acc [note-index note]]
+              (into acc (->>
+                         note
+                         (map vector (range))
+                         (reduce
+                          (fn[acc1 [ni i]]
+                            ;;create all notes in a single beat.
+                            (let [note-xy-map [row-index
+                                               bhaag-index
+                                               note-index
+                                               ni]]
+                              (conj acc1 note-xy-map)))
+                          []))))
+            [])))
+        bfn (fn[acci [row-index bhaag]]
+              (into acci (->> bhaag
+                              (map vector (range))
+                              (reduce (fn[ acc [indx i]]
+                                        (let [indexes (bi row-index indx i )]
+                                          (into acc indexes))) []))))
+        b1
+        (->> indexed-ns
+             (map vector (range))
+             (reduce bfn []))]
+    b1))
 
 (defn split-bhaags
   [noteseq taal-def]
@@ -32,47 +68,67 @@
                       (-> taal-def :bhaags))]
                  fin)))))
 
+(defn get-forward-backward-map
+  [indexed]
+  (let [index-order (make-index-seq indexed)
+        index-forward-seq (zipmap (subvec index-order 0 (count index-order))
+                                  (vec (rest index-order)))
+        index-backward-seq (zipmap (vec (rest index-order))
+                                   (subvec index-order 0 (count index-order)) )]
+    [index-forward-seq
+     index-backward-seq]))
+
 (def init-comp
-  (let [m-noteseq
-        [
-         [{:note [:mandra :s]}]
-         [{:note [:mandra :r]}]
-         [{:note [:mandra :g]}
-          {:note [:mandra :m]}]
-         [{:note [:mandra :m+]}]
+    (let [m-noteseq
+          [
+           [{:note [:mandra :s]}]
+           [{:note [:mandra :r]}]
+           [{:note [:mandra :g]}
+            {:note [:mandra :m]}]
+           [{:note [:mandra :m+]}]
 
-         [{:note [:mandra :p]}
-          {:note [:mandra :-d]}
-          {:note [:mandra :d]}]
+           [{:note [:mandra :p]}
+            {:note [:mandra :-d]}
+            {:note [:mandra :d]}]
 
-         [{:note [:mandra :-n]}]
-         [{:note [:mandra :n]}]
+           [{:note [:mandra :-n]}]
+           [{:note [:mandra :n]}]
 
-         [{:note [:madhyam :s]}]
-         [{:note [:madhyam :-r]}]
-         [{:note [:madhyam :r]}]
-         [{:note [:madhyam :-g]}]
-         [{:note [:madhyam :g]}]
-         [{:note [:madhyam :m]}]
-         [{:note [:madhyam :m+]}]
-         [{:note [:madhyam :p]}]
-         [{:note [:madhyam :-d]}]
-         [{:note [:madhyam :d]}]
-         [
-          {:note [:madhyam :-n]}
-          {:note [:madhyam :n]}
-          {:note [:taar :s]}]
-         [{:note [:taar :-r]}]
-         [{:note [:taar :r]}]
-         [{:note [:taar :-g]}]
-         [{:note [:taar :g]}]
-         [{:note [:taar :m]}]
-         ]
-        res
-        {:m-noteseq m-noteseq
-         :taal teentaal
-         :indexed-noteseq (split-bhaags m-noteseq teentaal)}]
-    res))
+           [{:note [:madhyam :s]}]
+           [{:note [:madhyam :-r]}]
+           [{:note [:madhyam :r]}]
+           [{:note [:madhyam :-g]}]
+           [{:note [:madhyam :g]}]
+           [{:note [:madhyam :m]}]
+           [{:note [:madhyam :m+]}]
+           [{:note [:madhyam :p]}]
+           [{:note [:madhyam :-d]}]
+           [{:note [:madhyam :d]}]
+           [
+            {:note [:madhyam :-n]}
+            {:note [:madhyam :n]}
+            {:note [:taar :s]}]
+           [{:note [:taar :-r]}]
+           [{:note [:taar :r]}]
+           [{:note [:taar :-g]}]
+           [{:note [:taar :g]}]
+           [{:note [:taar :m]}]
+           ]
+          indexed (split-bhaags m-noteseq teentaal)
+          [f b] (get-forward-backward-map indexed)
+          res
+          {:m-noteseq m-noteseq
+           :taal teentaal
+           ;;the same m-noteseq that is split into groups of rows (one per taal cycle)
+           ;;further into bhaags per row (e.g. 4 in teentaal)
+           ;;further into notes and sub-notes
+           :indexed-noteseq indexed
+           ;;a map where the key is a 4-part index [row bhaag note sub-note]
+           ;;and the value is the next note in sequence (also expressed as a 4-part index)
+           :index-forward-seq f
+           :index-backward-seq b
+           }]
+      res))
 
 (def mswaras (subvec us/i-note-seq 0 (- (count us/i-note-seq) 2)))
 
@@ -115,6 +171,7 @@
 
 (def default-edit-props {:raga :todi :octave-mode :lower
                          :note-pos {}
+                         :cursor-pos (-> init-comp :index-seq count)
                          :note-index []})
 (def default-db
   {

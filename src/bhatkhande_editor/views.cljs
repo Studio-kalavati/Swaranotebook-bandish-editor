@@ -384,17 +384,17 @@
                                                                 note-xy-map])))
                                                  :x x1 :y 5}]
                                                ;;- and S
-                                               [:text {:x (+ 10 x1) :y 25}
-                                                (name (second cur-note))])
+                                               (do (println " text " cur-note " i " i)
+                                                   [:text {:x (+ 10 x1) :y 25}
+                                                    (name (second cur-note))]))
                                              r3 (-> acc1
                                                     (update-in [:images1] conj ith-note)
                                                     (update-in [:x1] + 20))
-                                             r3 (if (= note-xy-map
-                                                     @(subscribe [::subs/get-click-index]))
-                                                  (update-in r3 [:images1] conj cursor-rect)
-                                                  r3)]
-                                         (dispatch [::events/conj-note-index
-                                                    note-xy-map])
+
+                                             r3 (let [curpos @(subscribe [::subs/get-click-index])]
+                                                  (if (= note-xy-map curpos)
+                                                    (update-in r3 [:images1] conj cursor-rect)
+                                                    r3))]
                                          r3))
                                      {:x1 x :images1 []}))]
                                (let [img-count (count (filter #{:text :image}

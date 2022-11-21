@@ -37,40 +37,80 @@
            (update-in db [:composition :m-noteseq] conj [(assoc swara :part true)]))]
      {:db ndb})))
 
-(reg-event-fx
- ::conj-single-swara
- (fn [{:keys [db]} [_ svara]]
-   {:db (update-in db [:composition :m-noteseq] conj svara)
-    :dispatch [::index-noteseq]}))
+
+
+(defn get-last-noteseq-index
+  "get the level 4 index from the indexed-noteseq"
+  [indexed-ns]
+  (let [[row-index bhaag-index note-index note-sub-index :as indx]
+        [(count indexed-ns)
+         (-> indexed-ns last count)
+         (-> indexed-ns last last count)
+         (-> indexed-ns last last last count)]
+        res (mapv dec indx)]
+    res))
 
 (reg-event-fx
  ::index-noteseq
  (fn [{:keys [db]} [_ _]]
    (let [indexed-ns (db/split-bhaags
                      (get-in db [:composition :m-noteseq])
-                     (get-in db [:composition :taal]))]
-     {:db (update-in db [:composition :indexed-noteseq]
-                     (constantly indexed-ns))})))
+                     (get-in db [:composition :taal]))
+         [f b] (db/get-forward-backward-map indexed-ns)]
+     {:db
+      (-> db
+          (update-in [:composition :indexed-noteseq]
+                     (constantly indexed-ns))
+          (update-in [:composition :index-forward-seq] (constantly f))
+          (update-in [:composition :index-backward-seq] (constantly b)))})))
+
+(defn get-ns-index
+  [db]
+  (let [{:keys [row-index bhaag-index note-index ni] :as click-index}
+        (get-in db [:edit-props :cursor-pos])
+        nindex (db/get-noteseq-index click-index (get-in db [:composition :taal]))]
+    [nindex ni]))
 
 (reg-event-fx
  ::delete-single-swara
  (fn [{:keys [db]} [_ _]]
-   (let [{:keys [row-index bhaag-index note-index ni] :as click-index}
-         (get-in db [:edit-props :cursor-pos])
-         nindex (db/get-noteseq-index click-index (get-in db [:composition :taal]))]
+   (let [[note-index note-sub-index] (get-ns-index db)
+         cpos (get-in db [:edit-props :cursor-pos ] )
+         index-entry (get-in db [:composition :index-backward-seq (vals cpos)])]
      ;;need to update cursor position too
      {:db
-      (update-in db
-                 [:composition :m-noteseq]
-                 #(let [to-remove (% nindex)
-                        res
-                        (if (= 1 (count to-remove))
-                          ;;remove whole svara
-                          (into (subvec % 0 nindex) (subvec % (inc nindex)))
-                          (let [r2 (into (subvec to-remove 0 ni)
-                                         (subvec to-remove (inc ni)))]
-                            (update-in % [nindex] (constantly r2))))]
+      (-> db
+          (update-in [:composition :m-noteseq]
+                     #(let [to-remove (% note-index)
+                            res
+                            (if (= 1 (count to-remove))
+                              ;;remove whole svara
+                              (into (subvec % 0 note-index) (subvec % (inc note-index)))
+                              (let [r2 (into (subvec to-remove 0 note-sub-index)
+                                             (subvec to-remove (inc note-sub-index)))]
+                                (update-in % [note-index] (constantly r2))))]
                         res))
+          (update-in [:edit-props :cursor-pos]
+                     (constantly
+                      (zipmap [:row-index :bhaag-index :note-index :ni] index-entry))))
+      :dispatch [::index-noteseq]})))
+
+(reg-event-fx
+ ::conj-single-swara
+ (fn [{:keys [db]} [_ svara]]
+   (let [[note-index note-sub-index] (get-ns-index db)
+         cpos (get-in db [:edit-props :cursor-pos ] )
+         index-entry (get-in db [:composition :index-forward-seq (vals cpos)])
+         ;;next-entry (get-in db [:composition :index-seq (inc index-entry)])
+         ]
+     (println " cur pos" cpos  " index entry " index-entry " next-entry " )
+     {:db (-> db
+              (update-in [:composition :m-noteseq]
+                            #(into (conj (subvec % 0 (inc note-index)) svara )
+                                   (subvec % (inc note-index))))
+              (update-in [:edit-props :cursor-pos]
+                         (constantly
+                          (zipmap [:row-index :bhaag-index :note-index :ni] index-entry))))
       :dispatch [::index-noteseq]})))
 
 (reg-event-fx
@@ -81,12 +121,13 @@
 (reg-event-fx
  ::set-click-index
  (fn [{:keys [db]} [_ click-index]]
+   (println " set click index " click-index)
    {:db (update-in db [:edit-props :cursor-pos] (constantly click-index))}))
 
-(reg-event-fx
+#_(reg-event-fx
  ::conj-note-index
  (fn [{:keys [db]} [_ click-index]]
-   (let [ndb (update-in db [:edit-props :note-index ]
+   (let [ndb (update-in db [:edit-props :sur]
               conj click-index)]
      {:db ndb})))
 
