@@ -4,7 +4,7 @@
    [clojure.zip :as z]
    [clojure.walk :as w]
    [sargam.talas :as talas
-    :refer [teentaal jhaptaal ektaal rupak dadra kehrwa]]))
+    :refer [taal-def]]))
 
 (defn get-noteseq-index
   "given a multi-index of row,bhaag and note,
@@ -114,11 +114,22 @@
            [{:note [:taar :g]}]
            [{:note [:taar :m]}]
            ]
-          indexed (split-bhaags m-noteseq teentaal)
+          taal-id :teentaal
+          cur-taal (taal-def taal-id)
+          indexed (split-bhaags m-noteseq cur-taal)
           [f b] (get-forward-backward-map indexed)
           res
           {:m-noteseq m-noteseq
-           :taal teentaal
+           :taal taal-id}]
+      res))
+
+(defn add-indexes
+  [comp]
+  (let [{:keys [taal m-noteseq] :as imap} comp
+        cur-taal (taal-def taal)
+        indexed (split-bhaags m-noteseq cur-taal)
+        [f b] (get-forward-backward-map indexed)]
+    (assoc imap
            ;;the same m-noteseq that is split into groups of rows (one per taal cycle)
            ;;further into bhaags per row (e.g. 4 in teentaal)
            ;;further into notes and sub-notes
@@ -126,9 +137,7 @@
            ;;a map where the key is a 4-part index [row bhaag note sub-note]
            ;;and the value is the next note in sequence (also expressed as a 4-part index)
            :index-forward-seq f
-           :index-backward-seq b
-           }]
-      res))
+           :index-backward-seq b)))
 
 (def mswaras (subvec us/i-note-seq 0 (- (count us/i-note-seq) 2)))
 
@@ -150,13 +159,13 @@
 (def m-dispinfo {:y 40})
 (def dispinfo
   {:x 5  :under 30
-   :x-start 5 
+   :x-start 5
    :y-inc 80
    :x-end (percentage-95 (.-innerWidth js/window))
    :y-end (* 0.6 (.-innerHeight js/window))
    :over 30
    :kan {:kan-raise 10
-         :reduce-font-size 5 
+         :reduce-font-size 5
          :reduce-spacing 3
          :reduce-octave-size 5}
    :octave 15
@@ -165,28 +174,23 @@
    :header-y-spacing 50
    :debug {:disp-swara false}
    :cursor-padding 5
-   :sam-khaali 35 
+   :sam-khaali 35
    :font-size 20 :spacing 10 :text-align :left})
 
 
-(def default-edit-props {:raga :todi :octave-mode :lower
+(def default-edit-props {:raga :todi
                          :note-pos {}
                          :cursor-pos (-> init-comp :index-seq count)
                          :note-index []})
 (def default-db
   {
-   ;;properties for display of current part, from bhatkhande editor
-   :swaras-changed true
    :init-state {:cursor-color 0}
    :dispinfo (merge dispinfo m-dispinfo)
    :m-dispinfo m-dispinfo
    :dim {:editor (mapv dispinfo [:x-end :y-end])}
 
    ;;properties for this application
-   :composition init-comp
-   :comp-metadata {:default {:name "Todi "}}
-   :edit-props default-edit-props 
-   :user-state {}
+   :composition (add-indexes init-comp)
+   :edit-props default-edit-props
    :language :hindi
-   :state :waiting-for-event
    })
