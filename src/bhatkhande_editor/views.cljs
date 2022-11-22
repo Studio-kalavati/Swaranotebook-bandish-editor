@@ -24,8 +24,8 @@
                                    throbber
                                    modal-panel]]
    [breaking-point.core :as bp]
-   [sargam.ragas :refer [varjit-map]]
-   [sargam.talas :refer [bhaags sam-khali num-beats]]
+   [sargam.ragas :refer [varjit-svaras]]
+   [sargam.talas :refer [taal-def]]
    [sargam.languages :refer [lang-labels]]
 
    [reagent.core :as reagent]
@@ -68,7 +68,7 @@
   "generate a vector of size 3, one each for base middle and top octaves.
   It generates the swaras for a given raga id"
   [raga-id]
-  (let [varjit-set (varjit-map raga-id)
+  (let [varjit-set (varjit-svaras raga-id)
         _ (println " raga id " raga-id " - " varjit-set )
         com (remove varjit-set mswaras) 
         fnx (fn[saptak] (mapv #(assoc {} :note (vector saptak %)) com))
@@ -145,22 +145,19 @@
         taal-info [v-box
                    :children [[:p.info-heading "Choose your taal"]
                               [:p "Enter swaras in the selected taal"]]]
-        octave-info
-        [v-box
-         :children [[:p.info-heading "Select octaves"]
-                    [:p "Choose the lower and middle octaves, or the middle and higher octaves"]]]
         dugun-info [v-box
                     :children [[:p.info-heading "Select number of notes per beat"]
                                [:p "Select one beat to have 1, 2 or 3 notes in it."]]]
-        octave-switch (reagent/atom false)
         show-partname-popup (reagent/atom false)
         show-raga-popup (reagent/atom false)
+        show-taal-popup (reagent/atom false)
         part-name (reagent/atom "")
         notes-per-beat (reagent/atom 1)]
     (fn []
       (let [sbp (vec (repeat 21 (reagent/atom false)))
             speed-switch-fn (fn[i] {:disp-fn #(reset! notes-per-beat i)
-                                    :state #(= i @notes-per-beat)})]
+                                    :state #(= i @notes-per-beat)})
+            lang @(subscribe [::subs/lang])]
         [v-box
          :gap      "0.5vh"
          :children [[h-box
@@ -172,21 +169,29 @@
                                  :children
                                  [[h-box
                                    :children
-                                   []]
-                                  [info-button :info octave-info :position :left-center]]]
+                                   [(box-button
+                                     (let [taals (get-in lang-labels [lang :tala-labels])
+                                           taal @(subscribe [::subs/taal])]
+                                       (println " lang " lang " - " taals " taal " taal
+                                                " fin "(taals taal))
+                                       (taals taal))
+                                     {:disp-fn
+                                      #(do (reset! show-taal-popup (not @show-taal-popup)))
+                                      :state #(true? @show-taal-popup)})
+                                    [info-button :info taal-info]]]
+                                  ]]
                                 [h-box :align :center
                                  :min-width "15vw"
                                  :children
                                  [(box-button
-                                   (let [lang @(subscribe [::subs/lang])
-                                         ragas (get-in lang-labels [lang :raga-labels])
+                                   (let [ragas (get-in lang-labels [lang :raga-labels])
                                          raga @(subscribe [::subs/raga])]
                                      (println " lang " lang " - " ragas " raga " raga " fin "(ragas raga))
                                      (ragas raga))
-                                                        {:disp-fn
-                                                         #(do (reset! show-raga-popup (not @show-raga-popup)))
-                                                         :state #(true? @show-raga-popup)})
-                                            [info-button :info raga-info]]]
+                                   {:disp-fn
+                                    #(do (reset! show-raga-popup (not @show-raga-popup)))
+                                    :state #(true? @show-raga-popup)})
+                                  [info-button :info raga-info]]]
                                 [h-box
                                  :align :center
                                  :children [[h-box
@@ -194,7 +199,10 @@
                                                         (box-button "2" (speed-switch-fn 2))
                                                         (box-button "3" (speed-switch-fn 3))]]
                                             [info-button :info dugun-info]]]]]
-                    (let [swaras-3oct (swar36 @(subscribe [::subs/raga]))]
+                    (let [swaras-3oct (swar36 @(subscribe [::subs/raga]))
+                          but-style {:width (let [iw (.-innerWidth js/window)]
+                                              (if (> iw 200)
+                                                200 "50vw"))}]
                       [v-box
                        :gap "0.5vh"
                        :class "middle-buttons"
@@ -231,88 +239,66 @@
                                                ;;write the current part
                                                ;;(dispatch [:append-part])
                                                (download-link nil)))]]
-                         (when @show-raga-popup
-                           (let [raga-labels (mapv (fn[[a b]] {:id a  :label b})
-                                                   (:raga-labels @(subscribe [::subs/lang-data])))
+                         (when @show-taal-popup
+                             (let [ta (:tala-labels (lang-labels @(subscribe [::subs/lang])))
+                                   taal-labels (mapv (fn[[a b]] {:id a  :label b}) ta)
 
-                                 box-fn (fn[{:keys [id label]}]
-                                          [button
-                                           :label label
-                                           :style {:width (let [iw (.-innerWidth js/window)]
-                                                            (if (> iw 200)
-                                                              200 "50vw"))}
-                                           :on-click
-                                           #(do
-                                              (dispatch [::events/set-raga id])
-                                              (reset! show-raga-popup
-                                                      (not @show-raga-popup)))
-                                           :class "btn btn-default"])
-                                 children (mapv box-fn raga-labels)]
-
-                             [modal-panel
-                              :backdrop-on-click #(reset! show-raga-popup false)
-                              :child [:div {:class "popup" :style {:overflow-y :scroll
-                                                                   :max-height "80vh"}}
-                                      [v-box
-                                       :gap "2vh"
-                                       :class "body"
-                                       :children
-                                       [[box
-                                         :align :center
-                                         :child [title :level :level3
-                                                 :label "Show Swaras from Raga"]]
+                                   box-fn (fn[{:keys [id label]}]
+                                            [button
+                                             :label label
+                                             :style but-style
+                                             :on-click
+                                             #(do
+                                                (dispatch [::events/set-taal id])
+                                                (reset! show-taal-popup
+                                                        (not @show-taal-popup)))
+                                             :class "btn btn-default"])
+                                   children (mapv box-fn taal-labels)]
+                               [modal-panel
+                                :backdrop-on-click #(reset! show-taal-popup false)
+                                :child [:div {:class "popup" :style {:overflow-y :scroll
+                                                                     :max-height "80vh"}}
                                         [v-box
-                                         :align :center
-                                         :children children]]]]]))
-                         (when @show-partname-popup
-                           (let [viewwidth  (.-innerWidth js/window)
-                                 [box-size padding] (box-size-padding viewwidth)]
-                             [modal-panel
-                              :backdrop-on-click #(reset! show-partname-popup false)
-                              :child [v-box
-                                      :gap "2vh"
-                                      :width box-size
-                                      :children
-                                      [[h-box :justify :end
-                                        :children [[md-circle-icon-button
-                                                    :md-icon-name "zmdi zmdi-hc-lg zmdi-close mdc-text-red-700"
-                                                    :size :smaller
-                                                    :on-click #(reset! show-partname-popup false)]]]
-                                       [v-box
-                                        :style {:padding (str "2vh " padding " 2vh " padding)}
-                                        :children [[h-box
-                                                    :justify :center
-                                                    :children
-                                                    [[box :width "100%"
-                                        ;:style {:background-color "lightgray"}
-                                                      :class "form-control"
-                                                      :justify :center
-                                                      :child
-                                                      [title :level :level3 :label "Add new part"
-                                                       :style {:font-weight "bold"}]]]]
-                                                   [gap :size "5vh"]
-                                                   [v-box :gap "2px"
-                                                    :children [[title :level :level3 :label "Part Name"]
-                                                               [input-text
-                                                                :model           part-name
-                                                                :style {:flex "1"}
-                                                                :width            "100%"
-                                                                :placeholder      "yaman-chota-khyal"
-                                                                :on-change
-                                                                #(reset! part-name %)]
-                                                               [gap :size "2vh"]]]
-                                                   [gap :size "3vh"]
-                                                   [button
-                                                    :label "Continue"
-                                                    :on-click
-                                                    #(do
-                                                       (dispatch [:add-new-part (clojure.string/replace
-                                                                                 @part-name " " "_")])
-                                                       (reset! show-partname-popup false))
-                                                    :class "btn btn-default"
-                                                    :style (let [s {:width "100%"
-                                                                    :background-color "#d4aaa0"}]
-                                                             s)]]]]]]))])])]]))))
+                                         :gap "2vh"
+                                         :class "body"
+                                         :children
+                                         [[box
+                                           :align :center
+                                           :child [title :level :level3
+                                                   :label "Select Taal"]]
+                                          [v-box
+                                           :align :center
+                                           :children children]]]]]))
+                         (when @show-raga-popup
+                             (let [raga-labels (mapv (fn[[a b]] {:id a  :label b})
+                                                     (:raga-labels @(subscribe [::subs/lang-data])))
+
+                                   box-fn (fn[{:keys [id label]}]
+                                            [button
+                                             :label label
+                                             :style but-style
+                                             :on-click
+                                             #(do
+                                                (dispatch [::events/set-raga id])
+                                                (reset! show-raga-popup
+                                                        (not @show-raga-popup)))
+                                             :class "btn btn-default"])
+                                   children (mapv box-fn raga-labels)]
+                               [modal-panel
+                                :backdrop-on-click #(reset! show-raga-popup false)
+                                :child [:div {:class "popup" :style {:overflow-y :scroll
+                                                                     :max-height "80vh"}}
+                                        [v-box
+                                         :gap "2vh"
+                                         :class "body"
+                                         :children
+                                         [[box
+                                           :align :center
+                                           :child [title :level :level3
+                                                   :label "Show Swaras from Raga"]]
+                                          [v-box
+                                           :align :center
+                                           :children children]]]]]))])])]]))))
 
 (def editor-height (reagent/atom 0))
 (defn swara-display-area
@@ -460,10 +446,7 @@
           :ref #(if (identity %)
                   (let [ch (.-offsetHeight %)] 
                     (reset! editor-height ch)))}
-    [swara-buttons]]
-   #_(when (> @editor-height 0)
-     [swara-display-area]
-     )])
+    [swara-buttons]]])
 
 (defmethod routes/panels :home-panel [] [show-editor-keyboard])
 

@@ -52,6 +52,11 @@
    (:composition db)))
 
 (reg-sub
+ ::taal
+ :<- [::composition]
+ (fn [comp _]     
+   (-> comp :taal)))
+(reg-sub
  ::get-click-index
  (fn [db [_ _]]
    (get-in db [:edit-props :cursor-pos])))

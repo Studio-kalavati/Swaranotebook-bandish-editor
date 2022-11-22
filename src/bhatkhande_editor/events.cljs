@@ -119,6 +119,12 @@
    {:db (update-in db [:edit-props :raga] (constantly raga))}))
 
 (reg-event-fx
+ ::set-taal
+ (fn [{:keys [db]} [_ taal]]
+   (let [ncomp (db/add-indexes (assoc (get-in db [:composition]) :taal taal))]
+     {:db (update-in db [:composition] (constantly ncomp))})))
+
+(reg-event-fx
  ::set-click-index
  (fn [{:keys [db]} [_ click-index]]
    (println " set click index " click-index)
