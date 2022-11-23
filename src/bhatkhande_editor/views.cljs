@@ -76,9 +76,11 @@
    (let [msmap @(subscribe [::subs/swaramap])]
      (butn2 (msmap (second note))
             #(do
-               (if (> @notes-per-beat 1)
+               (dispatch [::events/conj-svara
+                          {:svara swaralem :notes-per-beat @notes-per-beat}])
+               #_(if (> @notes-per-beat 1)
                  (dispatch [::events/conj-part-swara
-                            {:swara swaralem :notes-per-beat @notes-per-beat}])
+                            {:svara swaralem :notes-per-beat @notes-per-beat}])
                  (dispatch [::events/conj-single-swara [swaralem]])))
             {:style (merge style {:width "100%"})}))))
 
@@ -151,7 +153,6 @@
                                  :children
                                  [(box-button
                                    (let [lang @(subscribe [::subs/lang])]
-                                     (println " lang "lang)
                                      (if (= :hindi lang) "S R G" "सा रे ग"))
                                    {:disp-fn
                                     #(do (dispatch [::events/toggle-lang] ))
@@ -176,7 +177,6 @@
                                  [(box-button
                                    (let [ragas (get-in lang-labels [lang :raga-labels])
                                          raga @(subscribe [::subs/raga])]
-                                     (println " lang " lang " - " ragas " raga " raga " fin "(ragas raga))
                                      (ragas raga))
                                    {:disp-fn
                                     #(do (reset! show-raga-popup (not @show-raga-popup)))
@@ -358,12 +358,11 @@
                                                  :on-click
                                                  (fn[i]
                                                    (do
-                                                     (println " on click "note-xy-map)
                                                      (dispatch [::events/set-click-index
                                                                 note-xy-map])))
                                                  :x x1 :y 5}]
                                                ;;- and S
-                                               (do (println " text " cur-note " i " i)
+                                               (do 
                                                    [:text {:x (+ 10 x1) :y 25}
                                                     (name (second cur-note))]))
                                              r3 (-> acc1
@@ -372,7 +371,8 @@
 
                                              r3 (let [curpos @(subscribe [::subs/get-click-index])]
                                                   (if (= note-xy-map curpos)
-                                                    (update-in r3 [:images1] conj cursor-rect)
+                                                    (do (println " showing cursor at " curpos)
+                                                        (update-in r3 [:images1] conj cursor-rect))
                                                     r3))]
                                          r3))
                                      {:x1 x :images1 []}))]

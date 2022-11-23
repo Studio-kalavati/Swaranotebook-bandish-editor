@@ -5,6 +5,13 @@
             subscribe dispatch dispatch-sync]]
    [bhatkhande-editor.db :as db]))
 
+(defn get-ns-index
+  [db]
+  (let [{:keys [row-index bhaag-index note-index ni] :as click-index}
+        (get-in db [:edit-props :cursor-pos])
+        nindex (db/get-noteseq-index click-index (get-in db [:composition :taal]))]
+    [nindex ni]))
+
 (re-frame/reg-event-db
  ::initialize-db
  (fn [_ _]
@@ -21,21 +28,47 @@
    {:db (assoc db :active-panel active-panel)}))
 
 (reg-event-fx
- ::conj-part-swara
- (fn [{:keys [db]} [_ {:keys [swara notes-per-beat]}]]
-   (let [ln (last (get-in db [:composition :m-noteseq]))
+ ::conj-svara
+ (fn [{:keys [db]} [_ {:keys [svara notes-per-beat]}]]
+   (let [
+         [note-index note-sub-index] (get-ns-index db)
+         cpos (get-in db [:edit-props :cursor-pos ] )
+         index-entry (get-in db [:composition :index-forward-seq (vals cpos)])
+
+         ln (get-in db [:composition :m-noteseq note-index])
+         _ (println svara " note at index " ln " cur pos" cpos  " next index entry " index-entry  " -- "[note-index note-sub-index])
+         nsvara (assoc svara :npb notes-per-beat)
          ndb
-         (if (:part (first ln))
-           (if (= notes-per-beat (count ln))
-             ;;add a new note
-             (update-in db [:composition :m-noteseq] conj [(assoc swara :part true)])
-             (let [mnoteseq (get-in db [:composition :m-noteseq])
-                   irest (-> mnoteseq butlast vec)]
-               ;;replace the last note and conj the new note
-               (update-in db [:composition :m-noteseq]
-                          (constantly (conj irest (conj ln swara))))))
-           (update-in db [:composition :m-noteseq] conj [(assoc swara :part true)]))]
-     {:db ndb})))
+         (update-in db
+          [:composition :m-noteseq]
+          #(let [note-insert
+                 (into (conj (subvec % 0 (inc note-index)) [nsvara])
+                       (subvec % (inc note-index)))]
+             ;;if npb is 1, or the last note's npb is different, insert new note
+             (if (or (-> ln last :npb (not= notes-per-beat))
+                     (= 1 notes-per-beat))
+               note-insert
+               (let [last-note-count (count ln)]
+                 ;;last note already have enough notes
+                 (if (= (count ln) notes-per-beat)
+                   note-insert
+                   (update-in % [note-index] conj nsvara))))))
+         ndb2
+         (update-in ndb
+                    [:edit-props :cursor-pos]
+                    (constantly
+                     (let [res
+                           (zipmap [:row-index :bhaag-index :note-index :ni]
+                                   (if (and (-> ln last :npb (= notes-per-beat))
+                                            (not (= notes-per-beat (count ln))))
+                                     ;;increment the note-sub-index
+                                     (mapv (update-in cpos [:ni] inc)
+                                                  [:row-index :bhaag-index :note-index :ni])
+                                     index-entry))]
+                       (println " update cursor to " res)
+                       res)))]
+     {:db ndb2
+      :dispatch [::index-noteseq]})))
 
 
 
@@ -59,12 +92,7 @@
           (update-in [:composition]
                      (constantly ncomp)))})))
 
-(defn get-ns-index
-  [db]
-  (let [{:keys [row-index bhaag-index note-index ni] :as click-index}
-        (get-in db [:edit-props :cursor-pos])
-        nindex (db/get-noteseq-index click-index (get-in db [:composition :taal]))]
-    [nindex ni]))
+
 
 (reg-event-fx
  ::delete-single-swara
@@ -90,7 +118,7 @@
                       (zipmap [:row-index :bhaag-index :note-index :ni] index-entry))))
       :dispatch [::index-noteseq]})))
 
-(reg-event-fx
+#_(reg-event-fx
  ::conj-single-swara
  (fn [{:keys [db]} [_ svara]]
    (let [[note-index note-sub-index] (get-ns-index db)
