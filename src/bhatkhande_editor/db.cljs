@@ -3,19 +3,21 @@
    [sargam.spec :as us]
    [clojure.zip :as z]
    [clojure.walk :as w]
-   [sargam.talas :as talas
+ [sargam.talas :as talas
     :refer [taal-def]]))
 
 (defn get-noteseq-index
   "given a multi-index of row,bhaag and note,
   returns the index of the note in m-noteseq.  "
-  [{:keys [row-index bhaag-index note-index] :as click-index} taal-def]
-  (let [num-beats (:num-beats taal-def)
+  [{:keys [row-index bhaag-index note-index] :as click-index} taal]
+  (let [td (taal-def taal)
+        num-beats (:num-beats td)
         a1 (* row-index num-beats)
-        a2 (apply + (take bhaag-index (:bhaags taal-def)))]
+        a2 (apply + (take bhaag-index (:bhaags td)))]
     (+ a1 a2 note-index)))
 
 (defn make-index-seq
+  "given a indexed sequence of notes, returns a flat sequence where each element is [row-index bhaag-index note-index note-sub-index],i.e the note indexes that can be used to retrieve a note  "
   [indexed-ns]
   (let [bi
         (fn[row-index bhaag-index note-map-seq]
@@ -50,6 +52,8 @@
     b1))
 
 (defn split-bhaags
+  "given a flat sequence of notes, returns a sequence where a specific note can be retrieved with
+  (get-in iseq [row-index bhaag-index note-index note-sub-index])"
   [noteseq taal-def]
   (->> noteseq
        (partition-all (-> taal-def :num-beats))
@@ -69,6 +73,10 @@
                  fin)))))
 
 (defn get-forward-backward-map
+  "returns a vector with 2 maps, the first indicating the next note in the sequence, and the second
+  indicating the previous note in the sequence.
+  Used to push the cursor to the next or previous position while editing.
+  "
   [indexed]
   (let [index-order (make-index-seq indexed)
         index-forward-seq (zipmap (subvec index-order 0 (count index-order))
@@ -115,9 +123,6 @@
            [{:note [:taar :m]}]
            ]
           taal-id :teentaal
-          cur-taal (taal-def taal-id)
-          indexed (split-bhaags m-noteseq cur-taal)
-          [f b] (get-forward-backward-map indexed)
           res
           {:m-noteseq m-noteseq
            :taal taal-id}]
@@ -145,12 +150,14 @@
                          i ["c" "c#" "d" "d#" "e" "f" "f#" "g" "g#" "a" "a#" "b"]]
                      [i octave])))
 
-(def image-map (zipmap (conj (vec (for [i [:mandra :madhyam :taar] j (take 12 us/i-note-seq)]
-                                    [i j])) [:ati-taar :s])
+(defn image-map
+  [lang]
+  (zipmap (conj (vec (for [i [:mandra :madhyam :taar] j (take 12 us/i-note-seq)]
+                       [i j])) [:ati-taar :s])
                        (mapv
-                        #(str "/images/swaras/hindi/png/" % ".png" )
-                                        ;#(str "/images/swaras/hindi/svg/Vector_" % ".svg" )
+                        #(str "/images/swaras/" lang "/png/" % ".png" )
                         (range 1 38))))
+
 (defn percentage-95
   [i]
   (let [ iw (js/parseInt i)]
@@ -180,6 +187,7 @@
 
 (def default-edit-props {:raga :todi
                          :note-pos {}
+                         :language-en? false
                          :cursor-pos (-> init-comp :index-seq count)
                          :note-index []})
 (def default-db
@@ -192,5 +200,4 @@
    ;;properties for this application
    :composition (add-indexes init-comp)
    :edit-props default-edit-props
-   :language :hindi
    })

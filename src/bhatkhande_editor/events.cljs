@@ -53,16 +53,11 @@
 (reg-event-fx
  ::index-noteseq
  (fn [{:keys [db]} [_ _]]
-   (let [indexed-ns (db/split-bhaags
-                     (get-in db [:composition :m-noteseq])
-                     (get-in db [:composition :taal]))
-         [f b] (db/get-forward-backward-map indexed-ns)]
+   (let [ncomp (db/add-indexes (get-in db [:composition]))]
      {:db
       (-> db
-          (update-in [:composition :indexed-noteseq]
-                     (constantly indexed-ns))
-          (update-in [:composition :index-forward-seq] (constantly f))
-          (update-in [:composition :index-backward-seq] (constantly b)))})))
+          (update-in [:composition]
+                     (constantly ncomp)))})))
 
 (defn get-ns-index
   [db]
@@ -101,9 +96,8 @@
    (let [[note-index note-sub-index] (get-ns-index db)
          cpos (get-in db [:edit-props :cursor-pos ] )
          index-entry (get-in db [:composition :index-forward-seq (vals cpos)])
-         ;;next-entry (get-in db [:composition :index-seq (inc index-entry)])
          ]
-     (println " cur pos" cpos  " index entry " index-entry " next-entry " )
+     (println " cur pos" cpos  " next index entry " index-entry  " -- "[note-index note-sub-index])
      {:db (-> db
               (update-in [:composition :m-noteseq]
                             #(into (conj (subvec % 0 (inc note-index)) svara )
@@ -125,17 +119,14 @@
      {:db (update-in db [:composition] (constantly ncomp))})))
 
 (reg-event-fx
+ ::toggle-lang
+ (fn [{:keys [db]} [_ _]]
+   {:db (update-in db [:edit-props :language-en?] not)}))
+
+(reg-event-fx
  ::set-click-index
  (fn [{:keys [db]} [_ click-index]]
-   (println " set click index " click-index)
    {:db (update-in db [:edit-props :cursor-pos] (constantly click-index))}))
-
-#_(reg-event-fx
- ::conj-note-index
- (fn [{:keys [db]} [_ click-index]]
-   (let [ndb (update-in db [:edit-props :sur]
-              conj click-index)]
-     {:db ndb})))
 
 (reg-event-fx
  ::reset-note-index

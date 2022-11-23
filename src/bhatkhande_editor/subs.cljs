@@ -4,14 +4,16 @@
    [re-frame.core :as re-frame :refer [reg-sub]]))
 
 (reg-sub
- ::lang-data
- (fn [db]
-   (lang-labels (:language db))))
-
-(reg-sub
  ::lang
  (fn [db]
-   (:language db)))
+   (if (-> db :edit-props :language-en?)
+     :english :hindi)))
+
+(reg-sub
+ ::lang-data
+ :<- [::lang]
+ (fn [lang _]
+   (lang-labels lang)))
 
 (reg-sub
  ::active-panel
@@ -19,8 +21,8 @@
    (:active-panel db)))
 
 (reg-sub
- ::edit-props 
- (fn [db _]     
+ ::edit-props
+ (fn [db _]
    (-> db :edit-props)))
 
 (reg-sub
@@ -43,8 +45,9 @@
 
 (reg-sub
  ::swaramap
- (fn [db _]
-   (get-in lang-labels [(:language db) :swara-labels])))
+ :<- [::lang]
+ (fn [lang _]
+   (get-in lang-labels [lang :swara-labels])))
 
 (reg-sub
  ::composition

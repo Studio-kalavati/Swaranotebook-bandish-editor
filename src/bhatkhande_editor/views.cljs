@@ -35,22 +35,6 @@
    [bhatkhande-editor.db :as db :refer [note-seq mswaras]]
    [bhatkhande-editor.subs :as subs]))
 
-(def img-path "images/swaras/")
-(defn get-image-map
-  [langpath sa-pitch]
-  (if (= "cdef" langpath)
-    (zipmap (subvec note-seq 24 (+ 24 48))
-            (mapv
-             #(str img-path langpath "/png/" % ".png" )
-             (range 1 49)))
-    (let [indx (.indexOf note-seq sa-pitch)
-          start-indx (- indx 12)]
-      ;;(println " image-map " indx " start-indx " start-indx " take 20 " (take 30 note-seq))
-      (zipmap (subvec note-seq start-indx (+ start-indx 37))
-              (mapv
-               #(str img-path langpath "/png/" % ".png" )
-               (range 1 38))))))
-
 (defn box-size-padding
   [viewwidth]
   (cond (< 800 viewwidth)
@@ -69,7 +53,6 @@
   It generates the swaras for a given raga id"
   [raga-id]
   (let [varjit-set (varjit-svaras raga-id)
-        _ (println " raga id " raga-id " - " varjit-set )
         com (remove varjit-set mswaras) 
         fnx (fn[saptak] (mapv #(assoc {} :note (vector saptak %)) com))
         res [(fnx :mandra) (fnx :madhyam) (fnx :taar)]]
@@ -151,7 +134,7 @@
         show-partname-popup (reagent/atom false)
         show-raga-popup (reagent/atom false)
         show-taal-popup (reagent/atom false)
-        part-name (reagent/atom "")
+        show-lang-popup (reagent/atom false)
         notes-per-beat (reagent/atom 1)]
     (fn []
       (let [sbp (vec (repeat 21 (reagent/atom false)))
@@ -165,6 +148,15 @@
                      :class "first-bar"
                      :align :center
                      :children [[h-box
+                                 :children
+                                 [(box-button
+                                   (let [lang @(subscribe [::subs/lang])]
+                                     (println " lang "lang)
+                                     (if (= :hindi lang) "S R G" "सा रे ग"))
+                                   {:disp-fn
+                                    #(do (dispatch [::events/toggle-lang] ))
+                                    :state (constantly false)})]]
+                                [h-box
                                  :align :center
                                  :children
                                  [[h-box
@@ -172,8 +164,6 @@
                                    [(box-button
                                      (let [taals (get-in lang-labels [lang :tala-labels])
                                            taal @(subscribe [::subs/taal])]
-                                       (println " lang " lang " - " taals " taal " taal
-                                                " fin "(taals taal))
                                        (taals taal))
                                      {:disp-fn
                                       #(do (reset! show-taal-popup (not @show-taal-popup)))
@@ -240,65 +230,65 @@
                                                ;;(dispatch [:append-part])
                                                (download-link nil)))]]
                          (when @show-taal-popup
-                             (let [ta (:tala-labels (lang-labels @(subscribe [::subs/lang])))
-                                   taal-labels (mapv (fn[[a b]] {:id a  :label b}) ta)
+                           (let [ta (:tala-labels (lang-labels @(subscribe [::subs/lang])))
+                                 taal-labels (mapv (fn[[a b]] {:id a  :label b}) ta)
 
-                                   box-fn (fn[{:keys [id label]}]
-                                            [button
-                                             :label label
-                                             :style but-style
-                                             :on-click
-                                             #(do
-                                                (dispatch [::events/set-taal id])
-                                                (reset! show-taal-popup
-                                                        (not @show-taal-popup)))
-                                             :class "btn btn-default"])
-                                   children (mapv box-fn taal-labels)]
-                               [modal-panel
-                                :backdrop-on-click #(reset! show-taal-popup false)
-                                :child [:div {:class "popup" :style {:overflow-y :scroll
-                                                                     :max-height "80vh"}}
+                                 box-fn (fn[{:keys [id label]}]
+                                          [button
+                                           :label label
+                                           :style but-style
+                                           :on-click
+                                           #(do
+                                              (dispatch [::events/set-taal id])
+                                              (reset! show-taal-popup
+                                                      (not @show-taal-popup)))
+                                           :class "btn btn-default"])
+                                 children (mapv box-fn taal-labels)]
+                             [modal-panel
+                              :backdrop-on-click #(reset! show-taal-popup false)
+                              :child [:div {:class "popup" :style {:overflow-y :scroll
+                                                                   :max-height "80vh"}}
+                                      [v-box
+                                       :gap "2vh"
+                                       :class "body"
+                                       :children
+                                       [[box
+                                         :align :center
+                                         :child [title :level :level3
+                                                 :label "Select Taal"]]
                                         [v-box
-                                         :gap "2vh"
-                                         :class "body"
-                                         :children
-                                         [[box
-                                           :align :center
-                                           :child [title :level :level3
-                                                   :label "Select Taal"]]
-                                          [v-box
-                                           :align :center
-                                           :children children]]]]]))
+                                         :align :center
+                                         :children children]]]]]))
                          (when @show-raga-popup
-                             (let [raga-labels (mapv (fn[[a b]] {:id a  :label b})
-                                                     (:raga-labels @(subscribe [::subs/lang-data])))
+                           (let [raga-labels (mapv (fn[[a b]] {:id a  :label b})
+                                                   (:raga-labels @(subscribe [::subs/lang-data])))
 
-                                   box-fn (fn[{:keys [id label]}]
-                                            [button
-                                             :label label
-                                             :style but-style
-                                             :on-click
-                                             #(do
-                                                (dispatch [::events/set-raga id])
-                                                (reset! show-raga-popup
-                                                        (not @show-raga-popup)))
-                                             :class "btn btn-default"])
-                                   children (mapv box-fn raga-labels)]
-                               [modal-panel
-                                :backdrop-on-click #(reset! show-raga-popup false)
-                                :child [:div {:class "popup" :style {:overflow-y :scroll
-                                                                     :max-height "80vh"}}
+                                 box-fn (fn[{:keys [id label]}]
+                                          [button
+                                           :label label
+                                           :style but-style
+                                           :on-click
+                                           #(do
+                                              (dispatch [::events/set-raga id])
+                                              (reset! show-raga-popup
+                                                      (not @show-raga-popup)))
+                                           :class "btn btn-default"])
+                                 children (mapv box-fn raga-labels)]
+                             [modal-panel
+                              :backdrop-on-click #(reset! show-raga-popup false)
+                              :child [:div {:class "popup" :style {:overflow-y :scroll
+                                                                   :max-height "80vh"}}
+                                      [v-box
+                                       :gap "2vh"
+                                       :class "body"
+                                       :children
+                                       [[box
+                                         :align :center
+                                         :child [title :level :level3
+                                                 :label "Show Swaras from Raga"]]
                                         [v-box
-                                         :gap "2vh"
-                                         :class "body"
-                                         :children
-                                         [[box
-                                           :align :center
-                                           :child [title :level :level3
-                                                   :label "Show Swaras from Raga"]]
-                                          [v-box
-                                           :align :center
-                                           :children children]]]]]))])])]]))))
+                                         :align :center
+                                         :children children]]]]]))])])]]))))
 
 (def editor-height (reagent/atom 0))
 (defn swara-display-area
@@ -333,6 +323,9 @@
                  comp @(subscribe [::subs/composition])
                  _ (dispatch [::events/reset-note-index])
                  rect-style {:width 2 :height 30 :y 10}
+                 image-map (db/image-map
+                            (if (= :hindi @(subscribe [::subs/lang]))
+                              "hindi" "english_SrR"))
                  draw-bhaag
                  (fn[row-index bhaag-index note-map-seq]
                    (let [r3
@@ -358,7 +351,7 @@
                                                            :x (+ x1 25) :y 5
                                                            :height 50)]
                                              ith-note
-                                             (if-let [ival (db/image-map cur-note)]
+                                             (if-let [ival (image-map cur-note)]
                                                [:image
                                                 {:height 32 :width 32
                                                  :href ival
