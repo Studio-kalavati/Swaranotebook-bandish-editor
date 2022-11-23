@@ -349,7 +349,8 @@
                                              cursor-rect
                                              [:rect (assoc rect-style
                                                            :x (+ x1 25) :y 5
-                                                           :height 50)]
+                                                           :height 50
+                                                           :class "blinking-cursor")]
                                              ith-note
                                              (if-let [ival (image-map cur-note)]
                                                [:image
