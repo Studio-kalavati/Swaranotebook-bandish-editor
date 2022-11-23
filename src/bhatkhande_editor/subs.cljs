@@ -59,6 +59,7 @@
  :<- [::composition]
  (fn [comp _]     
    (-> comp :taal)))
+
 (reg-sub
  ::get-click-index
  (fn [db [_ _]]

@@ -363,8 +363,8 @@
                                                  :x x1 :y 5}]
                                                ;;- and S
                                                (do 
-                                                   [:text {:x (+ 10 x1) :y 25}
-                                                    (name (second cur-note))]))
+                                                 [:text {:x (+ 10 x1) :y 25}
+                                                  (name (second cur-note))]))
                                              r3 (-> acc1
                                                     (update-in [:images1] conj ith-note)
                                                     (update-in [:x1] + 20))
@@ -373,31 +373,50 @@
                                                   (if (= note-xy-map curpos)
                                                     (do (println " showing cursor at " curpos)
                                                         (update-in r3 [:images1] conj cursor-rect))
-                                                    r3))]
+                                                    r3))
+                                             ]
                                          r3))
-                                     {:x1 x :images1 []}))]
-                               (let [img-count (count (filter #{:text :image}
-                                                              (map first (:images1 r2))))
-                                     r5(-> acc
-                                           (update-in [:x] (constantly (:x1 r2)))
-                                           (update-in [:images] into (:images1 r2)))]
-                                 ;;if more than 1 note in a single beat,
-                                 ;;draw the ellipse under the notes
-                                 (if (> img-count 1)
-                                   (update-in r5 [:images]
-                                              conj
-                                              [:polyline
-                                               {:points
-                                                (let [y0 40
-                                                      sl 5]
-                                                  ;;line with ends curved up
-                                                  (str (+ sl x) "," y0 " "
-                                                       (+ x ( * 2 sl)) "," (+ y0 sl) " "
-                                                       (:x1 r2) "," (+ y0 sl) " "
-                                                       (+ sl (:x1 r2)) "," y0))
-                                                :stroke "black"
-                                                :fill "none"}])
-                                   r5))))
+                                     {:x1 x :images1 []}))
+
+                                   img-count (count (filter #{:text :image}
+                                                            (map first (:images1 r2))))
+                                   r5(-> acc
+                                         (update-in [:x] (constantly (:x1 r2)))
+                                         (update-in [:images] into (:images1 r2)))
+                                   ;;if more than 1 note in a single beat,
+                                   ;;draw the ellipse under the notes
+
+                                   r6 (if (> img-count 1)
+                                        (update-in r5 [:images]
+                                                   conj
+                                                   [:polyline
+                                                    {:points
+                                                     (let [y0 40
+                                                           sl 5]
+                                                       ;;line with ends curved up
+                                                       (str (+ sl x) "," y0 " "
+                                                            (+ x ( * 2 sl)) "," (+ y0 sl) " "
+                                                            (:x1 r2) "," (+ y0 sl) " "
+                                                            (+ sl (:x1 r2)) "," y0))
+                                                     :stroke "black"
+                                                     :fill "none"}])
+                                        r5)
+                                   ;;add sam-khaali
+                                   r7 (if (and #_(= 0 ni) (= 0 note-index))
+                                        (update-in r6 
+                                                   [:images] conj
+                                                   [:text {:x 14 :y 60
+                                                           :style {:font-size "15px"}}
+                                                    (let [t @(subscribe [::subs/taal])
+                                                          sk-index
+                                                          (->> taal-def t :bhaags
+                                                               (take bhaag-index)
+                                                               (apply +)
+                                                               inc)]
+                                                      (get (-> taal-def t :sam-khaali )
+                                                           sk-index))])
+                                        r6)]
+                               r7))
                            {:x 5 :images []}))
                          images (:images r3)
                          x-end (:x r3)]
