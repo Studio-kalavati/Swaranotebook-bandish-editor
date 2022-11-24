@@ -135,7 +135,9 @@
    (let [[note-index note-sub-index] (get-ns-index db)
          cpos (get-in db [:edit-props :cursor-pos ] )
          index-entry (get-in db [:composition :index-backward-seq (vals cpos)])]
-     (println " delete index "[note-index note-sub-index] " entry at index " index-entry)
+     (println " delete index "[note-index note-sub-index]
+              " cpos " cpos
+              " entry at index " index-entry)
      ;;need to update cursor position too
      {:db
       (-> db
@@ -146,19 +148,21 @@
                             (if (= 0 note-index)
                               ;;dont delete  the first one
                               %
-                              (into (subvec % 0 (dec note-index)) (subvec % note-index)))
-                            #_(if (= 1 (count to-remove))
-                              ;;remove whole svara
-                              (into (subvec % 0 note-index) (subvec % (inc note-index)))
-                              (let [r2 (into (subvec to-remove 0 note-sub-index)
-                                             (subvec to-remove (inc note-sub-index)))]
-                                (update-in % [note-index] (constantly r2))))]
+                              (into (subvec % 0 (dec note-index)) (subvec % note-index)))]
                         res))
           (update-in [:edit-props :cursor-pos]
                      (constantly
-                      (if (= 0 note-index)
-                        cpos
-                        (zipmap [:row-index :bhaag-index :note-index :ni] index-entry)))))
+                      (let [res 
+                            (if (= 0 note-index)
+                              cpos
+                              (zipmap [:row-index :bhaag-index :note-index :ni]
+                                      (if (> (last index-entry) 0 )
+                                        ;;if deleting a multi-note, the ni is > 0
+                                        ;;instead make it 0
+                                        (conj (subvec index-entry 0 3) 0)
+                                        index-entry)))]
+                        (println " cursor after delete " res)
+                        res))))
       :dispatch [::index-noteseq]})))
 
 (reg-event-fx
