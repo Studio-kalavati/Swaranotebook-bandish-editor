@@ -53,8 +53,8 @@
   It generates the swaras for a given raga id"
   [raga-id]
   (let [varjit-set (varjit-svaras raga-id)
-        com (remove varjit-set mswaras) 
-        fnx (fn[saptak] (mapv #(assoc {} :note (vector saptak %)) com))
+        com (remove varjit-set mswaras)
+        fnx (fn[saptak] (mapv #(assoc {} :shruti (vector saptak %)) com))
         res [(fnx :mandra) (fnx :madhyam) (fnx :taar)]]
     res))
 
@@ -65,23 +65,19 @@
    [box
     :size "auto"
     :align-self :stretch
-    :style {:flex "1 1 0px"} 
-    :child [:button {:style (merge style {:width "100%"}) :class class 
+    :style {:flex "1 1 0px"}
+    :child [:button {:style (merge style {:width "100%"}) :class class
                      :on-click on-click-fn}
             [:span text]]]))
 
 (defn mk-button
   ([beat-mode swaralem] (mk-button {} beat-mode swaralem))
-  ([style notes-per-beat {:keys [note] :as swaralem}]
+  ([style notes-per-beat {:keys [shruti] :as sh}]
    (let [msmap @(subscribe [::subs/swaramap])]
-     (butn2 (msmap (second note))
+     (butn2 (msmap (second shruti))
             #(do
                (dispatch [::events/conj-svara
-                          {:svara swaralem :notes-per-beat @notes-per-beat}])
-               #_(if (> @notes-per-beat 1)
-                 (dispatch [::events/conj-part-swara
-                            {:svara swaralem :notes-per-beat @notes-per-beat}])
-                 (dispatch [::events/conj-single-swara [swaralem]])))
+                          {:svara sh :notes-per-beat @notes-per-beat}]))
             {:style (merge style {:width "100%"})}))))
 
 (defn box-button
@@ -259,6 +255,7 @@
                                         [v-box
                                          :align :center
                                          :children children]]]]]))
+
                          (when @show-raga-popup
                            (let [raga-labels (mapv (fn[[a b]] {:id a  :label b})
                                                    (:raga-labels @(subscribe [::subs/lang-data])))
@@ -288,17 +285,43 @@
                                                  :label "Show Swaras from Raga"]]
                                         [v-box
                                          :align :center
-                                         :children children]]]]]))])])]]))))
+                                         :children children]]]]]))
+                         (when-let [{:keys [row-index bhaag-index text-val]}
+                                    @(subscribe [::subs/show-text-popup])]
+                           (let [text-val (reagent/atom text-val)]
+                             [modal-panel
+                              :backdrop-on-click #(dispatch [::events/hide-text-popup])
+                              :child [:div {:class "popup" :style {:overflow-y :scroll
+                                                                   :max-height "80vh"}}
+                                      [v-box
+                                       :gap "2vh"
+                                       :class "body"
+                                       :children
+                                       [[input-text :src (at)
+                                         :model            text-val
+                                         :width            "60vw"
+                                         :on-change        #(reset! text-val %)
+                                         ]
+                                        [button :label "Ok"
+                                         :on-click
+                                         #(do
+                                            (dispatch [::events/conj-sahitya
+                                                         {:text-val @text-val
+                                                          :bhaag-index bhaag-index
+                                                          :row-index row-index}])
+                                            (dispatch [::events/hide-text-popup])
+                                            )
+                                         ]]]]]))])])]]))))
 
 (def editor-height (reagent/atom 0))
 (defn swara-display-area
   []
-  (let [cursor-index (reagent/atom nil)]
+  (let []
     (fn []
       (let [winhgt (.-innerHeight js/window)
-            myhgt (- winhgt 
+            myhgt (- winhgt
                      @editor-height)]
-        [:div 
+        [:div
          [:div
           {:class "edit-composition"
            :style {:overflow-y "scroll"
@@ -317,7 +340,7 @@
                   (let [sctop (- (.-scrollHeight % ) myhgt)]
                     (set! (.-scrollTop %) sctop)))))}
           [:div {:class "com-edit"
-                 ;;:ref #(when (identity %) (set-scroll-top %))
+                 ;;:on-click (fn[i] (do (println " got on -click")))
                  }
            (let [div-id "editor"
                  comp @(subscribe [::subs/composition])
@@ -328,7 +351,9 @@
                               "hindi" "english_SrR"))
                  draw-bhaag
                  (fn[row-index bhaag-index note-map-seq]
-                   (let [r3
+                   (let [sahitya (get-in comp [:sahitya [row-index bhaag-index]])
+                         sah-list (when sahitya (clojure.string/split sahitya #","))
+                         r3
                          (->>
                           note-map-seq
                           (map vector (range))
@@ -337,12 +362,13 @@
                              (let [r2
                                    (->>
                                     note
+                                    :notes
                                     (map vector (range))
                                     (reduce
-                                     (fn[{:keys [x1 images1] :as acc1} [ni i]]
+                                     (fn[{:keys [x1 images1] :as acc1}
+                                         [ni {:keys [shruti] :as cur-note}]]
                                        ;;create all notes in a single beat.
-                                       (let [cur-note (:note i)
-                                             note-xy-map {:row-index row-index
+                                       (let [note-xy-map {:row-index row-index
                                                           :bhaag-index bhaag-index
                                                           :note-index note-index
                                                           :ni ni}
@@ -352,7 +378,7 @@
                                                            :height 50
                                                            :class "blinking-cursor")]
                                              ith-note
-                                             (if-let [ival (image-map cur-note)]
+                                             (if-let [ival (image-map shruti)]
                                                [:image
                                                 {:height 32 :width 32
                                                  :href ival
@@ -363,31 +389,38 @@
                                                                 note-xy-map])))
                                                  :x x1 :y 5}]
                                                ;;- and S
-                                               (do 
-                                                 [:text {:x (+ 10 x1) :y 25}
-                                                  (name (second cur-note))]))
+                                               (do
+                                                 [:text {:x (+ 10 x1) :y 30}
+                                                  (name (second shruti))]))
                                              r3 (-> acc1
                                                     (update-in [:images1] conj ith-note)
                                                     (update-in [:x1] + 20))
 
                                              r3 (let [curpos @(subscribe [::subs/get-click-index])]
                                                   (if (= note-xy-map curpos)
-                                                    (do (println " showing cursor at " curpos)
-                                                        (update-in r3 [:images1] conj cursor-rect))
+                                                    (do
+                                                      (update-in r3 [:images1] conj cursor-rect))
                                                     r3))
-                                             ]
+                                             r3 (if-let [sah (get sah-list note-index)]
+                                                  (if (= ni 0)
+                                                    (-> r3
+                                                        (update-in
+                                                         [:images1]
+                                                         conj
+                                                         [:text {:x (+ 10 x1)
+                                                                 :style {:font-size "15px"}
+                                                                 :y 60} sah]))
+                                                    r3)
+                                                  r3)]
                                          r3))
                                      {:x1 x :images1 []}))
 
-                                   img-count (count (filter #{:text :image}
-                                                            (map first (:images1 r2))))
                                    r5(-> acc
                                          (update-in [:x] (constantly (:x1 r2)))
                                          (update-in [:images] into (:images1 r2)))
                                    ;;if more than 1 note in a single beat,
                                    ;;draw the ellipse under the notes
-
-                                   r6 (if (> img-count 1)
+                                   r6 (if (> (count (:notes note)) 1)
                                         (update-in r5 [:images]
                                                    conj
                                                    [:polyline
@@ -403,11 +436,12 @@
                                                      :fill "none"}])
                                         r5)
                                    ;;add sam-khaali
-                                   r7 (if (and #_(= 0 ni) (= 0 note-index))
-                                        (update-in r6 
+                                   r7 (if (and (= 0 note-index))
+                                        (update-in r6
                                                    [:images] conj
-                                                   [:text {:x 14 :y 60
-                                                           :style {:font-size "15px"}}
+                                                   [:text {:x 14 :y 88
+                                                           :style {:font-size "15px"}
+                                                           }
                                                     (let [t @(subscribe [::subs/taal])
                                                           sk-index
                                                           (->> taal-def t :bhaags
@@ -416,10 +450,39 @@
                                                                inc)]
                                                       (get (-> taal-def t :sam-khaali )
                                                            sk-index))])
-                                        r6)]
-                               r7))
+                                        r6)
+                                   r8 (update-in
+                                       r7
+                                       [:images] conj
+                                       )]
+                               r8))
                            {:x 5 :images []}))
-                         images (:images r3)
+
+                         images
+                         (-> (:images r3)
+                             (into (let [tv @(subscribe [::subs/get-sahitya
+                                                         [row-index bhaag-index]])]
+                                     [
+                                      [:defs
+                                       [:linearGradient {:id "sahitya-fill"}
+                                        [:stop {:offset "0%" :stop-color "gray"}]
+                                        [:stop {:offset "100%" :stop-color "white"}]]]
+                                      [:rect
+                                       {:x 5 :y 48
+                                        :width (:x r3) :height 25
+                                        :rx "5"
+                                        :style
+                                        (let [m {:font-size "15px"}]
+                                          (merge m
+                                                 (if sahitya
+                                                   {:fill "transparent"}
+                                                   {:fill "url(#sahitya-fill)"})))
+                                        :on-click
+                                        (fn[i]
+                                          (dispatch [::events/show-text-popup
+                                                     {:row-index row-index
+                                                      :text-val (if tv tv "")
+                                                      :bhaag-index bhaag-index}]))}]])))
                          x-end (:x r3)]
                      ;;add vertical bars for bhaag
                      ;;2 bars if the avartan starts
@@ -437,7 +500,8 @@
                             (map vector (range))
                             (mapv (fn[[indx i]]
                                     (let [{:keys [images x]} (draw-bhaag row-index indx i )]
-                                      [:div {:class "bhaag-item" :style  {:max-width (+ x 20)}}
+                                      [:div {:class "bhaag-item" :style
+                                             {:max-width (+ x 20)}}
                                        (reduce conj
                                                [:svg {:xmlns "http://www.w3.org/2000/svg" }]
                                                images)])))
@@ -457,7 +521,7 @@
    [swara-display-area]
    [:div {:class "keyboard wow fadeInUp"
           :ref #(if (identity %)
-                  (let [ch (.-offsetHeight %)] 
+                  (let [ch (.-offsetHeight %)]
                     (reset! editor-height ch)))}
     [swara-buttons]]])
 

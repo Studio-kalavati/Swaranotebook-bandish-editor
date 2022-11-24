@@ -8,7 +8,7 @@
 
 (defn get-noteseq-index
   "given a multi-index of row,bhaag and note,
-  returns the index of the note in m-noteseq.  "
+  returns the index of the note in noteseq.  "
   [{:keys [row-index bhaag-index note-index] :as click-index} taal]
   (let [td (taal-def taal)
         num-beats (:num-beats td)
@@ -28,6 +28,7 @@
             (fn[acc [note-index note]]
               (into acc (->>
                          note
+                         :notes
                          (map vector (range))
                          (reduce
                           (fn[acc1 [ni i]]
@@ -75,10 +76,11 @@
 (defn get-forward-backward-map
   "returns a vector with 2 maps, the first indicating the next note in the sequence, and the second
   indicating the previous note in the sequence.
-  Used to push the cursor to the next or previous position while editing.
+  Used to pushruti the cursor to the next or previous position while editing.
   "
   [indexed]
   (let [index-order (make-index-seq indexed)
+        _ (println " index order " index-order)
         index-forward-seq (zipmap (subvec index-order 0 (count index-order))
                                   (vec (rest index-order)))
         index-backward-seq (zipmap (vec (rest index-order))
@@ -87,7 +89,7 @@
      index-backward-seq]))
 
 (def init-comp
-    (let [m-noteseq
+    (let [noteseq
           [
            [{:note [:mandra :s]}]
            [{:note [:mandra :r]}]
@@ -124,18 +126,51 @@
            ]
           taal-id :teentaal
           res
-          {:m-noteseq m-noteseq
+          {:m-noteseq noteseq
+           :sahitya {}
+           :taal taal-id}]
+      res))
+
+(def init-comp2
+    (let [noteseq
+          [
+           {:notes [{:shruti [:mandra :s]}] :lyrics ""}
+           {:notes [{:shruti [:mandra :r]}]}
+           {:notes [{:shruti [:mandra :g]}]}
+           {:notes [{:shruti [:mandra :m]}]}
+           {:notes [{:shruti [:mandra :p]}]}
+           {:notes [{:shruti [:mandra :d]}]}
+           {:notes [{:shruti [:mandra :n]}]}
+           {:notes [{:shruti [:madhyam :s]}]}
+           {:notes [{:shruti [:madhyam "-"]}]}
+           {:notes [{:shruti [:madhyam "s"]}]}
+           {:notes [{:shruti [:madhyam :s]} {:shruti [:madhyam :r]} {:shruti [:madhyam :g]}]}
+           {:notes [{:shruti [:madhyam :m]} {:shruti [:madhyam :p]}]}
+           {:notes [{:shruti [:madhyam :d]}]}
+           {:notes [{:shruti [:madhyam :-n]}]}
+           {:notes [{:shruti [:taar :s]}]}
+           {:notes [{:shruti [:taar :r]}]}
+           {:notes [{:shruti [:taar :g]}]}
+           {:notes [{:shruti [:taar :m]}]}
+           {:notes [{:shruti [:taar :p]}]}
+           {:notes [{:shruti [:taar :d]}]}
+           {:notes [{:shruti [:taar :n]}]}]
+          taal-id :teentaal
+          res
+          {:noteseq noteseq
+           :sahitya {}
            :taal taal-id}]
       res))
 
 (defn add-indexes
   [comp]
-  (let [{:keys [taal m-noteseq] :as imap} comp
+  (let [{:keys [taal noteseq] :as imap} comp
         cur-taal (taal-def taal)
-        indexed (split-bhaags m-noteseq cur-taal)
+        indexed (split-bhaags noteseq cur-taal)
         [f b] (get-forward-backward-map indexed)]
+    (println indexed " indexed " (clojure.string/join indexed "\n"))
     (assoc imap
-           ;;the same m-noteseq that is split into groups of rows (one per taal cycle)
+           ;;the same noteseq that is split into groups of rows (one per taal cycle)
            ;;further into bhaags per row (e.g. 4 in teentaal)
            ;;further into notes and sub-notes
            :indexed-noteseq indexed
@@ -198,6 +233,6 @@
    :dim {:editor (mapv dispinfo [:x-end :y-end])}
 
    ;;properties for this application
-   :composition (add-indexes init-comp)
+   :composition (add-indexes init-comp2)
    :edit-props default-edit-props
    })

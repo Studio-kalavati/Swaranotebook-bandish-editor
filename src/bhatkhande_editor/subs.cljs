@@ -66,6 +66,16 @@
    (get-in db [:edit-props :cursor-pos])))
 
 (reg-sub
+ ::show-text-popup
+ (fn [db [_ _]]
+   (get-in db [:edit-props :show-text-popup])))
+
+(reg-sub
+ ::get-sahitya
+ (fn [db [_ [row-index bhaag-index]]]
+   (get-in db [:composition :sahitya [row-index bhaag-index]])))
+
+(reg-sub
  ::get-note-pos
  (fn [db [_ [bhaag-row-index bhaag-index note-index]]]
    (println "sub "[bhaag-row-index bhaag-index note-index])
