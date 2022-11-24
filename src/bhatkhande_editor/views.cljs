@@ -386,7 +386,9 @@
                                                  (fn[i]
                                                    (do
                                                      (dispatch [::events/set-click-index
-                                                                note-xy-map])))
+                                                                ;;for multi-note, always show on the first
+                                                                (assoc note-xy-map
+                                                                       :ni 0)])))
                                                  :x x1 :y 5}]
                                                ;;- and S
                                                (do
