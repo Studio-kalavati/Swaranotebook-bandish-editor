@@ -30,54 +30,57 @@
 (reg-event-fx
  ::conj-svara
  (fn [{:keys [db]} [_ {:keys [svara notes-per-beat]}]]
-   (let [
-         [note-index note-sub-index] (get-ns-index db)
-         cpos (get-in db [:edit-props :cursor-pos ] )
+   (let [cpos (get-in db [:edit-props :cursor-pos ] )
          index-entry (get-in db [:composition :index-forward-seq (vals cpos)])
-
+         prev-index (get-in db [:composition :index-backward-seq (vals cpos)])
+         _ (println " cur pos" cpos
+                    " prev index " prev-index
+                    " next index " index-entry)
+         note-index (db/get-noteseq-index
+                     (zipmap [:row-index :bhaag-index :note-index :ni]
+                             prev-index)
+                     (get-in db [:composition :taal]))
+         _ (println " pie2 " note-index)
          ln (get-in db [:composition :noteseq note-index])
          nsvara (assoc svara :npb notes-per-beat)
-         _ (println nsvara " note at index " ln " cur pos" cpos  " next index entry " index-entry  " -- "[note-index note-sub-index])
+         _ (println nsvara " note at index " ln 
+                    " notes per beat " notes-per-beat)
+         noteseq-up-fn
+         #(let [note-insert
+                (into (conj (subvec % 0 (inc note-index)) {:notes [nsvara]})
+                      (subvec % (inc note-index)))
+                next-note-cursor
+                (zipmap [:row-index :bhaag-index :note-index :ni] index-entry)
+                res
+                (if (> notes-per-beat 1)
+                  ;;2 states here: either adding the first note of a multi-note
+                  (do (println " a1 "
+                               (and (not= notes-per-beat (-> ln :notes count))
+                                    (= notes-per-beat (-> ln :notes last :npb))))
+                      ;;if not the same as the last npb
+                      (if
+                          (and (not= notes-per-beat (-> ln :notes count))
+                           (= notes-per-beat (-> ln :notes last :npb)))
+                        [(update-in % [note-index :notes] conj nsvara)
+                         (do (println " a2 "(= notes-per-beat (-> ln :notes count inc)))
+                             (if (> notes-per-beat (-> ln :notes count))
+                               ;;if multi-note will be full after this, jump to next full note
+                               cpos
+                               (zipmap [:row-index :bhaag-index :note-index :ni]
+                                       (mapv (update-in cpos [:ni] inc)
+                                             [:row-index :bhaag-index :note-index :ni]))))]
+                        [note-insert next-note-cursor]
+                        ;;otherwise append to multi-note
+                        ))
+                  [note-insert next-note-cursor])]
+            (println " cursor " (second res))
+            res)
+         [updated-ns updated-cursor] (noteseq-up-fn (get-in db [:composition :noteseq]))
          ndb
-         (update-in db
-          [:composition :noteseq]
-          #(let [note-insert
-                 (into (conj (subvec % 0 (inc note-index)) {:notes [nsvara]})
-                       (subvec % (inc note-index)))
-                 ;;if npb is 1, or the last note's npb is different, insert new note
-                 res (if (or (-> ln :notes last :npb (not= notes-per-beat))
-                             (= 1 notes-per-beat))
-                       (do (println " a1 true "
-                                    (vector (-> ln :notes last :npb (not= notes-per-beat))
-                                            (= 1 notes-per-beat)))
-                           note-insert)
-                       (let [last-note-count (count ln)]
-                         (println " a1 false, next "
-                                  (= (count (:notes ln)) notes-per-beat))
-                         ;;last note already have enough notes
-                         (if (= (count (:notes ln)) notes-per-beat)
-                           note-insert
-                           (update-in % [note-index :notes] conj nsvara))))]
-             res))
-         ndb2
-         (update-in ndb
-                    [:edit-props :cursor-pos]
-                    (constantly
-                     (let [_ (println " ntest "
-                                      (vector
-                                       (-> ln :notes last :npb (= notes-per-beat))
-                                       (not (= notes-per-beat (count (:notes ln))))))
-                           res
-                           (zipmap [:row-index :bhaag-index :note-index :ni]
-                                   (if (and (-> ln :notes last :npb (= notes-per-beat))
-                                            (not (= notes-per-beat (count (:notes ln)))))
-                                     ;;increment the note-sub-index
-                                     (mapv (update-in cpos [:ni] inc)
-                                                  [:row-index :bhaag-index :note-index :ni])
-                                     index-entry))]
-                       (println " update cursor to " res)
-                       res)))]
-     {:db ndb2
+         (-> db 
+             (update-in [:composition :noteseq] (constantly updated-ns))
+             (update-in [:edit-props :cursor-pos] (constantly updated-cursor)))]
+     {:db ndb
       :dispatch [::index-noteseq]})))
 
 (reg-event-fx
@@ -132,13 +135,19 @@
    (let [[note-index note-sub-index] (get-ns-index db)
          cpos (get-in db [:edit-props :cursor-pos ] )
          index-entry (get-in db [:composition :index-backward-seq (vals cpos)])]
+     (println " delete index "[note-index note-sub-index] " entry at index " index-entry)
      ;;need to update cursor position too
      {:db
       (-> db
           (update-in [:composition :noteseq]
                      #(let [to-remove (% note-index)
+                            _ (println " to-remove " to-remove )
                             res
-                            (if (= 1 (count to-remove))
+                            (if (= 0 note-index)
+                              ;;dont delete  the first one
+                              %
+                              (into (subvec % 0 (dec note-index)) (subvec % note-index)))
+                            #_(if (= 1 (count to-remove))
                               ;;remove whole svara
                               (into (subvec % 0 note-index) (subvec % (inc note-index)))
                               (let [r2 (into (subvec to-remove 0 note-sub-index)
@@ -147,7 +156,9 @@
                         res))
           (update-in [:edit-props :cursor-pos]
                      (constantly
-                      (zipmap [:row-index :bhaag-index :note-index :ni] index-entry))))
+                      (if (= 0 note-index)
+                        cpos
+                        (zipmap [:row-index :bhaag-index :note-index :ni] index-entry)))))
       :dispatch [::index-noteseq]})))
 
 (reg-event-fx

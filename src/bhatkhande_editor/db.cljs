@@ -13,8 +13,10 @@
   (let [td (taal-def taal)
         num-beats (:num-beats td)
         a1 (* row-index num-beats)
-        a2 (apply + (take bhaag-index (:bhaags td)))]
-    (+ a1 a2 note-index)))
+        a2 (apply + (take bhaag-index (:bhaags td)))
+        res (+ a1 a2 note-index)]
+    (println " getns res " res)
+    res))
 
 (defn make-index-seq
   "given a indexed sequence of notes, returns a flat sequence where each element is [row-index bhaag-index note-index note-sub-index],i.e the note indexes that can be used to retrieve a note  "
@@ -80,7 +82,6 @@
   "
   [indexed]
   (let [index-order (make-index-seq indexed)
-        _ (println " index order " index-order)
         index-forward-seq (zipmap (subvec index-order 0 (count index-order))
                                   (vec (rest index-order)))
         index-backward-seq (zipmap (vec (rest index-order))
@@ -168,7 +169,6 @@
         cur-taal (taal-def taal)
         indexed (split-bhaags noteseq cur-taal)
         [f b] (get-forward-backward-map indexed)]
-    (println indexed " indexed " (clojure.string/join indexed "\n"))
     (assoc imap
            ;;the same noteseq that is split into groups of rows (one per taal cycle)
            ;;further into bhaags per row (e.g. 4 in teentaal)

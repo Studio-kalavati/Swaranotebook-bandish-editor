@@ -374,7 +374,7 @@
                                                           :ni ni}
                                              cursor-rect
                                              [:rect (assoc rect-style
-                                                           :x (+ x1 25) :y 5
+                                                           :x (+ x1 5) #_(+ x1 25) :y 5
                                                            :height 50
                                                            :class "blinking-cursor")]
                                              ith-note
