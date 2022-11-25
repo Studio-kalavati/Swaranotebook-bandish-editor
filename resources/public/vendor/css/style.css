@@ -574,7 +574,6 @@ h6,.h6
 }
 .composition.parts .body
 {
-    /*background-image: linear-gradient(#6d0505, #d4caca);*/
 }
 .composition.parts .body h4
 {
@@ -1325,13 +1324,13 @@ input[type="search"]
 }
 .edit-composition
 {
-    background-color: #F6F6F6;
     padding: 30px 0;
+    background: linear-gradient(90deg, #fe8c00 0%, #f83600 100%);
     overflow: auto;
 }
 .edit-composition .com-edit
 {
-    background-color: #FCFCFC;
+    /* background-color: #FCFCFC; */
     padding: 50px 15px;
     border: 3px solid #EEECED;
 }
@@ -1413,6 +1412,11 @@ input[type="search"]
     margin-bottom: 30px;
 }
 
+.keyboard {
+
+    background: coral;
+    padding: 2px;
+}
 /* Media query */
 @media (max-width: 1199px)
 {
@@ -1624,7 +1628,7 @@ input[type="search"]
     .edit-composition
     {
         padding: 0;
-        background-color: #fcfcfc;
+        /* background-color: #fcfcfc; */
     }
     
     .edit-composition .com-edit
@@ -1684,9 +1688,9 @@ input[type="search"]
 }
 
 .bhaag-item {
-    /*background-color: #444; */
+    background-color: antiquewhite;
     color: #fff;
-    border: solid gray;
+    border: outset  lightgray 1px;
     border-radius: 5px;
     padding: 2px;
     font-size: 150%;
@@ -1713,3 +1717,16 @@ input[type="search"]
     overflow:hidden;
 }
 
+@media print {
+    body * {
+        visibility: hidden;
+    }
+    .edit-composition, .edit-composition * {
+        visibility: visible;
+    }
+    .edit-composition{
+        position: absolute;
+        left: 0;
+        top: 0;
+    }
+}

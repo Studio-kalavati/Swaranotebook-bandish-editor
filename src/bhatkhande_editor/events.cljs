@@ -73,7 +73,6 @@
                         ;;otherwise append to multi-note
                         ))
                   [note-insert next-note-cursor])]
-            (println " cursor " (second res))
             res)
          [updated-ns updated-cursor] (noteseq-up-fn (get-in db [:composition :noteseq]))
          ndb
@@ -86,11 +85,13 @@
 (reg-event-fx
  ::conj-sahitya
  (fn [{:keys [db]} [_ {:keys [text-val bhaag-index row-index]}]]
-   (let []
-     (println " conj sahitya " [text-val bhaag-index row-index])
+   (let [indx (db/get-noteseq-index {:row-index row-index
+                                     :bhaag-index bhaag-index
+                                     :note-index 0}
+                                    (get-in db [:composition :taal]))]
      {:db (-> db
               (update-in
-               [:composition :sahitya [row-index bhaag-index]]
+               [:composition :noteseq indx :lyrics]
                (constantly text-val)))})))
 
 (defn get-last-noteseq-index
@@ -161,7 +162,6 @@
                                         ;;instead make it 0
                                         (conj (subvec index-entry 0 3) 0)
                                         index-entry)))]
-                        (println " cursor after delete " res)
                         res))))
       :dispatch [::index-noteseq]})))
 

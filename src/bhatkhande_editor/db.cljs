@@ -15,7 +15,6 @@
         a1 (* row-index num-beats)
         a2 (apply + (take bhaag-index (:bhaags td)))
         res (+ a1 a2 note-index)]
-    (println " getns res " res)
     res))
 
 (defn make-index-seq
@@ -86,51 +85,9 @@
                                   (vec (rest index-order)))
         index-backward-seq (zipmap (vec (rest index-order))
                                    (subvec index-order 0 (count index-order)) )]
-    [index-forward-seq
+    [index-order
+     index-forward-seq
      index-backward-seq]))
-
-(def init-comp
-    (let [noteseq
-          [
-           [{:note [:mandra :s]}]
-           [{:note [:mandra :r]}]
-           [{:note [:mandra :g]}
-            {:note [:mandra :m]}]
-           [{:note [:mandra :m+]}]
-
-           [{:note [:mandra :p]}
-            {:note [:mandra :-d]}
-            {:note [:mandra :d]}]
-
-           [{:note [:mandra :-n]}]
-           [{:note [:mandra :n]}]
-
-           [{:note [:madhyam :s]}]
-           [{:note [:madhyam :-r]}]
-           [{:note [:madhyam :r]}]
-           [{:note [:madhyam :-g]}]
-           [{:note [:madhyam :g]}]
-           [{:note [:madhyam :m]}]
-           [{:note [:madhyam :m+]}]
-           [{:note [:madhyam :p]}]
-           [{:note [:madhyam :-d]}]
-           [{:note [:madhyam :d]}]
-           [
-            {:note [:madhyam :-n]}
-            {:note [:madhyam :n]}
-            {:note [:taar :s]}]
-           [{:note [:taar :-r]}]
-           [{:note [:taar :r]}]
-           [{:note [:taar :-g]}]
-           [{:note [:taar :g]}]
-           [{:note [:taar :m]}]
-           ]
-          taal-id :teentaal
-          res
-          {:m-noteseq noteseq
-           :sahitya {}
-           :taal taal-id}]
-      res))
 
 (def init-comp2
     (let [noteseq
@@ -155,7 +112,9 @@
            {:notes [{:shruti [:taar :m]}]}
            {:notes [{:shruti [:taar :p]}]}
            {:notes [{:shruti [:taar :d]}]}
-           {:notes [{:shruti [:taar :n]}]}]
+           {:notes [{:shruti [:taar :n]}]}
+           {:notes [{:shruti [:madhyam :-]}]}
+           ]
           taal-id :teentaal
           res
           {:noteseq noteseq
@@ -168,7 +127,7 @@
   (let [{:keys [taal noteseq] :as imap} comp
         cur-taal (taal-def taal)
         indexed (split-bhaags noteseq cur-taal)
-        [f b] (get-forward-backward-map indexed)]
+        [order f b] (get-forward-backward-map indexed)]
     (assoc imap
            ;;the same noteseq that is split into groups of rows (one per taal cycle)
            ;;further into bhaags per row (e.g. 4 in teentaal)
@@ -176,6 +135,7 @@
            :indexed-noteseq indexed
            ;;a map where the key is a 4-part index [row bhaag note sub-note]
            ;;and the value is the next note in sequence (also expressed as a 4-part index)
+           :index order
            :index-forward-seq f
            :index-backward-seq b)))
 
@@ -223,16 +183,20 @@
 (def default-edit-props {:raga :todi
                          :note-pos {}
                          :language-en? false
-                         :cursor-pos (-> init-comp :index-seq count)
                          :note-index []})
-(def default-db
-  {
-   :init-state {:cursor-color 0}
-   :dispinfo (merge dispinfo m-dispinfo)
-   :m-dispinfo m-dispinfo
-   :dim {:editor (mapv dispinfo [:x-end :y-end])}
+(let [comp (add-indexes init-comp2)]
+  (def default-db
+    {
+     :init-state {:cursor-color 0}
+     :dispinfo (merge dispinfo m-dispinfo)
+     :m-dispinfo m-dispinfo
+     :dim {:editor (mapv dispinfo [:x-end :y-end])}
 
-   ;;properties for this application
-   :composition (add-indexes init-comp2)
-   :edit-props default-edit-props
-   })
+     ;;properties for this application
+     :composition comp
+     :edit-props (update-in default-edit-props
+                            [:cursor-pos]
+                            (constantly
+                             (let [in (-> comp :index last)]
+                               (zipmap [:row-index :bhaag-index :note-index :ni] in))))
+     }))

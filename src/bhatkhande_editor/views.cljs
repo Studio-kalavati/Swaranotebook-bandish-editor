@@ -58,6 +58,17 @@
         res [(fnx :mandra) (fnx :madhyam) (fnx :taar)]]
     res))
 
+(defn zmdi-butn2
+  ([icon-class on-click-fn]
+   [box
+    :size "auto"
+    :align-self :stretch
+    :style {:flex "1 1 0px"}
+    :child [:button {:style {:width "100%"}
+                     :class "btn btn-lg"
+                     :on-click on-click-fn}
+            [:i {:class icon-class}]]]))
+
 (defn butn2
   ([text on-click-fn] (butn2 text on-click-fn {}))
   ([text on-click-fn {:keys [style class]
@@ -213,18 +224,22 @@
                                                      {:border-bottom "5px solid black"}
                                                      notes-per-beat)
                                             (swaras-3oct 0))]])
+
                         [[h-box
                           :gap      "0.5vw"
                           :style {:flex-flow "row wrap"}
                           :class "last-bar"
-                          :children [(mk-button notes-per-beat {:note [:madhyam :-]})
-                                     (mk-button notes-per-beat {:note [:madhyam :a]})
-                                     (butn2 "⌫" #(dispatch [::events/delete-single-swara]))
+                          :children [(zmdi-butn2 "zmdi zmdi-print zmdi-hc-lg"
+                                                 #(do (.print js/window)))
                                      (butn2 "💾"
-                                            #(do
-                                               ;;write the current part
-                                               ;;(dispatch [:append-part])
-                                               (download-link nil)))]]
+                                            #(let [comp @(subscribe [::subs/composition])]
+                                               (println " ns " (:noteseq comp))
+                                               (download-link
+                                                (select-keys comp [:noteseq :taal]))))
+                                     (mk-button notes-per-beat {:shruti [:madhyam :-]})
+                                     (mk-button notes-per-beat {:shruti [:madhyam :a]})
+                                     (butn2 "⌫" #(dispatch [::events/delete-single-swara]))
+                                     ]]
                          (when @show-taal-popup
                            (let [ta (:tala-labels (lang-labels @(subscribe [::subs/lang])))
                                  taal-labels (mapv (fn[[a b]] {:id a  :label b}) ta)
@@ -291,18 +306,23 @@
                            (let [text-val (reagent/atom text-val)]
                              [modal-panel
                               :backdrop-on-click #(dispatch [::events/hide-text-popup])
-                              :child [:div {:class "popup" :style {:overflow-y :scroll
-                                                                   :max-height "80vh"}}
+                              :child [:div {:class "popup"
+                                            :style {:overflow-y :scroll
+                                                    :max-height "80vh"}}
                                       [v-box
                                        :gap "2vh"
                                        :class "body"
+                                       :align :center
                                        :children
-                                       [[input-text :src (at)
-                                         :model            text-val
-                                         :width            "60vw"
-                                         :on-change        #(reset! text-val %)
-                                         ]
-                                        [button :label "Ok"
+                                       [[box :align :center
+                                         :child 
+                                         [input-text
+                                          :src (at)
+                                          :model            text-val
+                                          :style {:font-size "large" :width "200px"}
+                                          :on-change        #(reset! text-val %)]]
+                                        [button :label " OK "
+                                         :class "btn-lg btn btn-default"
                                          :on-click
                                          #(do
                                             (dispatch [::events/conj-sahitya
@@ -351,7 +371,15 @@
                               "hindi" "english_SrR"))
                  draw-bhaag
                  (fn[row-index bhaag-index note-map-seq]
-                   (let [sahitya (get-in comp [:sahitya [row-index bhaag-index]])
+                   (let [sahitya
+                         (get-in comp
+                                 [:noteseq
+                                  (db/get-noteseq-index
+                                   {:row-index row-index
+                                    :bhaag-index bhaag-index :note-index 0}
+                                   (:taal comp))
+                                  :lyrics])
+
                          sah-list (when sahitya (clojure.string/split sahitya #","))
                          r3
                          (->>
@@ -374,7 +402,7 @@
                                                           :ni ni}
                                              cursor-rect
                                              [:rect (assoc rect-style
-                                                           :x (+ x1 5) #_(+ x1 25) :y 5
+                                                           :x (+ x1 5) :y 5
                                                            :height 50
                                                            :class "blinking-cursor")]
                                              ith-note
@@ -468,7 +496,7 @@
                                       [:defs
                                        [:linearGradient {:id "sahitya-fill"}
                                         [:stop {:offset "0%" :stop-color "gray"}]
-                                        [:stop {:offset "100%" :stop-color "white"}]]]
+                                        [:stop {:offset "100%" :stop-color "lightgray"}]]]
                                       [:rect
                                        {:x 5 :y 48
                                         :width (:x r3) :height 25
