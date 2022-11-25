@@ -31,30 +31,35 @@
  ::conj-svara
  (fn [{:keys [db]} [_ {:keys [svara notes-per-beat]}]]
    (let [cpos (get-in db [:edit-props :cursor-pos ] )
-         index-entry (get-in db [:composition :index-forward-seq (vals cpos)])
+         next-index(get-in db [:composition :index-forward-seq (vals cpos)])
          prev-index (get-in db [:composition :index-backward-seq (vals cpos)])
          _ (println " cur pos" cpos
                     " prev index " prev-index
-                    " next index " index-entry)
-         note-index (db/get-noteseq-index
-                     (zipmap [:row-index :bhaag-index :note-index :ni]
-                             prev-index)
-                     (get-in db [:composition :taal]))
-         _ (println " pie2 " note-index)
+                    " next index " next-index)
+
+         note-index
+         (if (nil? prev-index)
+           -1
+           (db/get-noteseq-index
+            (zipmap [:row-index :bhaag-index :note-index :nsi] prev-index)
+            (get-in db [:composition :taal])))
+         ;;_ (println " pie2 " note-index " count of ns " (count (get-in db [:composition :noteseq])))
          ln (get-in db [:composition :noteseq note-index])
          nsvara (assoc svara :npb notes-per-beat)
-         _ (println nsvara " note at index " ln 
-                    " notes per beat " notes-per-beat)
+         ;;_ (println nsvara " note at index " ln " notes per beat " notes-per-beat)
          noteseq-up-fn
          #(let [note-insert
-                (into (conj (subvec % 0 (inc note-index)) {:notes [nsvara]})
-                      (subvec % (inc note-index)))
+                (if (= -1 note-index)
+                  ;;insert note before rest of seq cos this is at 0 position
+                  (into [{:notes [nsvara]}] %)
+                  (into (conj (subvec % 0 (inc note-index)) {:notes [nsvara]})
+                        (subvec % (inc note-index))))
                 next-note-cursor
-                (zipmap [:row-index :bhaag-index :note-index :ni] index-entry)
+                (zipmap [:row-index :bhaag-index :note-index :nsi] next-index)
                 res
                 (if (> notes-per-beat 1)
                   ;;2 states here: either adding the first note of a multi-note
-                  (do (println " a1 "
+                  (do #_(println " a1 "
                                (and (not= notes-per-beat (-> ln :notes count))
                                     (= notes-per-beat (-> ln :notes last :npb))))
                       ;;if not the same as the last npb
@@ -62,25 +67,46 @@
                           (and (not= notes-per-beat (-> ln :notes count))
                            (= notes-per-beat (-> ln :notes last :npb)))
                         [(update-in % [note-index :notes] conj nsvara)
-                         (do (println " a2 "(= notes-per-beat (-> ln :notes count inc)))
+                         (do #_(println " a2 "(> notes-per-beat (-> ln :notes count)))
                              (if (> notes-per-beat (-> ln :notes count))
-                               ;;if multi-note will be full after this, jump to next full note
-                               cpos
-                               (zipmap [:row-index :bhaag-index :note-index :ni]
-                                       (mapv (update-in cpos [:ni] inc)
-                                             [:row-index :bhaag-index :note-index :ni]))))]
-                        [note-insert next-note-cursor]
+                               ;;if multi-note will be full after this, stay on the same note
+                               ;;don't increment the cursor
+                               :cur-cursor
+                               ;;increment just note-sub-index
+                               (zipmap [:row-index :bhaag-index :note-index :nsi]
+                                       (mapv (update-in cpos [:nsi] inc)
+                                             [:row-index :bhaag-index :note-index :nsi]))))]
+                        [note-insert :next-note-cursor]
                         ;;otherwise append to multi-note
                         ))
-                  [note-insert next-note-cursor])]
+                  [note-insert :next-note-cursor])]
             res)
          [updated-ns updated-cursor] (noteseq-up-fn (get-in db [:composition :noteseq]))
          ndb
          (-> db 
              (update-in [:composition :noteseq] (constantly updated-ns))
-             (update-in [:edit-props :cursor-pos] (constantly updated-cursor)))]
-     {:db ndb
-      :dispatch [::index-noteseq]})))
+             (update-in [:composition] db/add-indexes))
+         ndb
+         (-> ndb
+             (update-in [:edit-props :cursor-pos]
+                        (constantly
+                         (cond
+                           (= updated-cursor :next-note-cursor)
+                           (let [next-index
+                                 (get-in ndb [:composition :index-forward-seq (vals cpos)])
+                                 prev-index
+                                 (get-in ndb [:composition :index-backward-seq (vals cpos)])
+                                 k1 (zipmap [:row-index :bhaag-index :note-index :nsi] next-index)
+                                 ]
+                             #_(println " 00 cur pos" cpos
+                                      " prev index " prev-index
+                                      " next index " next-index
+                                      " k1 " k1)
+                             k1)
+                           (= updated-cursor :cur-cursor) cpos
+                           :else
+                           updated-cursor))))]
+     {:db ndb})))
 
 (reg-event-fx
  ::conj-sahitya
@@ -156,7 +182,7 @@
                       (let [res 
                             (if (= 0 note-index)
                               cpos
-                              (zipmap [:row-index :bhaag-index :note-index :ni]
+                              (zipmap [:row-index :bhaag-index :note-index :nsi]
                                       (if (> (last index-entry) 0 )
                                         ;;if deleting a multi-note, the ni is > 0
                                         ;;instead make it 0

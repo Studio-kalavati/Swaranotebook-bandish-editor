@@ -394,12 +394,12 @@
                                     (map vector (range))
                                     (reduce
                                      (fn[{:keys [x1 images1] :as acc1}
-                                         [ni {:keys [shruti] :as cur-note}]]
+                                         [nsi {:keys [shruti] :as cur-note}]]
                                        ;;create all notes in a single beat.
                                        (let [note-xy-map {:row-index row-index
                                                           :bhaag-index bhaag-index
                                                           :note-index note-index
-                                                          :ni ni}
+                                                          :nsi nsi}
                                              cursor-rect
                                              [:rect (assoc rect-style
                                                            :x (+ x1 5) :y 5
@@ -416,7 +416,7 @@
                                                      (dispatch [::events/set-click-index
                                                                 ;;for multi-note, always show on the first
                                                                 (assoc note-xy-map
-                                                                       :ni 0)])))
+                                                                       :nsi 0)])))
                                                  :x x1 :y 5}]
                                                ;;- and S
                                                (do
@@ -436,7 +436,7 @@
                                                       (update-in r3 [:images1] conj cursor-rect))
                                                     r3))
                                              r3 (if-let [sah (get sah-list note-index)]
-                                                  (if (= ni 0)
+                                                  (if (= nsi 0)
                                                     (-> r3
                                                         (update-in
                                                          [:images1]
@@ -487,8 +487,7 @@
                                         r6)
                                    r8 (update-in
                                        r7
-                                       [:images] conj
-                                       )]
+                                       [:images] conj)]
                                r8))
                            {:x 5 :images []}))
 

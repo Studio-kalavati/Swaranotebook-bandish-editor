@@ -114,6 +114,7 @@
            {:notes [{:shruti [:taar :d]}]}
            {:notes [{:shruti [:taar :n]}]}
            {:notes [{:shruti [:madhyam :-]}]}
+           {:notes [{:shruti [:madhyam :-]}]}
            ]
           taal-id :teentaal
           res
@@ -198,5 +199,5 @@
                             [:cursor-pos]
                             (constantly
                              (let [in (-> comp :index last)]
-                               (zipmap [:row-index :bhaag-index :note-index :ni] in))))
+                               (zipmap [:row-index :bhaag-index :note-index :nsi] in))))
      }))
