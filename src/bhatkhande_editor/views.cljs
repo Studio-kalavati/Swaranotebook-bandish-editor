@@ -420,7 +420,11 @@
                                                  :x x1 :y 5}]
                                                ;;- and S
                                                (do
-                                                 [:text {:x (+ 10 x1) :y 30}
+                                                 [:text {:x (+ 10 x1) :y 30
+                                                         :on-click
+                                                         (fn[i]
+                                                           (dispatch [::events/set-click-index
+                                                                      note-xy-map]))}
                                                   (name (second shruti))]))
                                              r3 (-> acc1
                                                     (update-in [:images1] conj ith-note)
