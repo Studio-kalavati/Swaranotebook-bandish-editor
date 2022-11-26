@@ -100,7 +100,7 @@
    [button
     :label [:span label]
     :style {:padding "10px"}
-    :class (if (true? (state)) "btn-lg swarabuttons btn-sm btn-primary btn-highlight" "btn-lg swarabuttons btn-sm btn-default")
+    :class (if (true? (state)) "btn-lg swarabuttons btn-sm btn-primary " "btn-lg swarabuttons btn-sm btn-default")
     :on-click #(disp-fn)]])
 
 (defn alternating-color-background
@@ -225,21 +225,38 @@
                                                      notes-per-beat)
                                             (swaras-3oct 0))]])
 
-                        [[h-box
-                          :gap      "0.5vw"
-                          :style {:flex-flow "row wrap"}
-                          :class "last-bar"
-                          :children [(zmdi-butn2 "zmdi zmdi-print zmdi-hc-lg"
-                                                 #(do (.print js/window)))
-                                     (butn2 "💾"
-                                            #(let [comp @(subscribe [::subs/composition])]
-                                               (println " ns " (:noteseq comp))
-                                               (download-link
-                                                (select-keys comp [:noteseq :taal]))))
-                                     (mk-button notes-per-beat {:shruti [:madhyam :-]})
-                                     (mk-button notes-per-beat {:shruti [:madhyam :a]})
-                                     (butn2 "⌫" #(dispatch [::events/delete-single-swara]))
-                                     ]]
+                        [(let [logged-in? @(subscribe [::subs/user])]
+                           [h-box
+                            :gap      "0.5vw"
+                            :style {:flex-flow "row wrap"}
+                            :class "last-bar"
+                            :children [(zmdi-butn2 "zmdi zmdi-print zmdi-hc-lg"
+                                                   #(do (.print js/window)))
+                                       (zmdi-butn2 "zmdi zmdi-download zmdi-hc-lg"
+                                                   #(let [comp @(subscribe [::subs/composition])]
+                                                      (println " ns " (:noteseq comp))
+                                                      (download-link
+                                                       (select-keys comp [:noteseq :taal]))))
+                                       (if logged-in?
+                                         (zmdi-butn2 "zmdi zmdi-sign-in zmdi-hc-lg"
+                                                     #(do (dispatch [::events/sign-out])))
+                                         (zmdi-butn2 "zmdi zmdi-google-plus zmdi-hc-lg"
+                                                     #(do (dispatch [::events/sign-in]))))
+                                       (when-let [share-url @(subscribe [::subs/share-url])] 
+                                         (zmdi-butn2 "zmdi zmdi-share zmdi-hc-lg"
+                                                     #(let [share-url (db/get-bandish-url share-url)]
+                                                        (when (.-share js/navigator)
+                                                          (-> (.share js/navigator #js {"title" "test"
+                                                                                        "text" " check out this bandish"
+                                                                                        "url" share-url})
+                                                              (.then (fn[i] (println " shared")))
+                                                              (.catch (fn[i] (println " share error"))))))))
+                                       (when logged-in? 
+                                         (zmdi-butn2 "zmdi zmdi-cloud-upload zmdi-hc-lg"
+                                                     #(dispatch [::events/upload-comp-json "abc.json"])))
+                                       (mk-button notes-per-beat {:shruti [:madhyam :-]})
+                                       (mk-button notes-per-beat {:shruti [:madhyam :a]})
+                                       (butn2 "⌫" #(dispatch [::events/delete-single-swara]))]])
                          (when @show-taal-popup
                            (let [ta (:tala-labels (lang-labels @(subscribe [::subs/lang])))
                                  taal-labels (mapv (fn[[a b]] {:id a  :label b}) ta)
@@ -547,7 +564,7 @@
                  fin (reduce conj [:div {:class "wrapper"}] b1)]
              fin)]]]))))
 
-(defn show-editor-keyboard
+(defn show-editor
   []
   [:div
    ;;editor height is 0 by default, so the canvas is first drawn too large in height
@@ -558,10 +575,25 @@
                     (reset! editor-height ch)))}
     [swara-buttons]]])
 
-(defmethod routes/panels :home-panel [] [show-editor-keyboard])
+
+(defn load-bandish
+  []
+  [:div
+   (do 
+     #_(dispatch [::events/get-bandish-json])
+     [:h1 "Retrieving notes "])
+   #_(if @(subscribe [::subs/composition])
+     (dispatch [::events/set-active-panel :home])
+     )
+   ])
+
+(defmethod routes/panels :load-panel [] [load-bandish])
+
+(defmethod routes/panels :home-panel [] [show-editor])
 
 (defn main-panel []
   (let [active-panel (re-frame/subscribe [::subs/active-panel])]
+    (println " panels " routes/panels " active " @active-panel)
     [re-com/v-box
      :src      (at)
      :height   "100%"

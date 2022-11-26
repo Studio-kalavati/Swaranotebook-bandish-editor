@@ -13,7 +13,9 @@
   [studiokalavati/sargam-spec "0.1.10"]
   [com.cognitect/transit-cljs "0.8.280"]
 
+  [com.shark8me/re-frame-firebase "0.8.3-SNAPSHOT"]
   [breaking-point "0.1.2"]
+  [adzerk/env "0.4.0"]
   [binaryage/devtools "1.0.6"]
   [cider/cider-nrepl "0.28.4"]]
 
