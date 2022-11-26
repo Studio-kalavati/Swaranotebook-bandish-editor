@@ -80,3 +80,13 @@
  (fn [db [_ [bhaag-row-index bhaag-index note-index]]]
    (println "sub "[bhaag-row-index bhaag-index note-index])
    (get-in db [:edit-props :note-pos bhaag-row-index bhaag-index note-index])))
+
+(reg-sub
+ ::user
+ (fn [db [_ _]]
+   (:user db)))
+
+(reg-sub
+ ::share-url
+ (fn [db [_ _]]
+   (:bandish-url db)))

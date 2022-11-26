@@ -1,10 +1,21 @@
 (ns bhatkhande-editor.db
   (:require
    [sargam.spec :as us]
-   [clojure.zip :as z]
-   [clojure.walk :as w]
- [sargam.talas :as talas
-    :refer [taal-def]]))
+   [sargam.talas :as talas :refer [taal-def]])
+  (:require-macros [adzerk.env :as env]))
+
+
+(env/def
+  apiKey :required
+  authDomain :required
+  projectId :required
+  storageBucket :required
+  messagingSenderId :required
+  appId :required)
+
+(defn get-bandish-url
+  [path]
+  (str "https://storage.googleapis.com/" storageBucket "/" path))
 
 (defn get-noteseq-index
   "given a multi-index of row,bhaag and note,
@@ -119,7 +130,6 @@
           taal-id :teentaal
           res
           {:noteseq noteseq
-           :sahitya {}
            :taal taal-id}]
       res))
 
@@ -185,19 +195,20 @@
                          :note-pos {}
                          :language-en? false
                          :note-index []})
-(let [comp (add-indexes init-comp2)]
-  (def default-db
-    {
-     :init-state {:cursor-color 0}
-     :dispinfo (merge dispinfo m-dispinfo)
-     :m-dispinfo m-dispinfo
-     :dim {:editor (mapv dispinfo [:x-end :y-end])}
-
-     ;;properties for this application
-     :composition comp
+(defn comp-decorator
+  [comp0]
+  (let [comp (add-indexes comp0)]
+    {:composition comp
      :edit-props (update-in default-edit-props
                             [:cursor-pos]
                             (constantly
                              (let [in (-> comp :index last)]
-                               (zipmap [:row-index :bhaag-index :note-index :nsi] in))))
-     }))
+                               (zipmap [:row-index :bhaag-index :note-index :nsi] in))))}))
+
+(def default-db
+  (merge (comp-decorator init-comp2)
+         {:init-state {:cursor-color 0}
+          :dispinfo (merge dispinfo m-dispinfo)
+          :m-dispinfo m-dispinfo
+          :dim {:editor (mapv dispinfo [:x-end :y-end])}}))
+

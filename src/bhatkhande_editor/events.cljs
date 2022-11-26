@@ -3,7 +3,13 @@
    [re-frame.core :as re-frame
     :refer [debug reg-event-db reg-event-fx
             subscribe dispatch dispatch-sync]]
-   [bhatkhande-editor.db :as db]))
+   [bhatkhande-editor.db :as db]
+   ["firebase/app" :default firebase]
+   ["firebase/auth" :default fbauth]
+   ["firebase/storage" :default storage]
+   ["firebase/firestore" :as firebase-firestore]
+   [cognitect.transit :as t]
+   ))
 
 (defn get-ns-index
   [db]
@@ -20,11 +26,13 @@
 (re-frame/reg-event-fx
   ::navigate
   (fn [_ [_ handler]]
+    (println " navigaate " handler)
    {:navigate handler}))
 
 (re-frame/reg-event-fx
  ::set-active-panel
  (fn [{:keys [db]} [_ active-panel]]
+   (println " setting active panel "active-panel)
    {:db (assoc db :active-panel active-panel)}))
 
 (reg-event-fx
@@ -217,3 +225,127 @@
  (fn [{:keys [db]} [_ _]]
    (let [ndb (update-in db [:edit-props :note-index ] (constantly []))]
      {:db ndb})))
+
+(defn to-trans [x]
+  (let [w (t/writer :json)]
+    (t/write w x)))
+
+;; media and cloud
+(reg-event-fx
+ ::upload-comp-json
+ (fn [{:keys [db]} [_ file-name]]
+   (let [comp (to-trans (select-keys (-> db :composition) [:noteseq :taal]))
+         uuid (last (.split (.toString (random-uuid)) #"-"))
+         _ (println uuid " last notes "
+                    (->> db :composition :noteseq (drop 20)))
+         path (str (-> db :user :uid) "/" uuid "-" file-name )
+         stor (.storage firebase)
+         storageRef (.ref stor)
+         file-ref  (.child storageRef path)]
+     (-> (.putString file-ref comp)
+         (.then
+          (fn[i]
+            ;;handle failure of upload
+            (.then
+             (.getDownloadURL file-ref)
+             (fn[iurl]
+               (dispatch [::submission-completed? true])
+               (dispatch [::update-bandish-url path]))))))
+     {})))
+
+(reg-event-fx
+ ::submission-completed?
+ (fn [{:keys [db]} [_ _]]
+   {:db db}))
+
+(reg-event-fx
+ ::update-bandish-url
+ (fn [{:keys [db]} [_ bandish-json-url]]
+   {:db
+    (-> db
+        (update-in [:bandish-url]
+                   (constantly bandish-json-url)))}))
+
+(reg-event-fx
+ ::sign-in
+ (fn [{:keys [db]} _]
+   (let [storage (.-sessionStorage js/window)]
+     ;;set a local storage because
+     ;;when the auth redirect is sent back to the page,
+     ;;the local DB atom will not remember and will load its
+     ;;original clean slate.
+     (.setItem storage "sign-in" "inprogress")
+     {:db (-> db
+              (dissoc :firebase-error))
+      :firebase/google-sign-in {:sign-in-method :redirect}})))
+
+(reg-event-fx
+ ::sign-out
+ (fn [{:keys [db]} _]
+   {:db (dissoc db :user)
+    :firebase/sign-out nil}))
+
+(reg-event-fx
+ ::set-user
+ (fn [{:keys [db]}[_ user]]
+   (if (and user (:email user))
+     (let [storage (.-sessionStorage js/window)]
+       (when storage
+         (do ;;(println " removeItem called")
+           (.removeItem storage "sign-in")))
+       ;;set the id token
+       #_(.then (.getIdToken (:user user))
+                #(dispatch [::set-firebase-idtoken %]))
+       {:db (-> db (assoc :user user)
+                (dissoc :user-nil-times))
+        })
+     ;;the first event is user nil and the second one has the user mapv
+     ;;therefor if it is set nil twice, then show login popup
+     {:db (update-in db [:user-nil-times] (fnil inc 1))
+      ;;:dispatch [::set-active-panel :login-panel]
+      })))
+
+(reg-event-fx
+ ::firebase-error
+ (fn [{:keys [db]} _]
+   (println " fb auth error ")
+   {:db db}))
+
+(reg-event-fx
+ ::set-bandish-id
+ (fn [{:keys [db]} [_ id]]
+   {:db (assoc db :bandish-id id)}))
+
+(reg-event-fx
+ ::get-bandish-json
+ (fn [{:keys [db]} [_ {:keys [path id]}]]
+   (let [tr (t/reader :json)]
+     (-> (js/fetch
+          (db/get-bandish-url (str path "/" id))
+          #js {"method" "get"})
+         (.then (fn[i] (.text i)))
+         (.then (fn[i]
+                  (let [imap (js->clj (t/read tr i))
+                        res (db/comp-decorator imap)]
+                    (println " noteseqq " (keys imap) " - "
+                             (->> res :composition :noteseq (drop 20)))
+                    (dispatch [::refresh-comp res]))))
+         (.catch (fn[i] (println " error " i ))))
+     {:db db})))
+
+
+(reg-event-fx
+ ::refresh-comp
+ (fn [{:keys [db]} [_ {:keys [composition edit-props]}]]
+   {:db (-> db
+            (update-in [:composition] (constantly composition))
+            (update-in [:edit-props] (constantly edit-props)))
+    :dispatch [::navigate :home]}))
+
+#_(reg-event-fx
+ ::share-event
+ (fn [{:keys [db]} [_ _]]
+   {:db (-> db
+            (update-in [:composition] (constantly composition))
+            (update-in [:edit-props] (constantly edit-props)))
+    :dispatch [::navigate :home]}))

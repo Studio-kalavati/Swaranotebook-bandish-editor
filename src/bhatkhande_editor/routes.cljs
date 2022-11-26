@@ -10,8 +10,8 @@
 
 (def routes
   (atom
-    ["/" {""      :home
-          "about" :about}]))
+   ["/" {"" :home
+         "view/" {[:path "/" :id]:load}}]))
 
 (defn parse
   [url]
@@ -24,6 +24,12 @@
 (defn dispatch
   [route]
   (let [panel (keyword (str (name (:handler route)) "-panel"))]
+    (println " panel " panel " route " route)
+    (when-let [id  (-> route :route-params :id)]
+      (println " route " id)
+      (re-frame/dispatch [::events/get-bandish-json
+                          {:path (-> route :route-params :path)
+                           :id id}]))
     (re-frame/dispatch [::events/set-active-panel panel])))
 
 (defonce history
@@ -31,6 +37,7 @@
 
 (defn navigate!
   [handler]
+  (println " navigate " handler)
   (pushy/set-token! history (url-for handler)))
 
 (defn start!

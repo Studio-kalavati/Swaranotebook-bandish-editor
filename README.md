@@ -215,3 +215,8 @@ Please be patient; it may take over 15 seconds to see any output, and over 30 se
 
 The `resources/public/js/compiled` directory is created, containing the compiled `app.js` and
 `manifest.edn` files.
+
+## Cors config
+
+Allow cors request from hosts. See https://cloud.google.com/storage/docs/gsutil/commands/cors#synopsis
+gsutil cors set  cors-config gs://cloudbucket.appspot.com

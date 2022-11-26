@@ -11,6 +11,7 @@
 		"react-dom": "^17.0.2"
 	},
 	"devDependencies": {
-		"shadow-cljs": "2.19.6"
+		"shadow-cljs": "2.19.6",
+		"firebase": "^8.6.4"
 	}
 }
