@@ -30,6 +30,7 @@
    :asset-path "/js/compiled"
    :modules
    {:app {:init-fn bhatkhande-editor.core/init}}
+   :release {:compiler-options {:optimizations :simple}}
    :devtools
    {:preloads []}
    :dev
