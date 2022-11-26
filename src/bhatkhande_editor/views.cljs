@@ -144,6 +144,8 @@
         show-raga-popup (reagent/atom false)
         show-taal-popup (reagent/atom false)
         show-lang-popup (reagent/atom false)
+        show-login-popup? (reagent/atom false)
+        newsletter-signup? (reagent/atom true)
         notes-per-beat (reagent/atom 1)]
     (fn []
       (let [sbp (vec (repeat 21 (reagent/atom false)))
@@ -241,8 +243,8 @@
                                          (zmdi-butn2 "zmdi zmdi-sign-in zmdi-hc-lg"
                                                      #(do (dispatch [::events/sign-out])))
                                          (zmdi-butn2 "zmdi zmdi-google-plus zmdi-hc-lg"
-                                                     #(do (dispatch [::events/sign-in]))))
-                                       (when-let [share-url @(subscribe [::subs/share-url])] 
+                                                     #(do (reset! show-login-popup? true))))
+                                       (when-let [share-url @(subscribe [::subs/share-url])]
                                          (zmdi-butn2 "zmdi zmdi-share zmdi-hc-lg"
                                                      #(let [share-url (db/get-bandish-url share-url)]
                                                         (when (.-share js/navigator)
@@ -257,6 +259,31 @@
                                        (mk-button notes-per-beat {:shruti [:madhyam :-]})
                                        (mk-button notes-per-beat {:shruti [:madhyam :a]})
                                        (butn2 "⌫" #(dispatch [::events/delete-single-swara]))]])
+                         (when @show-login-popup?
+                           (let []
+                             [modal-panel
+                              :backdrop-on-click #(reset! show-login-popup? false)
+                              :child [:div {:class "popup" :style {:overflow-y :scroll
+                                                                   :max-height "80vh"}}
+                                      [v-box
+                                       :gap "2vh"
+                                       :class "body"
+                                       :align :center
+                                       :children
+                                       [[box
+                                         :align :center
+                                         :child [title :level :level3
+                                                 :label "Login to save & share Bandish"]]
+                                        [gap :size "3vh"]
+                                        [button
+                                         :label "Google + "
+                                         :class "btn-hc-lg btn-primary btn-danger"
+                                         :on-click #(do (reset! show-login-popup? false)
+                                                        (dispatch [::events/sign-in]))]
+                                        #_[checkbox
+                                         :model newsletter-signup?
+                                         :label "Sign up for an occasional email"
+                                         :on-change #(reset! newsletter-signup? (not @newsletter-signup?))]]]]]))
                          (when @show-taal-popup
                            (let [ta (:tala-labels (lang-labels @(subscribe [::subs/lang])))
                                  taal-labels (mapv (fn[[a b]] {:id a  :label b}) ta)
