@@ -245,21 +245,15 @@
      (-> (.putString file-ref comp)
          (.then
           (fn[i]
-            ;;handle failure of upload
-            (.then
-             (.getDownloadURL file-ref)
-             (fn[iurl]
-               (dispatch [::submission-completed? true])
-               (dispatch [::get-short-url path])
-               (dispatch [::update-bandish-url path]))))))
+            (dispatch [::update-bandish-url path]))))
      {})))
 
-(reg-event-fx
+#_(reg-event-fx
  ::submission-completed?
  (fn [{:keys [db]} [_ _]]
    {:db db}))
 
-(reg-event-fx
+#_(reg-event-fx
  ::get-short-url
  (fn [{:keys [db]} [_ path]]
    (let [tr (t/reader :json)]
@@ -278,11 +272,12 @@
 
 (reg-event-fx
  ::update-bandish-url
- (fn [{:keys [db]} [_ bandish-json-url]]
+ (fn [{:keys [db]} [_ bandish-url]]
+   (println " bandish url is "bandish-url)
    {:db
     (-> db
         (update-in [:bandish-url]
-                   (constantly bandish-json-url)))}))
+                   (constantly bandish-url)))}))
 
 (reg-event-fx
  ::sign-in

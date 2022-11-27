@@ -254,8 +254,8 @@
                                              (if (.-share js/navigator)
                                                (-> (.share js/navigator
                                                            #js
-                                                           {"title" "test"
-                                                            "text" " check out this bandish"
+                                                           {"title" @title-val
+                                                            "text" " Check out this bandish I wrote"
                                                             "url"
                                                             (str
                                                              (.-origin (.-location js/window))
