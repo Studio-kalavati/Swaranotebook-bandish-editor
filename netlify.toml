@@ -1,5 +1,5 @@
 [[redirects]]
-  from = "/view"
+  from = "/view/*"
   to = "/index.html"
   status = 200
   force = true 

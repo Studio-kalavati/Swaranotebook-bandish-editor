@@ -20,6 +20,7 @@
                                    ;;simple-v-table
                                    at
                                    button
+                                   p
                                    gap
                                    throbber
                                    modal-panel]]
@@ -290,10 +291,12 @@
                                          [title :level :level3
                                           :label "Copy this link to share the Bandish"]]
                                         [gap :size "3vh"]
-                                        [hyperlink
-                                         :label (str (.-origin (.-location js/window))
-                                                     "/view/"
-                                                     @(subscribe [::subs/share-url]))]
+                                        [box :align :center
+                                         :style {:max-width "40vw"}
+                                         :child
+                                         [p (str (.-origin (.-location js/window))
+                                                 "/view/"
+                                                 @(subscribe [::subs/share-url]))]]
                                         [button
                                          :label "  OK  " 
                                          :class "btn-hc-lg btn-primary "
