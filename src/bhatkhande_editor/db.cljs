@@ -17,6 +17,10 @@
   [path]
   (str "https://storage.googleapis.com/" storageBucket "/" path))
 
+(defn get-long-url
+  [path]
+  (str (.-host (.-location js/window)) "/view/" path))
+
 (defn get-noteseq-index
   "given a multi-index of row,bhaag and note,
   returns the index of the note in noteseq.  "

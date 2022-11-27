@@ -256,7 +256,8 @@
                                                                       {"title" "test"
                                                                        "text" " check out this bandish"
                                                                        "url"
-                                                                       (str (.-origin (.-location js/window))
+                                                                       (str
+                                                                        (.-origin (.-location js/window))
                                                                             "/view/"
                                                                             share-url)})
                                                               (.then (fn[i] (println " shared")))
@@ -286,9 +287,10 @@
                                          :align :center
                                          :child [title :level :level3 :label "Copy this link to share the Bandish"]]
                                         [gap :size "3vh"]
-                                        [hyperlink :label (str (.-origin (.-location js/window))
-                                                               "/view/"
-                                                               @(subscribe [::subs/share-url]))]
+                                        [hyperlink :label (str
+                                                           (.-origin (.-location js/window))
+                                                           "/view/"
+                                                           @(subscribe [::subs/share-url]))]
                                         [button
                                          :label "  OK  " 
                                          :class "btn-hc-lg btn-primary "

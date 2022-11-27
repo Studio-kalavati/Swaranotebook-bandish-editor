@@ -250,6 +250,7 @@
              (.getDownloadURL file-ref)
              (fn[iurl]
                (dispatch [::submission-completed? true])
+               (dispatch [::get-short-url path])
                (dispatch [::update-bandish-url path]))))))
      {})))
 
@@ -257,6 +258,23 @@
  ::submission-completed?
  (fn [{:keys [db]} [_ _]]
    {:db db}))
+
+(reg-event-fx
+ ::get-short-url
+ (fn [{:keys [db]} [_ path]]
+   (let [tr (t/reader :json)]
+     (-> (js/fetch
+          (str "https://firebasedynamiclinks.googleapis.com/v1/shortLinks?key=" db/apiKey)
+          #js {"method" "post"
+               "body" (.stringify js/JSON
+                                  #js {"longDynamicLink"
+                                       (db/get-long-url path)})})
+         (.then (fn[i] (.json i)))
+         (.then (fn[i]
+                  (let []
+                    (println " json resp " i))))
+         (.catch (fn[i] (println " error " i ))))
+     {:db db})))
 
 (reg-event-fx
  ::update-bandish-url
