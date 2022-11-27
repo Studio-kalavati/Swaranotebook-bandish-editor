@@ -249,24 +249,25 @@
                                        (when-let [share-url @(subscribe [::subs/share-url])]
                                          (zmdi-butn2
                                           "zmdi zmdi-share zmdi-hc-lg"
-                                                     #(let [share-url (db/get-bandish-url share-url)]
-                                                        (if (.-share js/navigator)
-                                                          (-> (.share js/navigator
-                                                                      #js
-                                                                      {"title" "test"
-                                                                       "text" " check out this bandish"
-                                                                       "url"
-                                                                       (str
-                                                                        (.-origin (.-location js/window))
-                                                                            "/view/"
-                                                                            share-url)})
-                                                              (.then (fn[i] (println " shared")))
-                                                              (.catch (fn[i]
-                                                                        (println " share error"))))
-                                                          ;;put in a popup if share is not enabled
-                                                          (do
-                                                            (reset! show-share-popup? true))
-                                                          ))))
+                                          #(let []
+                                             (println " share url " share-url)
+                                             (if (.-share js/navigator)
+                                               (-> (.share js/navigator
+                                                           #js
+                                                           {"title" "test"
+                                                            "text" " check out this bandish"
+                                                            "url"
+                                                            (str
+                                                             (.-origin (.-location js/window))
+                                                             "/view/"
+                                                             share-url)})
+                                                   (.then (fn[i] (println " shared")))
+                                                   (.catch (fn[i]
+                                                             (println " share error"))))
+                                               ;;put in a popup if share is not enabled
+                                               (do
+                                                 (reset! show-share-popup? true))
+                                               ))))
                                        (when logged-in?
                                          (zmdi-butn2 "zmdi zmdi-cloud-upload zmdi-hc-lg"
                                                      #(reset! show-title-popup? true)))
@@ -285,12 +286,14 @@
                                        :children
                                        [[box
                                          :align :center
-                                         :child [title :level :level3 :label "Copy this link to share the Bandish"]]
+                                         :child
+                                         [title :level :level3
+                                          :label "Copy this link to share the Bandish"]]
                                         [gap :size "3vh"]
-                                        [hyperlink :label (str
-                                                           (.-origin (.-location js/window))
-                                                           "/view/"
-                                                           @(subscribe [::subs/share-url]))]
+                                        [hyperlink
+                                         :label (str (.-origin (.-location js/window))
+                                                     "/view/"
+                                                     @(subscribe [::subs/share-url]))]
                                         [button
                                          :label "  OK  " 
                                          :class "btn-hc-lg btn-primary "
