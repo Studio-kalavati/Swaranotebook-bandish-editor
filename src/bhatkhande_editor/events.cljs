@@ -341,11 +341,3 @@
             (update-in [:composition] (constantly composition))
             (update-in [:edit-props] (constantly edit-props)))
     :dispatch [::navigate :home]}))
-
-#_(reg-event-fx
- ::share-event
- (fn [{:keys [db]} [_ _]]
-   {:db (-> db
-            (update-in [:composition] (constantly composition))
-            (update-in [:edit-props] (constantly edit-props)))
-    :dispatch [::navigate :home]}))

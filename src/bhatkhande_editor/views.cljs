@@ -145,7 +145,10 @@
         show-taal-popup (reagent/atom false)
         show-lang-popup (reagent/atom false)
         show-login-popup? (reagent/atom false)
+        show-share-popup? (reagent/atom false)
+        show-title-popup? (reagent/atom false)
         newsletter-signup? (reagent/atom true)
+        title-val (reagent/atom "")
         notes-per-beat (reagent/atom 1)]
     (fn []
       (let [sbp (vec (repeat 21 (reagent/atom false)))
@@ -236,7 +239,6 @@
                                                    #(do (.print js/window)))
                                        (zmdi-butn2 "zmdi zmdi-download zmdi-hc-lg"
                                                    #(let [comp @(subscribe [::subs/composition])]
-                                                      (println " ns " (:noteseq comp))
                                                       (download-link
                                                        (select-keys comp [:noteseq :taal]))))
                                        (if logged-in?
@@ -245,20 +247,79 @@
                                          (zmdi-butn2 "zmdi zmdi-google-plus zmdi-hc-lg"
                                                      #(do (reset! show-login-popup? true))))
                                        (when-let [share-url @(subscribe [::subs/share-url])]
-                                         (zmdi-butn2 "zmdi zmdi-share zmdi-hc-lg"
+                                         (zmdi-butn2
+                                          "zmdi zmdi-share zmdi-hc-lg"
                                                      #(let [share-url (db/get-bandish-url share-url)]
-                                                        (when (.-share js/navigator)
-                                                          (-> (.share js/navigator #js {"title" "test"
-                                                                                        "text" " check out this bandish"
-                                                                                        "url" share-url})
+                                                        (if (.-share js/navigator)
+                                                          (-> (.share js/navigator
+                                                                      #js
+                                                                      {"title" "test"
+                                                                       "text" " check out this bandish"
+                                                                       "url"
+                                                                       (str (.-origin (.-location js/window))
+                                                                            "/view/"
+                                                                            share-url)})
                                                               (.then (fn[i] (println " shared")))
-                                                              (.catch (fn[i] (println " share error"))))))))
-                                       (when logged-in? 
+                                                              (.catch (fn[i]
+                                                                        (println " share error"))))
+                                                          ;;put in a popup if share is not enabled
+                                                          (do
+                                                            (reset! show-share-popup? true))
+                                                          ))))
+                                       (when logged-in?
                                          (zmdi-butn2 "zmdi zmdi-cloud-upload zmdi-hc-lg"
-                                                     #(dispatch [::events/upload-comp-json "abc.json"])))
+                                                     #(reset! show-title-popup? true)))
                                        (mk-button notes-per-beat {:shruti [:madhyam :-]})
                                        (mk-button notes-per-beat {:shruti [:madhyam :a]})
                                        (butn2 "⌫" #(dispatch [::events/delete-single-swara]))]])
+                         (when @show-share-popup?
+                           [modal-panel
+                              :backdrop-on-click #(reset! show-share-popup? false)
+                              :child [:div {:class "popup" :style {:overflow-y :scroll
+                                                                   :max-height "80vh"}}
+                                      [v-box
+                                       :gap "2vh"
+                                       :class "body"
+                                       :align :center
+                                       :children
+                                       [[box
+                                         :align :center
+                                         :child [title :level :level3 :label "Copy this link to share the Bandish"]]
+                                        [gap :size "3vh"]
+                                        [hyperlink :label (str (.-origin (.-location js/window))
+                                                               "/view/"
+                                                               @(subscribe [::subs/share-url]))]
+                                        [button
+                                         :label "  OK  " 
+                                         :class "btn-hc-lg btn-primary "
+                                         :on-click #(do (reset! show-share-popup? false))]]]]])
+                         (when @show-title-popup?
+                           (let []
+                             [modal-panel
+                              :backdrop-on-click #(reset! show-title-popup? false)
+                              :child [:div {:class "popup" :style {:overflow-y :scroll
+                                                                   :max-height "80vh"}}
+                                      [v-box
+                                       :gap "2vh"
+                                       :class "body"
+                                       :align :center
+                                       :children
+                                       [[box
+                                         :align :center
+                                         :child [title :level :level3 :label "Bandish title"]]
+                                        [gap :size "3vh"]
+                                        [box :align :center
+                                         :child 
+                                         [input-text
+                                          :src (at)
+                                          :model            title-val
+                                          :style {:font-size "large" :width "200px" :text-align "center"}
+                                          :on-change        #(reset! title-val %)]]
+                                        [button
+                                         :label " Save "
+                                         :class "btn-hc-lg btn-primary "
+                                         :on-click #(do (reset! show-title-popup? false)
+                                                        (dispatch [::events/upload-comp-json @title-val]))]]]]]))
                          (when @show-login-popup?
                            (let []
                              [modal-panel
