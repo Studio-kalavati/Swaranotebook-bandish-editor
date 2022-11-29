@@ -34,6 +34,7 @@
    [bhatkhande-editor.events :as events]
    [bhatkhande-editor.routes :as routes]
    [bhatkhande-editor.db :as db :refer [note-seq mswaras]]
+   
    [bhatkhande-editor.subs :as subs]))
 
 (defn box-size-padding
@@ -675,21 +676,26 @@
 (defn load-bandish
   []
   [:div
-   (do 
-     #_(dispatch [::events/get-bandish-json])
-     [:h1 "Retrieving notes "])
-   #_(if @(subscribe [::subs/composition])
-     (dispatch [::events/set-active-panel :home])
-     )
-   ])
+   [modal-panel
+    :child [:div {:class "popup"
+                  :style {:overflow-y :scroll
+                          :max-height "80vh"}}
+            [v-box
+             :gap "2vh"
+             :class "body"
+             :align :center
+             :children
+             [[box :align :center
+               :child
+               [title :level :level3 :label "Loading Bandish"]]]]]]])
 
 (defmethod routes/panels :load-panel [] [load-bandish])
 
 (defmethod routes/panels :home-panel [] [show-editor])
 
 (defn main-panel []
-  (let [active-panel (re-frame/subscribe [::subs/active-panel])]
-    (println " panels " routes/panels " active " @active-panel)
+  (let [active-panel (re-frame/subscribe [::subs/active-panel])
+        screen-height (re-frame/subscribe [::bp/screen-height])]
     [re-com/v-box
      :src      (at)
      :height   "100%"
