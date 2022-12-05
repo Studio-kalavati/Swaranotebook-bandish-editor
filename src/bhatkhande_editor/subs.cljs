@@ -1,6 +1,7 @@
 (ns bhatkhande-editor.subs
   (:require
    [sargam.languages :refer [lang-labels]]
+   [bhatkhande-editor.db :as db]
    [re-frame.core :as re-frame :refer [reg-sub]]))
 
 (reg-sub
@@ -73,7 +74,11 @@
 (reg-sub
  ::get-sahitya
  (fn [db [_ [row-index bhaag-index]]]
-   (get-in db [:composition :sahitya [row-index bhaag-index]])))
+   (let [indx (db/get-noteseq-index {:row-index row-index
+                                     :bhaag-index bhaag-index
+                                     :note-index 0}
+                                    (get-in db [:composition :taal]))]
+     (-> db (get-in [:composition :noteseq indx :lyrics])))))
 
 (reg-sub
  ::get-note-pos

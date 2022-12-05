@@ -415,9 +415,12 @@
                                         [v-box
                                          :align :center
                                          :children children]]]]]))
-                         (when-let [{:keys [row-index bhaag-index text-val]}
+                         (when-let [{:keys [row-index bhaag-index]}
                                     @(subscribe [::subs/show-text-popup])]
-                           (let [text-val (reagent/atom text-val)]
+                           (let [text-val
+                                 @(subscribe [::subs/get-sahitya
+                                              [row-index bhaag-index]])
+                                 tval (reagent/atom text-val)]
                              [modal-panel
                               :backdrop-on-click #(dispatch [::events/hide-text-popup])
                               :child [:div {:class "popup"
@@ -429,23 +432,21 @@
                                        :align :center
                                        :children
                                        [[box :align :center
-                                         :child 
+                                         :child
                                          [input-text
                                           :src (at)
-                                          :model            text-val
+                                          :model            tval
                                           :style {:font-size "large" :width "200px"}
                                           ;;debug height
-                                          :change-on-blur? false
                                           :on-change
                                           #(do
-                                             (println " inner ht " (.-innerHeight js/window))
-                                             (reset! text-val %))]]
+                                             (reset! tval %))]]
                                         [button :label " OK "
                                          :class "btn-lg btn btn-default"
                                          :on-click
                                          #(do
                                             (dispatch [::events/conj-sahitya
-                                                         {:text-val @text-val
+                                                         {:text-val @tval
                                                           :bhaag-index bhaag-index
                                                           :row-index row-index}])
                                             (dispatch [::events/hide-text-popup])
@@ -460,7 +461,6 @@
       (let [winhgt (.-innerHeight js/window)
             myhgt (- winhgt
                      @editor-height)]
-        (println " swara display area " winhgt)
         [:div
          [:div
           {:class "edit-composition"
