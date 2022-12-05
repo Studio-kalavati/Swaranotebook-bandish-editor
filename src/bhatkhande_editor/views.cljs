@@ -417,7 +417,6 @@
                                          :children children]]]]]))
                          (when-let [{:keys [row-index bhaag-index text-val]}
                                     @(subscribe [::subs/show-text-popup])]
-                           (println " inner ht " (.-innerHeight js/window))
                            (let [text-val (reagent/atom text-val)]
                              [modal-panel
                               :backdrop-on-click #(dispatch [::events/hide-text-popup])
@@ -435,7 +434,12 @@
                                           :src (at)
                                           :model            text-val
                                           :style {:font-size "large" :width "200px"}
-                                          :on-change        #(reset! text-val %)]]
+                                          ;;debug height
+                                          :change-on-blur? false
+                                          :on-change
+                                          #(do
+                                             (println " inner ht " (.-innerHeight js/window))
+                                             (reset! text-val %))]]
                                         [button :label " OK "
                                          :class "btn-lg btn btn-default"
                                          :on-click
