@@ -417,6 +417,7 @@
                                          :children children]]]]]))
                          (when-let [{:keys [row-index bhaag-index text-val]}
                                     @(subscribe [::subs/show-text-popup])]
+                           (println " inner ht " (.-innerHeight js/window))
                            (let [text-val (reagent/atom text-val)]
                              [modal-panel
                               :backdrop-on-click #(dispatch [::events/hide-text-popup])
@@ -455,6 +456,7 @@
       (let [winhgt (.-innerHeight js/window)
             myhgt (- winhgt
                      @editor-height)]
+        (println " swara display area " winhgt)
         [:div
          [:div
           {:class "edit-composition"
