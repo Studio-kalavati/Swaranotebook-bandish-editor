@@ -13,19 +13,20 @@ A mobile friendly editor to write Indian Classical (Hindustani) music notations.
 
 Named after VN Bhatkhande, the scholar who documented thousands of classical Bandishes and developed a notation system (now named after him).
 
-Supports:
-- automatically formats the notation according to the selected Taal.
+## Taal aware editing
+automatically formats the notation according to the selected Taal.
 
-[![Watch the video](https://img.youtube.com/vi/ot5JaHZ7jDY/default.jpg)](https://youtube.com/shorts/ot5JaHZ7jDY?feature=share)
+![Taal aware editing](https://user-images.githubusercontent.com/89076/205581573-f8e80879-1096-44a2-8e91-e2acf182a3d6.gif)
 
 - multiple notes per beat (e.g dugun /tigun)
 - show Svaras only for the raga selected.
 - open source: add definitions for additional ragas and talas
 - supports multiple languages (English and Devnagri)
 
-https://youtube.com/shorts/VfSJELQzIoo?feature=share
+## Support for multiple languages/scripts
+![Switch  languages easily](https://user-images.githubusercontent.com/89076/205581667-11a3d9e3-320d-4a94-884d-bd6a4fedd94c.gif)
 
-[![Watch the video](https://img.youtube.com/vi/VfSJELQzIoo/default.jpg)](https://youtube.com/shorts/VfSJELQzIoo?feature=share)
+
 - support entry for lyrics
 
 
