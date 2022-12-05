@@ -1,22 +1,44 @@
-# bhatkhande-svg-viewer
+[![GitHub issues](https://img.shields.io/github/issues-raw/Studio-kalavati/Bandish-editor?style=for-the-badge&logo=github)](https://github.com/Studio-kalavati/Bandish-editor/issues)
+[![GitHub pull requests](https://img.shields.io/github/issues-pr/Studio-kalavati/Bandish-editor?style=for-the-badge&logo=github)](https://github.com/Studio-kalavati/Bandish-editor/pulls)
+[![License](https://img.shields.io/github/license/Studio-kalavati/Bandish-editor?style=for-the-badge)](license.txt)
 
-A [re-frame](https://github.com/day8/re-frame) application designed to ... well, that part is up to
-you.
 
-## Getting Started
+# Bandish editor
 
-### Project Overview
+A mobile friendly Bandish notation editor
 
-* Architecture:
-[Single Page Application (SPA)](https://en.wikipedia.org/wiki/Single-page_application)
+# Features
+
+A mobile friendly editor to write Indian Classical (Hindustani) music notations.
+
+Named after VN Bhatkhande, the scholar who documented thousands of classical Bandishes and developed a notation system (now named after him).
+
+Supports:
+- automatically formats the notation according to the selected Taal.
+
+[![Watch the video](https://img.youtube.com/vi/ot5JaHZ7jDY/default.jpg)](https://youtube.com/shorts/ot5JaHZ7jDY?feature=share)
+
+- multiple notes per beat (e.g dugun /tigun)
+- show Svaras only for the raga selected.
+- open source: add definitions for additional ragas and talas
+- supports multiple languages (English and Devnagri)
+
+https://youtube.com/shorts/VfSJELQzIoo?feature=share
+
+[![Watch the video](https://img.youtube.com/vi/VfSJELQzIoo/default.jpg)](https://youtube.com/shorts/VfSJELQzIoo?feature=share)
+- support entry for lyrics
+
+
+- support for meends tbd
+
+# Technical details
+
+### Implementation 
+
 * Languages
   - Front end is [ClojureScript](https://clojurescript.org/) with ([re-frame](https://github.com/day8/re-frame))
 * Dependencies
   - UI framework: [re-frame](https://github.com/day8/re-frame)
-  ([docs](https://github.com/day8/re-frame/blob/master/docs/README.md),
-  [FAQs](https://github.com/day8/re-frame/blob/master/docs/FAQs/README.md)) ->
-  [Reagent](https://github.com/reagent-project/reagent) ->
-  [React](https://github.com/facebook/react)
   - Client-side routing: [bidi](https://github.com/juxt/bidi) and [pushy](https://github.com/clj-commons/pushy)
   - UI components: [re-com](https://github.com/day8/re-com)
   - Screen breakpoints tool: [BREAKING-POINT](https://github.com/gadfly361/breaking-point)
@@ -26,45 +48,13 @@ you.
   - Debugging: [CLJS DevTools](https://github.com/binaryage/cljs-devtools)
   - Emacs integration: [CIDER](https://github.com/clojure-emacs/cider)
 
-#### Directory structure
-
-* [`/`](/../../): project config files
-* [`dev/`](dev/): source files compiled only with the [dev](#running-the-app) profile
-  - [`user.cljs`](dev/cljs/user.cljs): symbols for use during development in the
-[ClojureScript REPL](#connecting-to-the-browser-repl-from-a-terminal)
-* [`resources/public/`](resources/public/): SPA root directory;
-[dev](#running-the-app) / [prod](#production) profile depends on the most recent build
-  - [`vendor/`](resources/public/vendor/): UI component CSS, fonts, and images
-  ([re-com](https://github.com/day8/re-com))
-  - [`index.html`](resources/public/index.html): SPA home page
-    - Dynamic SPA content rendered in the following `div`:
-        ```html
-        <div id="app"></div>
-        ```
-    - Customizable; add headers, footers, links to other scripts and styles, etc.
-  - Generated directories and files
-    - Created on build with either the [dev](#running-the-app) or [prod](#production) profile
-    - `js/compiled/`: compiled CLJS (`shadow-cljs`)
-      - Not tracked in source control; see [`.gitignore`](.gitignore)
-* [`src/bhatkhande_svg_viewer/`](src/bhatkhande_svg_viewer/): SPA source files (ClojureScript,
-[re-frame](https://github.com/Day8/re-frame))
-  - [`core.cljs`](src/bhatkhande_svg_viewer/core.cljs): contains the SPA entry point, `init`
-* [`.github/workflows/`](.github/workflows/): contains the
-[github actions](https://github.com/features/actions) pipelines.
-  - [`test.yaml`](.github/workflows/test.yaml): Pipeline for testing.
-
-
-### Editor/IDE
-
-Use your preferred editor or IDE that supports Clojure/ClojureScript development. See
-[Clojure tools](https://clojure.org/community/resources#_clojure_tools) for some popular options.
 
 ### Environment Setup
 
 1. Install [JDK 8 or later](https://openjdk.java.net/install/) (Java Development Kit)
 2. Install [Node.js](https://nodejs.org/) (JavaScript runtime environment) which should include
    [NPM](https://docs.npmjs.com/cli/npm) or if your Node.js installation does not include NPM also install it.
-5. Clone this repo and open a terminal in the `bhatkhande-svg-viewer` project root directory
+5. Clone this repo and open a terminal in the `bandish-editor` project root directory
 
 ### Browser Setup
 
@@ -113,10 +103,6 @@ Please be patient; it may take over 20 seconds to see any output, and over 40 se
 
 When `[:app] Build completed` appears in the output, browse to
 [http://localhost:8280/](http://localhost:8280/).
-
-[`shadow-cljs`](https://github.com/thheller/shadow-cljs) will automatically push ClojureScript code
-changes to your browser on save. To prevent a few common issues, see
-[Hot Reload in ClojureScript: Things to avoid](https://code.thheller.com/blog/shadow-cljs/2019/08/25/hot-reload-in-clojurescript.html#things-to-avoid).
 
 Opening the app in your browser starts a
 [ClojureScript browser REPL](https://clojurescript.org/reference/repl#using-the-browser-as-an-evaluation-environment),
