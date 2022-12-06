@@ -14,23 +14,40 @@ A mobile friendly editor to write Indian Classical (Hindustani) music notations.
 Named after VN Bhatkhande, the scholar who documented thousands of classical Bandishes and developed a notation system (now named after him).
 
 ## Taal aware editing
-automatically formats the notation according to the selected Taal.
+
+Formats the notation according to the selected Taal.
 
 ![Taal aware editing](https://user-images.githubusercontent.com/89076/205581573-f8e80879-1096-44a2-8e91-e2acf182a3d6.gif)
 
-- multiple notes per beat (e.g dugun /tigun)
-- show Svaras only for the raga selected.
-- open source: add definitions for additional ragas and talas
-- supports multiple languages (English and Devnagri)
+## Multiple notes per beat (e.g dugun /tigun)
+
+![Multiple notes per beat](https://user-images.githubusercontent.com/89076/205819071-527642f1-6ec0-4875-b502-a663bf77d63d.gif)
+
+## Show Svaras for the raga selected.
+
+
+![Raga selection](https://user-images.githubusercontent.com/89076/205825611-b9115d6a-82f2-4db6-ad59-bfe8b1885d61.gif)
+
+
+## Open source: 
+- Open source definitions for ragas and talas. [defined in a separate project](https://github.com/Studio-kalavati/sargam-spec/)
+
 
 ## Support for multiple languages/scripts
+
+Supports multiple languages (English and Devnagri at the moment)
 ![Switch  languages easily](https://user-images.githubusercontent.com/89076/205581667-11a3d9e3-320d-4a94-884d-bd6a4fedd94c.gif)
 
 
-- support entry for lyrics
+## Lyrics assigned to each svara
+
+Type in lyrics that are vertically aligned to each Svara. 
+For each bhaag, Click on the gray box below the svaras and enter the lyrics separated by commas.
+
+For example: Teentaal (4 beats in a Bhaag), "Pi,ya,bi,na" will align the 4 Bols to each svara in that Bhaag.
 
 
-- support for meends tbd
+![Bandish lyrics](https://user-images.githubusercontent.com/89076/205826468-00d2b48f-56e2-4ac0-a01d-a6ed8393335a.gif)
 
 # Technical details
 
