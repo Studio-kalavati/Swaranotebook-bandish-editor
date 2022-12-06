@@ -10,7 +10,7 @@
   [re-com "2.13.2"]
   [bidi "2.1.6"]
   [clj-commons/pushy "0.3.10"]
-  [studiokalavati/sargam-spec "0.1.10"]
+  [studiokalavati/sargam-spec "0.1.11"]
   [com.cognitect/transit-cljs "0.8.280"]
 
   [com.shark8me/re-frame-firebase "0.8.3-SNAPSHOT"]

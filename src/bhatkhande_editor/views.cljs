@@ -388,13 +388,14 @@
                          (when @show-raga-popup
                            (let [raga-labels (mapv (fn[[a b]] {:id a  :label b})
                                                    (:raga-labels @(subscribe [::subs/lang-data])))
-
+                                 _ (println " raga labels " raga-labels)
                                  box-fn (fn[{:keys [id label]}]
                                           [button
                                            :label label
                                            :style but-style
                                            :on-click
                                            #(do
+                                              (println " set raga " id " - label " label)
                                               (dispatch [::events/set-raga id])
                                               (reset! show-raga-popup
                                                       (not @show-raga-popup)))
