@@ -15,27 +15,32 @@ Named after VN Bhatkhande, the scholar who documented thousands of classical Ban
 
 ## Taal aware editing
 
-Formats the notation according to the selected Taal.
+Formats the notation according to Sam/Khaali/Bhaag of the selected Taal.
 
 ![Taal aware editing](https://user-images.githubusercontent.com/89076/205581573-f8e80879-1096-44a2-8e91-e2acf182a3d6.gif)
 
 ## Multiple notes per beat (e.g dugun /tigun)
 
+Click on the 1/2/3 buttons to enter a single note per beat or 2 (or 3) notes per beat
+
 ![Multiple notes per beat](https://user-images.githubusercontent.com/89076/205819071-527642f1-6ec0-4875-b502-a663bf77d63d.gif)
 
 ## Show Svaras for the raga selected.
 
+Constrains the  keyboard to show Svaras in the selected Raga
 
 ![Raga selection](https://user-images.githubusercontent.com/89076/205825611-b9115d6a-82f2-4db6-ad59-bfe8b1885d61.gif)
 
 
 ## Open source: 
+
 - Open source definitions for ragas and talas. [defined in a separate project](https://github.com/Studio-kalavati/sargam-spec/)
 
 
 ## Support for multiple languages/scripts
 
 Supports multiple languages (English and Devnagri at the moment)
+
 ![Switch  languages easily](https://user-images.githubusercontent.com/89076/205581667-11a3d9e3-320d-4a94-884d-bd6a4fedd94c.gif)
 
 
@@ -220,7 +225,8 @@ Please be patient; it may take over 15 seconds to see any output, and over 30 se
 The `resources/public/js/compiled` directory is created, containing the compiled `app.js` and
 `manifest.edn` files.
 
-## Cors config
+## Cors config for storage
 
 Allow cors request from hosts. See https://cloud.google.com/storage/docs/gsutil/commands/cors#synopsis
-gsutil cors set  cors-config gs://cloudbucket.appspot.com
+
+`gsutil cors set  cors-config gs://cloudbucket.appspot.com`
