@@ -36,13 +36,14 @@
 
 (defn init []
   (re-frame/dispatch-sync [::events/initialize-db])
-  (firebase/init :firebase-app-info  firebase-app-info
-                 :firestore-settings     {
-                                          :timestampsInSnapshots true
-                                          }
-                 :get-user-sub           [::events/user]
-                 :set-user-event         [::events/set-user]
-                 :default-error-handler  [::events/firebase-error])
+  (when (:apiKey firebase-app-info)
+    (firebase/init :firebase-app-info  firebase-app-info
+                   :firestore-settings     {
+                                            :timestampsInSnapshots true
+                                            }
+                   :get-user-sub           [::events/user]
+                   :set-user-event         [::events/set-user]
+                   :default-error-handler  [::events/firebase-error]))
 
   (routes/start!)
   (re-frame/dispatch-sync [::events/initialize-db])
