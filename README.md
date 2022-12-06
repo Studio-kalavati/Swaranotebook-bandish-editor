@@ -5,13 +5,12 @@
 
 # Bandish editor
 
-A mobile friendly Bandish notation editor
-
-# Features
-
 A mobile friendly editor to write Indian Classical (Hindustani) music notations.
 
 Named after VN Bhatkhande, the scholar who documented thousands of classical Bandishes and developed a notation system (now named after him).
+
+# Features
+
 
 ## Taal aware editing
 
