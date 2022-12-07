@@ -177,7 +177,7 @@
    (let [[note-index note-sub-index] (get-ns-index db)
          cpos (get-in db [:edit-props :cursor-pos ] )
          index-entry (get-in db [:composition :index-backward-seq (vals cpos)])]
-     (println " delete index "[note-index note-sub-index]
+     #_(println " delete index "[note-index note-sub-index]
               " cpos " cpos
               " entry at index " index-entry)
      ;;need to update cursor position too
@@ -185,7 +185,6 @@
       (-> db
           (update-in [:composition :noteseq]
                      #(let [to-remove (% note-index)
-                            _ (println " to-remove " to-remove )
                             res
                             (if (= 0 note-index)
                               ;;dont delete  the first one
@@ -335,6 +334,17 @@
          (.catch (fn[i] (println " error " i ))))
      {:db db})))
 
+(reg-event-fx
+ ::hide-keyboard
+ (fn [{:keys [db]} [_ _]]
+   {:db (update-in db [:edit-props :show-keyboard?]
+                   (constantly false))}))
+
+(reg-event-fx
+ ::show-keyboard
+ (fn [{:keys [db]} [_ _]]
+   {:db (update-in db [:edit-props :show-keyboard?]
+                   (constantly true))}))
 
 (reg-event-fx
  ::refresh-comp

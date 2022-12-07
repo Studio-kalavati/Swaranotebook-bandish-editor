@@ -104,10 +104,10 @@
      index-forward-seq
      index-backward-seq]))
 
-(def init-comp2
-    (let [noteseq
+(def test-comp
+(let [noteseq
           [
-           {:notes [{:shruti [:mandra :s]}] :lyrics ""}
+           {:notes [{:shruti [:mandra :s]}]}
            {:notes [{:shruti [:mandra :r]}]}
            {:notes [{:shruti [:mandra :g]}]}
            {:notes [{:shruti [:mandra :m]}]}
@@ -129,6 +129,21 @@
            {:notes [{:shruti [:taar :d]}]}
            {:notes [{:shruti [:taar :n]}]}
            {:notes [{:shruti [:madhyam :-]}]}
+           {:notes [{:shruti [:madhyam :-]}]}
+           ]
+          taal-id :teentaal
+          res
+          {:noteseq noteseq
+           :taal taal-id}]
+      res))
+
+(def init-comp
+    (let [noteseq
+          [
+           {:notes [{:shruti [:madhyam :s]}]}
+           {:notes [{:shruti [:madhyam :r]}]}
+           {:notes [{:shruti [:madhyam :g]}]}
+           {:notes [{:shruti [:madhyam :m]}]}
            {:notes [{:shruti [:madhyam :-]}]}
            ]
           taal-id :teentaal
@@ -195,9 +210,10 @@
    :font-size 20 :spacing 10 :text-align :left})
 
 
-(def default-edit-props {:raga :todi
+(def default-edit-props {:raga :yaman
                          :note-pos {}
-                         :language-en? false
+                         :show-keyboard? true
+                         :language-en? true
                          :note-index []})
 (defn comp-decorator
   [comp0]
@@ -210,7 +226,7 @@
                                (zipmap [:row-index :bhaag-index :note-index :nsi] in))))}))
 
 (def default-db
-  (merge (comp-decorator init-comp2)
+  (merge (comp-decorator init-comp)
          {:init-state {:cursor-color 0}
           :dispinfo (merge dispinfo m-dispinfo)
           :m-dispinfo m-dispinfo

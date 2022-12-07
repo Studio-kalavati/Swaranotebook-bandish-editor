@@ -103,6 +103,11 @@
    (:bandish-url db)))
 
 (reg-sub
+ ::show-keyboard?
+ (fn [db [_ _]]
+   (get-in db [:edit-props :show-keyboard?])))
+
+(reg-sub
  ::share-url
  (fn [db [_ _]]
    (db/get-long-url (:bandish-url db))))

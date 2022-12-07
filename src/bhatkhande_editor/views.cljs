@@ -237,9 +237,22 @@
                             :gap      "0.5vw"
                             :style {:flex-flow "row wrap"}
                             :class "last-bar"
-                            :children [(zmdi-butn2 "zmdi zmdi-print zmdi-hc-lg"
+                            :children [
+
+                                       [box
+                                        :size "auto"
+                                        :align-self :stretch
+                                        :style {:flex "1 1 0px" }
+                                        :child [:button
+                                                {:style {:width "100%"
+                                                         :background-color "coral"}
+                                                 :class "btn btn-lg"
+                                                 :on-click
+                                                 #(do (dispatch [::events/hide-keyboard]))}
+                                                [:i {:class "zmdi zmdi-chevron-down zmdi-hc-lg"}]]]
+                                       (zmdi-butn2 "zmdi zmdi-print zmdi-hc-lg"
                                                    #(do (.print js/window)))
-                                       (zmdi-butn2 "zmdi zmdi-download zmdi-hc-lg"
+                                       #_(zmdi-butn2 "zmdi zmdi-download zmdi-hc-lg"
                                                    #(let [comp @(subscribe [::subs/composition])]
                                                       (download-link
                                                        (select-keys comp [:noteseq :taal]))))
@@ -667,6 +680,26 @@
                  fin (reduce conj [:div {:class "wrapper"}] b1)]
              fin)]]]))))
 
+(defn hidden-keyboard-footer
+  []
+  (fn []
+    [v-box
+     :gap      "0.5vh"
+     :children [
+                [h-box
+                 :gap      "0.5vw"
+                 :style {:flex-flow "row wrap"}
+                 :class "last-bar"
+                 :children [(zmdi-butn2 "zmdi zmdi-comment-edit zmdi-hc-lg"
+                                        #(do (dispatch [::events/show-keyboard])))
+                            (zmdi-butn2 "zmdi zmdi-file-plus zmdi-hc-lg"
+                                        #(do
+                                           (dispatch [::events/refresh-comp
+                                                      (db/comp-decorator db/init-comp)])
+                                           (.pushState (.-history js/window)
+                                                       #js {} ""
+                                                       (.-origin (.-location js/window)))))]]]]))
+
 (defn show-editor
   []
   [:div
@@ -676,7 +709,9 @@
           :ref #(if (identity %)
                   (let [ch (.-offsetHeight %)]
                     (reset! editor-height ch)))}
-    [swara-buttons]]])
+    (if @(subscribe [::subs/show-keyboard?])
+      [swara-buttons]
+      [hidden-keyboard-footer])]])
 
 
 (defn load-bandish
