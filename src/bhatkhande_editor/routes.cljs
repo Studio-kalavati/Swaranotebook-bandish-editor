@@ -3,10 +3,22 @@
    [bidi.bidi :as bidi]
    [pushy.core :as pushy]
    [re-frame.core :as re-frame]
+[re-com.core :as re-com :refer [
+                                   border
+                                   box
+                                   throbber
+                                   modal-panel]]
    [bhatkhande-editor.events :as events]))
 
 (defmulti panels identity)
-(defmethod panels :default [] [:div "No panel found for this route."])
+(defmethod panels :default []
+  [:div
+   [modal-panel
+    :backdrop-color "#f83600"
+    :child [:div {:class "popup"
+                  :style {:overflow-y :scroll
+                          :max-height "80vh"}}
+            [throbber :size :large]]]])
 
 (def routes
   (atom
@@ -24,9 +36,7 @@
 (defn dispatch
   [route]
   (let [panel (keyword (str (name (:handler route)) "-panel"))]
-    (println " panel " panel " route " route)
     (when-let [id  (-> route :route-params :id)]
-      (println " route " id)
       (re-frame/dispatch [::events/get-bandish-json
                           {:path (-> route :route-params :path)
                            :id id}]))
@@ -37,7 +47,6 @@
 
 (defn navigate!
   [handler]
-  (println " navigate " handler)
   (pushy/set-token! history (url-for handler)))
 
 (defn start!

@@ -18,21 +18,29 @@
         nindex (db/get-noteseq-index click-index (get-in db [:composition :taal]))]
     [nindex ni]))
 
-(re-frame/reg-event-db
+(reg-event-db
  ::initialize-db
  (fn [_ _]
-   db/default-db))
+   (let [storage (.-sessionStorage js/window)
+         comp-str (.getItem storage "comp")]
+   (if comp-str
+     (let [w (t/reader :json)
+           comp (t/read w comp-str)
+           {:keys [composition edit-props]} (db/comp-decorator comp)]
+       (-> db/default-db
+           (update-in [:composition] (constantly composition))
+           (update-in [:edit-props] (constantly edit-props))))
+     db/default-db))))
 
-(re-frame/reg-event-fx
+(reg-event-fx
   ::navigate
   (fn [_ [_ handler]]
     (println " navigaate " handler)
    {:navigate handler}))
 
-(re-frame/reg-event-fx
+(reg-event-fx
  ::set-active-panel
  (fn [{:keys [db]} [_ active-panel]]
-   (println " setting active panel "active-panel)
    {:db (assoc db :active-panel active-panel)}))
 
 (reg-event-fx
@@ -41,10 +49,6 @@
    (let [cpos (get-in db [:edit-props :cursor-pos ] )
          next-index(get-in db [:composition :index-forward-seq (vals cpos)])
          prev-index (get-in db [:composition :index-backward-seq (vals cpos)])
-         _ (println " cur pos" cpos
-                    " prev index " prev-index
-                    " next index " next-index)
-
          note-index
          (if (nil? prev-index)
            -1
@@ -67,10 +71,8 @@
                 res
                 (if (> notes-per-beat 1)
                   ;;2 states here: either adding the first note of a multi-note
-                  (do #_(println " a1 "
-                               (and (not= notes-per-beat (-> ln :notes count))
-                                    (= notes-per-beat (-> ln :notes last :npb))))
-                      ;;if not the same as the last npb
+                  (do
+                    ;;if not the same as the last npb
                       (if
                           (and (not= notes-per-beat (-> ln :notes count))
                            (= notes-per-beat (-> ln :notes last :npb)))
@@ -104,17 +106,13 @@
                                  (get-in ndb [:composition :index-forward-seq (vals cpos)])
                                  prev-index
                                  (get-in ndb [:composition :index-backward-seq (vals cpos)])
-                                 k1 (zipmap [:row-index :bhaag-index :note-index :nsi] next-index)
-                                 ]
-                             #_(println " 00 cur pos" cpos
-                                      " prev index " prev-index
-                                      " next index " next-index
-                                      " k1 " k1)
+                                 k1 (zipmap [:row-index :bhaag-index :note-index :nsi] next-index)]
                              k1)
                            (= updated-cursor :cur-cursor) cpos
                            :else
                            updated-cursor))))]
-     {:db ndb})))
+     {:db ndb
+      :dispatch [::save-to-localstorage]})))
 
 (reg-event-fx
  ::conj-sahitya
@@ -127,6 +125,16 @@
               (update-in
                [:composition :noteseq indx :lyrics]
                (constantly text-val)))})))
+
+(reg-event-fx
+ ::save-to-localstorage
+ (fn[{:keys [db]} [_ _]]
+   (let [storage (.-sessionStorage js/window)
+         w (t/writer :json)
+         out-string
+         (t/write w (select-keys (-> db :composition) [:noteseq :taal]))]
+     (.setItem storage "comp" out-string)
+     {})))
 
 (defn get-last-noteseq-index
   "get the level 4 index from the indexed-noteseq"
@@ -185,6 +193,7 @@
                               %
                               (into (subvec % 0 (dec note-index)) (subvec % note-index)))]
                         res))
+          (update-in [:composition] db/add-indexes)
           (update-in [:edit-props :cursor-pos]
                      (constantly
                       (let [res 
@@ -197,18 +206,21 @@
                                         (conj (subvec index-entry 0 3) 0)
                                         index-entry)))]
                         res))))
-      :dispatch [::index-noteseq]})))
+      :dispatch [::save-to-localstorage]})))
 
 (reg-event-fx
  ::set-raga
  (fn [{:keys [db]} [_ raga]]
-   {:db (update-in db [:edit-props :raga] (constantly raga))}))
+   {:db (update-in db [:edit-props :raga] (constantly raga))
+    :dispatch [::save-to-localstorage]
+    }))
 
 (reg-event-fx
  ::set-taal
  (fn [{:keys [db]} [_ taal]]
    (let [ncomp (db/add-indexes (assoc (get-in db [:composition]) :taal taal))]
-     {:db (update-in db [:composition] (constantly ncomp))})))
+     {:db (update-in db [:composition] (constantly ncomp))
+      :dispatch [::save-to-localstorage]})))
 
 (reg-event-fx
  ::toggle-lang
@@ -304,19 +316,14 @@
    (if (and user (:email user))
      (let [storage (.-sessionStorage js/window)]
        (when storage
-         (do ;;(println " removeItem called")
+         (do 
            (.removeItem storage "sign-in")))
-       ;;set the id token
-       #_(.then (.getIdToken (:user user))
-                #(dispatch [::set-firebase-idtoken %]))
-       {:db (-> db (assoc :user user)
-                (dissoc :user-nil-times))
-        })
+       {:db (-> db
+                (assoc :user user)
+                (dissoc :user-nil-times))})
      ;;the first event is user nil and the second one has the user mapv
      ;;therefor if it is set nil twice, then show login popup
-     {:db (update-in db [:user-nil-times] (fnil inc 1))
-      ;;:dispatch [::set-active-panel :login-panel]
-      })))
+     {:db (update-in db [:user-nil-times] (fnil inc 1))})))
 
 (reg-event-fx
  ::firebase-error
