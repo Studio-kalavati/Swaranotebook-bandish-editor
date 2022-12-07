@@ -271,8 +271,11 @@
                                                  (reset! show-share-popup? true))
                                                ))))
                                        (when logged-in?
-                                         (zmdi-butn2 "zmdi zmdi-cloud-upload zmdi-hc-lg"
-                                                     #(reset! show-title-popup? true)))
+                                         (zmdi-butn2
+                                          "zmdi zmdi-cloud-upload zmdi-hc-lg"
+                                          (if-let [ctitle @(subscribe [::subs/comp-title])]
+                                            #(dispatch [::events/upload-comp-json])
+                                            #(reset! show-title-popup? true))))
                                        (mk-button notes-per-beat {:shruti [:madhyam :-]})
                                        (mk-button notes-per-beat {:shruti [:madhyam :a]})
                                        (butn2 "⌫" #(dispatch [::events/delete-single-swara]))]])
@@ -295,9 +298,7 @@
                                         [box :align :center
                                          :style {:max-width "40vw"}
                                          :child
-                                         [p (str (.-origin (.-location js/window))
-                                                 "/view/"
-                                                 @(subscribe [::subs/share-url]))]]
+                                         [p @(subscribe [::subs/share-url])]]
                                         [button
                                          :label "  OK  " 
                                          :class "btn-hc-lg btn-primary "
@@ -318,7 +319,7 @@
                                          :child [title :level :level3 :label "Bandish title"]]
                                         [gap :size "3vh"]
                                         [box :align :center
-                                         :child 
+                                         :child
                                          [input-text
                                           :src (at)
                                           :model            title-val
@@ -697,6 +698,23 @@
 (defmethod routes/panels :load-panel [] [load-bandish])
 
 (defmethod routes/panels :home-panel [] [show-editor])
+
+(defmethod routes/panels :wait-for-save-completion []
+  [:div
+   [modal-panel
+    :backdrop-color "#f83600"
+    :child [:div {:class "popup"
+                  :style {:overflow-y :scroll
+                          :max-height "80vh"}}
+            [v-box
+             :gap "2vh"
+             :class "body"
+             :align :center
+             :children
+             [[box :align :center
+               :child
+               [title :level :level3 :label "Saving Bandish"]]
+              [throbber :size :large]]]]]])
 
 (defn main-panel []
   (let [active-panel (re-frame/subscribe [::subs/active-panel])

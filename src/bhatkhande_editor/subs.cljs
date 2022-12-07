@@ -58,8 +58,14 @@
 (reg-sub
  ::taal
  :<- [::composition]
- (fn [comp _]     
+ (fn [comp _]
    (-> comp :taal)))
+
+(reg-sub
+ ::comp-title
+ :<- [::composition]
+ (fn [comp _]
+   (-> comp :title)))
 
 (reg-sub
  ::get-click-index
@@ -92,6 +98,11 @@
    (:user db)))
 
 (reg-sub
- ::share-url
+ ::bandish-url
  (fn [db [_ _]]
    (:bandish-url db)))
+
+(reg-sub
+ ::share-url
+ (fn [db [_ _]]
+   (db/get-long-url (:bandish-url db))))

@@ -19,7 +19,7 @@
 
 (defn get-long-url
   [path]
-  (str (.-host (.-location js/window)) "/view/" path))
+  (str (.-origin (.-location js/window)) "/view/" path))
 
 (defn get-noteseq-index
   "given a multi-index of row,bhaag and note,

@@ -35,7 +35,6 @@
 (reg-event-fx
   ::navigate
   (fn [_ [_ handler]]
-    (println " navigaate " handler)
    {:navigate handler}))
 
 (reg-event-fx
@@ -245,47 +244,32 @@
 ;; media and cloud
 (reg-event-fx
  ::upload-comp-json
- (fn [{:keys [db]} [_ file-name]]
-   (let [comp (to-trans (select-keys (-> db :composition) [:noteseq :taal]))
+ (fn [{:keys [db]} [_ comp-title]]
+   (let [comp-title (if comp-title comp-title (get-in db [:composition :title]))
+         comp (to-trans (select-keys (-> db :composition) [:noteseq :taal]))
          uuid (last (.split (.toString (random-uuid)) #"-"))
-         _ (println uuid " last notes "
-                    (->> db :composition :noteseq (drop 20)))
-         path (str (-> db :user :uid) "/" uuid "-" file-name )
+         path (str (-> db :user :uid) "/" uuid "-" comp-title)
          stor (.storage firebase)
          storageRef (.ref stor)
          file-ref  (.child storageRef path)]
      (-> (.putString file-ref comp)
          (.then
           (fn[i]
-            (dispatch [::update-bandish-url path]))))
-     {})))
+            (dispatch [::update-bandish-url path])
+            (.pushState (.-history js/window) #js {} ""
+                        (db/get-long-url path))
+            (dispatch [::set-active-panel :home-panel]))))
+     {:dispatch [::set-active-panel :wait-for-save-completion]
+      :db (update-in db [:composition :title] (constantly comp-title))})))
 
 #_(reg-event-fx
  ::submission-completed?
  (fn [{:keys [db]} [_ _]]
    {:db db}))
 
-#_(reg-event-fx
- ::get-short-url
- (fn [{:keys [db]} [_ path]]
-   (let [tr (t/reader :json)]
-     (-> (js/fetch
-          (str "https://firebasedynamiclinks.googleapis.com/v1/shortLinks?key=" db/apiKey)
-          #js {"method" "post"
-               "body" (.stringify js/JSON
-                                  #js {"longDynamicLink"
-                                       (db/get-long-url path)})})
-         (.then (fn[i] (.json i)))
-         (.then (fn[i]
-                  (let []
-                    (println " json resp " i))))
-         (.catch (fn[i] (println " error " i ))))
-     {:db db})))
-
 (reg-event-fx
  ::update-bandish-url
  (fn [{:keys [db]} [_ bandish-url]]
-   (println " bandish url is "bandish-url)
    {:db
     (-> db
         (update-in [:bandish-url]
@@ -347,8 +331,6 @@
          (.then (fn[i]
                   (let [imap (js->clj (t/read tr i))
                         res (db/comp-decorator imap)]
-                    (println " noteseqq " (keys imap) " - "
-                             (->> res :composition :noteseq (drop 20)))
                     (dispatch [::refresh-comp res]))))
          (.catch (fn[i] (println " error " i ))))
      {:db db})))
