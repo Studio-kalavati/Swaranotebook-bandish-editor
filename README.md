@@ -3,11 +3,14 @@
 [![License](https://img.shields.io/github/license/Studio-kalavati/Bandish-editor?style=for-the-badge)](license.txt)
 
 
-# Bandish editor
+<p>
+<h1 align="center">Bhatkhande Bandish editor</h1>
 
 A mobile friendly editor to write Indian Classical (Hindustani) music notations.
 
 Named after VN Bhatkhande, the scholar who documented thousands of classical Bandishes and developed a notation system (now named after him).
+
+---
 
 # Features
 
@@ -52,6 +55,17 @@ For example: Teentaal (4 beats in a Bhaag), "Pi,ya,bi,na" will align the 4 Bols 
 
 
 ![Bandish lyrics](https://user-images.githubusercontent.com/89076/205826468-00d2b48f-56e2-4ac0-a01d-a6ed8393335a.gif)
+
+--- 
+
+## Get started
+
+There are multiple ways of getting started with the editor:
+
+1. You can use [our Hosted version](https://svaranotations.netlify.app/ "Bhatkhande Bandish Editor").  This is the simplest way to use the editor.
+1. Host your own version (documentation TBD)
+
+---
 
 # Technical details
 
