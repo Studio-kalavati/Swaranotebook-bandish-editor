@@ -1330,9 +1330,11 @@ input[type="search"]
 }
 .edit-composition .com-edit
 {
-    /* background-color: #FCFCFC; */
-    padding: 50px 15px;
+    /* background-color: #FCFCFC;
+
     border: 3px solid #EEECED;
+   */
+    padding: 15px;
 }
 
 /*--------- Footer ---------*/

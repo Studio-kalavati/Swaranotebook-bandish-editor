@@ -341,8 +341,12 @@
                                         [button
                                          :label " Save "
                                          :class "btn-hc-lg btn-primary "
-                                         :on-click #(do (reset! show-title-popup? false)
-                                                        (dispatch [::events/upload-comp-json @title-val]))]]]]]))
+                                         :on-click #(let [tv (clojure.string/replace @title-val
+                                                                                     #" " "-")]
+
+                                                      (reset! show-title-popup? false)
+                                                      (dispatch [::events/upload-comp-json
+                                                                 tv]))]]]]]))
                          (when @show-login-popup?
                            (let []
                              [modal-panel
@@ -754,6 +758,7 @@
 (defn main-panel []
   (let [active-panel (re-frame/subscribe [::subs/active-panel])
         screen-height (re-frame/subscribe [::bp/screen-height])]
+    (println " active panel " @active-panel)
     [re-com/v-box
      :src      (at)
      :height   "100%"
