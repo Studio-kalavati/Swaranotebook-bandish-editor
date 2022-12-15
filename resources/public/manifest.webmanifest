@@ -7,8 +7,8 @@
   "background_color": "#fff",
   "description": "An app for writing Hindustani Bandish notations",
   "icons": [{
-    "src": "images/swaras/english_SrR/png/13.png",
-    "sizes": "48x48",
+    "src": "images/icon.png",
+    "sizes": "512x512",
     "type": "image/png"
   }],
   "related_applications": []
