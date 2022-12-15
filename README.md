@@ -243,3 +243,5 @@ The `resources/public/js/compiled` directory is created, containing the compiled
 Allow cors request from hosts. See https://cloud.google.com/storage/docs/gsutil/commands/cors#synopsis
 
 `gsutil cors set  cors-config gs://cloudbucket.appspot.com`
+
+
