@@ -62,7 +62,7 @@ For example: Teentaal (4 beats in a Bhaag), "Pi,ya,bi,na" will align the 4 Bols 
 
 There are multiple ways of getting started with the editor:
 
-1. You can use [our Hosted version](https://svaranotations.netlify.app/ "Bhatkhande Bandish Editor").  This is the simplest way to use the editor.
+1. You can use [our Hosted version](https://bandish.netlify.app/ "Bhatkhande Bandish Editor").  This is the simplest way to use the editor.
 1. Host your own version (documentation TBD)
 
 ---
