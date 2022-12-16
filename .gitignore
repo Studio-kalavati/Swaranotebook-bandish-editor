@@ -1,5 +1,9 @@
 /out/
 /resources/public/js/compiled/
+/resources/public/workbox-*.js
+/resources/public/workbox-*.js.map
+/resources/public/sw.js
+/resources/public/sw.js.map
 /target/
 /*-init.clj
 /*.log

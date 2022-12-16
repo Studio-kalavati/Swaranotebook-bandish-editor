@@ -1,14 +1,15 @@
 {
-	"name": "bhatkhande-svg-viewer",
+	"name": "bandish-editor",
 	"scripts": {
 		"ancient": "clojure -Sdeps '{:deps {com.github.liquidz/antq {:mvn/version \"RELEASE\"}}}' -m antq.core",
-		"watch": "npx shadow-cljs watch app browser-test karma-test",
-		"release": "npx shadow-cljs release app",
+		"watch": "npx shadow-cljs watch app browser-test karma-test && workbox generateSW workbox-config.js",
+		"release": "npx shadow-cljs release app && workbox generateSW workbox-config.js",
 		"build-report": "npx shadow-cljs run shadow.cljs.build-report app target/build-report.html"
 	},
 	"dependencies": {
 		"react": "^17.0.2",
-		"react-dom": "^17.0.2"
+		"react-dom": "^17.0.2",
+		"workbox-cli": "^6.5.4"
 	},
 	"devDependencies": {
 		"shadow-cljs": "2.19.6",
