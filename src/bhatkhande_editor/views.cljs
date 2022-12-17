@@ -85,12 +85,11 @@
 (defn mk-button
   ([beat-mode swaralem] (mk-button {} beat-mode swaralem))
   ([style notes-per-beat {:keys [shruti] :as sh}]
-   (let [msmap @(subscribe [::subs/swaramap])
-         iurl (db/santoor-url-map shruti)]
+   (let [msmap @(subscribe [::subs/swaramap])]
      (butn2 (msmap (second shruti))
             #(do
                ;;since on IOS it needs a input to start the audio context
-               (dispatch-sync [::events/play-svara iurl])
+               (dispatch-sync [::events/play-svara shruti])
                (dispatch [::events/conj-svara
                           {:svara sh :notes-per-beat @notes-per-beat}]))
             {:style (merge style {:width "100%"})}))))

@@ -1,6 +1,7 @@
 (ns bhatkhande-editor.db
   (:require
    [sargam.spec :as us]
+   [reagent.core :as reagent]
    [sargam.talas :as talas :refer [taal-def]])
   (:require-macros [adzerk.env :as env]))
 
@@ -183,19 +184,34 @@
                         #(str "/images/swaras/" lang "/png/" % ".png" )
                         (range 1 38))))
 
-(defn get-santoor-url-map
-  []
-  (zipmap (conj (vec (for [i [:mandra :madhyam :taar] j (take 12 us/i-note-seq)]
-                       [i j])) [:ati-taar :s])
-          (mapv
-           #(str "/sounds/santoor/" %)
-           (-> (for [i ["4" "5" "6"]
-                      j ["c" "cs" "d" "ds" "e" "f" "fs" "g" "gs" "a" "as" "b"]]
-                  (str  j i ".mp3"))
-                vec
-                (conj "c7.mp3")))))
+(defn fetch-url
+  [imap ctx ikey iurl]
+  (->
+   (js/fetch iurl)
+   (.then (fn [r] (.arrayBuffer r)))
+   (.then (fn [r] (.decodeAudioData ctx r)))
+   (.then
+    (fn [resp]
+      (println " fetch url")
+      (swap! imap assoc ikey resp)))))
 
-(def santoor-url-map (get-santoor-url-map))
+(defn get-santoor-url-map
+  [ctx]
+  (let [ivals (mapv
+               #(str "/sounds/santoor/" %)
+               (-> (for [i ["4" "5" "6"]
+                         j ["c" "cs" "d" "ds" "e" "f" "fs" "g" "gs" "a" "as" "b"]]
+                     (str  j i ".mp3"))
+                   vec
+                   (conj "c7.mp3")))
+        imap (reagent/atom {})
+        ibuffers (mapv (partial fetch-url imap ctx)
+                       (conj (vec (for [i [:mandra :madhyam :taar] j (take 12 us/i-note-seq)]
+                                    [i j])) [:ati-taar :s])
+                       ivals)]
+    imap))
+
+;;(def santoor-url-map (get-santoor-url-map))
 
 (defn percentage-95
   [i]
@@ -240,9 +256,12 @@
                                (zipmap [:row-index :bhaag-index :note-index :nsi] in))))}))
 
 (def default-db
-  (merge (comp-decorator init-comp)
-         {:init-state {:cursor-color 0}
-          :dispinfo (merge dispinfo m-dispinfo)
-          :m-dispinfo m-dispinfo
-          :dim {:editor (mapv dispinfo [:x-end :y-end])}}))
+  (let [ctx (js/AudioContext.)]
+    (merge (comp-decorator init-comp)
+           {:init-state {:cursor-color 0}
+            :dispinfo (merge dispinfo m-dispinfo)
+            :m-dispinfo m-dispinfo
+            :audio-context ctx
+            :santoor-buffers (get-santoor-url-map ctx)
+            :dim {:editor (mapv dispinfo [:x-end :y-end])}})))
 

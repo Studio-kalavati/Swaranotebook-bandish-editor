@@ -116,3 +116,8 @@
  ::audio-context
  (fn [db [_ _]]
    (:audio-context db)))
+
+(reg-sub
+ ::santoor-buffers
+ (fn [db [_ _]]
+   (:santoor-buffers db)))
