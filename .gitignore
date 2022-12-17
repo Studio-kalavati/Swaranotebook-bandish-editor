@@ -17,3 +17,9 @@
 
 # shadow-cljs cache, port files
 /.shadow-cljs/
+
+# netlify
+.netlify/
+
+# lfs
+.lfsconfig

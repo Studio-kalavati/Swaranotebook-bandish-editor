@@ -353,3 +353,26 @@
             (update-in [:composition] (constantly composition))
             (update-in [:edit-props] (constantly edit-props)))
     :dispatch [::navigate :home]}))
+
+(reg-event-fx
+ ::init-audio-ctx
+ (fn [{:keys [db]} [_ audctx]]
+   {:db (if-not (:audio-context db)
+          (assoc db :audio-context audctx)
+          db)}))
+
+(defn play-url
+  ([ctx url] (play-url false nil ctx url))
+  ([loop? player-regn-fn ctx url]
+   (let [src (.createBufferSource ctx)
+         _ (.connect src (.-destination ctx))
+         _ (when player-regn-fn (player-regn-fn src))
+         _ (set! (.-loop src) loop?)
+         _ (->
+            (js/fetch url)
+            (.then (fn [r] (.arrayBuffer r)))
+            (.then (fn [r] (.decodeAudioData ctx r)))
+            (.then
+             (fn [resp]
+               (set! (.-buffer src) resp)
+               (.start src 0))))])))
