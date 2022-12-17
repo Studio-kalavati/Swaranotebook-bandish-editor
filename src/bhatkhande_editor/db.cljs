@@ -183,6 +183,20 @@
                         #(str "/images/swaras/" lang "/png/" % ".png" )
                         (range 1 38))))
 
+(defn get-santoor-url-map
+  []
+  (zipmap (conj (vec (for [i [:mandra :madhyam :taar] j (take 12 us/i-note-seq)]
+                       [i j])) [:ati-taar :s])
+          (mapv
+           #(str "/sounds/santoor/" %)
+           (-> (for [i ["4" "5" "6"]
+                      j ["c" "cs" "d" "ds" "e" "f" "fs" "g" "gs" "a" "as" "b"]]
+                  (str  j i ".mp3"))
+                vec
+                (conj "c7.mp3")))))
+
+(def santoor-url-map (get-santoor-url-map))
+
 (defn percentage-95
   [i]
   (let [ iw (js/parseInt i)]

@@ -34,7 +34,6 @@
    [bhatkhande-editor.events :as events]
    [bhatkhande-editor.routes :as routes]
    [bhatkhande-editor.db :as db :refer [note-seq mswaras]]
-   
    [bhatkhande-editor.subs :as subs]))
 
 (defn box-size-padding
@@ -86,9 +85,16 @@
 (defn mk-button
   ([beat-mode swaralem] (mk-button {} beat-mode swaralem))
   ([style notes-per-beat {:keys [shruti] :as sh}]
-   (let [msmap @(subscribe [::subs/swaramap])]
+   (let [msmap @(subscribe [::subs/swaramap])
+         iurl (db/santoor-url-map shruti)]
      (butn2 (msmap (second shruti))
-            #(do
+            #(let [audctx @(subscribe [::subs/audio-context])
+                   audctx (if audctx audctx
+                              (let [naud (js/AudioContext.)]
+                                (dispatch [::events/init-audio-ctx naud])
+                                naud))]
+               ;;since on IOS it needs a input to start the audio context
+               (events/play-url audctx iurl)
                (dispatch [::events/conj-svara
                           {:svara sh :notes-per-beat @notes-per-beat}]))
             {:style (merge style {:width "100%"})}))))
