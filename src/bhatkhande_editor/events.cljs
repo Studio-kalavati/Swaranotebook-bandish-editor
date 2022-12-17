@@ -18,6 +18,22 @@
         nindex (db/get-noteseq-index click-index (get-in db [:composition :taal]))]
     [nindex ni]))
 
+(defn play-url
+  ([ctx url] (play-url false nil ctx url))
+  ([loop? player-regn-fn ctx url]
+   (let [src (.createBufferSource ctx)
+         _ (.connect src (.-destination ctx))
+         _ (when player-regn-fn (player-regn-fn src))
+         _ (set! (.-loop src) loop?)
+         _ (->
+            (js/fetch url)
+            (.then (fn [r] (.arrayBuffer r)))
+            (.then (fn [r] (.decodeAudioData ctx r)))
+            (.then
+             (fn [resp]
+               (set! (.-buffer src) resp)
+               (.start src 0))))])))
+
 (reg-event-db
  ::initialize-db
  (fn [_ _]
@@ -41,6 +57,18 @@
  ::set-active-panel
  (fn [{:keys [db]} [_ active-panel]]
    {:db (assoc db :active-panel active-panel)}))
+
+(reg-event-fx
+ ::play-svara
+ (fn [{:keys [db]} [_ iurl]]
+   (let [audctx (:audio-context db)]
+     (println " play sound for "iurl )
+     (if audctx 
+       (do (play-url audctx iurl)
+           {})
+       (let [audctx (js/AudioContext.)]
+         (play-url audctx iurl)
+         {:db (assoc db :audio-context audctx)})))))
 
 (reg-event-fx
  ::conj-svara
@@ -361,18 +389,4 @@
           (assoc db :audio-context audctx)
           db)}))
 
-(defn play-url
-  ([ctx url] (play-url false nil ctx url))
-  ([loop? player-regn-fn ctx url]
-   (let [src (.createBufferSource ctx)
-         _ (.connect src (.-destination ctx))
-         _ (when player-regn-fn (player-regn-fn src))
-         _ (set! (.-loop src) loop?)
-         _ (->
-            (js/fetch url)
-            (.then (fn [r] (.arrayBuffer r)))
-            (.then (fn [r] (.decodeAudioData ctx r)))
-            (.then
-             (fn [resp]
-               (set! (.-buffer src) resp)
-               (.start src 0))))])))
+

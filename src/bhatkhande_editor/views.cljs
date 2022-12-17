@@ -88,14 +88,9 @@
    (let [msmap @(subscribe [::subs/swaramap])
          iurl (db/santoor-url-map shruti)]
      (butn2 (msmap (second shruti))
-            #(let [;;audctx @(subscribe [::subs/audio-context])
-                   audctx (js/AudioContext.) #_(if audctx audctx
-                              (let [naud (js/AudioContext.)]
-                                (dispatch [::events/init-audio-ctx naud])
-                                naud))]
+            #(do
                ;;since on IOS it needs a input to start the audio context
-               (println " play sound for "iurl " aud " audctx)
-               (events/play-url audctx iurl)
+               (dispatch-sync [::events/play-svara iurl])
                (dispatch [::events/conj-svara
                           {:svara sh :notes-per-beat @notes-per-beat}]))
             {:style (merge style {:width "100%"})}))))
