@@ -262,6 +262,7 @@
             :dispinfo (merge dispinfo m-dispinfo)
             :m-dispinfo m-dispinfo
             :audio-context ctx
+            :show-lyrics? true
             :santoor-buffers (get-santoor-url-map ctx)
             :dim {:editor (mapv dispinfo [:x-end :y-end])}})))
 

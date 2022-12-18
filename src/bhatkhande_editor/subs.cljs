@@ -121,3 +121,8 @@
  ::santoor-buffers
  (fn [db [_ _]]
    (:santoor-buffers db)))
+
+(reg-sub
+ ::show-lyrics?
+ (fn [db [_ _]]
+   (:show-lyrics? db)))

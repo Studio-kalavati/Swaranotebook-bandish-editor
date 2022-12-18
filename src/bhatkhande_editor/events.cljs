@@ -381,4 +381,9 @@
           (assoc db :audio-context audctx)
           db)}))
 
+(reg-event-fx
+ ::show-lyrics?
+ (fn [{:keys [db]} [_ ival]]
+   {:db (assoc db :show-lyrics? ival)}))
+
 

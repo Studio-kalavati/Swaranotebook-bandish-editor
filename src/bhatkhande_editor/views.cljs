@@ -151,6 +151,7 @@
         show-share-popup? (reagent/atom false)
         show-title-popup? (reagent/atom false)
         newsletter-signup? (reagent/atom true)
+        show-lyrics? (reagent/atom true)
         title-val (reagent/atom "")
         notes-per-beat (reagent/atom 1)]
     (fn []
@@ -184,7 +185,7 @@
                                      {:disp-fn
                                       #(do (reset! show-taal-popup (not @show-taal-popup)))
                                       :state #(true? @show-taal-popup)})
-                                    [info-button :info taal-info]]]
+                                    #_[info-button :info taal-info]]]
                                   ]]
                                 [h-box :align :center
                                  :min-width "15vw"
@@ -196,14 +197,22 @@
                                    {:disp-fn
                                     #(do (reset! show-raga-popup (not @show-raga-popup)))
                                     :state #(true? @show-raga-popup)})
-                                  [info-button :info raga-info]]]
+                                  #_[info-button :info raga-info]]]
+                                [h-box :align :center
+                                 :min-width "15vw"
+                                 :children
+                                 [[checkbox :model show-lyrics?
+                                   :on-change
+                                   #(let [nval (not @show-lyrics?)]
+                                      (reset! show-lyrics? nval)
+                                      (dispatch [::events/show-lyrics? nval]))]]]
                                 [h-box
                                  :align :center
                                  :children [[h-box
                                              :children [(box-button "1" (speed-switch-fn 1))
                                                         (box-button "2" (speed-switch-fn 2))
                                                         (box-button "3" (speed-switch-fn 3))]]
-                                            [info-button :info dugun-info]]]]]
+                                            #_[info-button :info dugun-info]]]]]
                     (let [swaras-3oct (swar36 @(subscribe [::subs/raga]))
                           but-style {:width (let [iw (.-innerWidth js/window)]
                                               (if (> iw 200)
@@ -478,7 +487,8 @@
     (fn []
       (let [winhgt (.-innerHeight js/window)
             myhgt (- winhgt
-                     @editor-height)]
+                     @editor-height)
+            show-lyrics? @(subscribe [::subs/show-lyrics?])]
         [:div
          [:div
           {:class "edit-composition"
@@ -611,9 +621,9 @@
                                    r7 (if (and (= 0 note-index))
                                         (update-in r6
                                                    [:images] conj
-                                                   [:text {:x 14 :y 88
-                                                           :style {:font-size "15px"}
-                                                           }
+                                                   [:text {:x 14
+                                                           :y  (if show-lyrics? 88 60)
+                                                           :style {:font-size "15px"}}
                                                     (let [t @(subscribe [::subs/taal])
                                                           sk-index
                                                           (->> taal-def t :bhaags
@@ -630,7 +640,8 @@
                            {:x 5 :images []}))
 
                          images
-                         (-> (:images r3)
+                         (if show-lyrics?
+                           (-> (:images r3)
                              (into (let [tv @(subscribe [::subs/get-sahitya
                                                          [row-index bhaag-index]])]
                                      [
@@ -654,6 +665,7 @@
                                                      {:row-index row-index
                                                       :text-val (if tv tv "")
                                                       :bhaag-index bhaag-index}]))}]])))
+                           (:images r3))
                          x-end (:x r3)]
                      ;;add vertical bars for bhaag
                      ;;2 bars if the avartan starts
@@ -672,9 +684,15 @@
                             (mapv (fn[[indx i]]
                                     (let [{:keys [images x]} (draw-bhaag row-index indx i )]
                                       [:div {:class "bhaag-item" :style
-                                             {:max-width (+ x 20)}}
+                                             (merge
+                                              {:max-width (+ x 20)}
+                                              (if @(subscribe [::subs/show-lyrics?])
+                                                {}
+                                                {:max-height "70px"}))}
                                        (reduce conj
-                                               [:svg {:xmlns "http://www.w3.org/2000/svg" }]
+                                               [:svg {:xmlns "http://www.w3.org/2000/svg"
+                                                     ;; :viewBox "0 0 10 10"
+                                                      }]
                                                images)])))
                             (reduce conj [:div {:class "box-row"}])))
                  b1
