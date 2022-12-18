@@ -94,17 +94,34 @@
                           {:svara sh :notes-per-beat @notes-per-beat}]))
             {:style (merge style {:width "100%"})}))))
 
-(defn box-button
-  [label {:keys [disp-fn state]}]
+(defn zmdi-box-button
+  [icon-class {:keys [disp-fn state]}]
   [box :size "1"
    :justify :center
    :align-self :stretch
+   :style {:max-width "10vw"}
    :child
-   [button
-    :label [:span label]
-    :style {:padding "10px"}
-    :class (if (true? (state)) "btn-lg swarabuttons btn-sm btn-primary " "btn-lg swarabuttons btn-sm btn-default")
-    :on-click #(disp-fn)]])
+   [:button {:style {:width "100%" :border-radius "5px"}
+             :class (if (true? (state))
+                      "zmdi-hc-2x btn-danger"
+                      "zmdi-hc-lg btn-default")
+             :on-click #(disp-fn)}
+    [:i {:class icon-class}]]])
+
+(defn box-button
+  ([label ifn]
+   (box-button {:padding "10px"} label ifn))
+  ([style label {:keys [disp-fn state]}]
+   [box :size "1"
+    :justify :center
+    :align-self :stretch
+    :child
+    [button
+     :label [:span label]
+     :style style
+     :class (if (true? (state)) "btn-lg swarabuttons btn-sm btn-danger"
+                "btn-lg swarabuttons btn-sm btn-default")
+     :on-click #(disp-fn)]]))
 
 (defn alternating-color-background
   "returns svg data with alternating colours for the background"
@@ -157,7 +174,9 @@
       (let [sbp (vec (repeat 21 (reagent/atom false)))
             speed-switch-fn (fn[i] {:disp-fn #(reset! notes-per-beat i)
                                     :state #(= i @notes-per-beat)})
-            lang @(subscribe [::subs/lang])]
+            lang @(subscribe [::subs/lang])
+            rag-box-style {:padding "10px 4px 10px 4px"}
+            ]
         [v-box
          :gap      "0.5vh"
          :children [[h-box
@@ -167,8 +186,11 @@
                      :children [[h-box
                                  :children
                                  [(box-button
+                                   rag-box-style
                                    (let [lang @(subscribe [::subs/lang])]
-                                     (if (= :hindi lang) "S R G" "सा रे ग"))
+                                     (if (= :hindi lang)
+                                       ;;"S R G" "सा रे ग"
+                                       "S R" "सा रे"))
                                    {:disp-fn
                                     #(do (dispatch [::events/toggle-lang] ))
                                     :state (constantly false)})]]
@@ -178,9 +200,11 @@
                                  [[h-box
                                    :children
                                    [(box-button
+                                     rag-box-style
                                      (let [taals (get-in lang-labels [lang :tala-labels])
                                            taal @(subscribe [::subs/taal])]
-                                       (taals taal))
+                                       ;;(taals taal)
+                                       "Tal")
                                      {:disp-fn
                                       #(do (reset! show-taal-popup (not @show-taal-popup)))
                                       :state #(true? @show-taal-popup)})
@@ -190,31 +214,33 @@
                                  :min-width "15vw"
                                  :children
                                  [(box-button
+                                   rag-box-style
                                    (let [ragas (get-in lang-labels [lang :raga-labels])
                                          raga @(subscribe [::subs/raga])]
-                                     (ragas raga))
+                                     #_(ragas raga)
+                                     "Rag")
                                    {:disp-fn
                                     #(do (reset! show-raga-popup (not @show-raga-popup)))
                                     :state #(true? @show-raga-popup)})
                                   #_[info-button :info raga-info]]]
-                                #_[h-box :align :center
-                                 :min-width "15vw"
-                                 :children
-                                 [[checkbox :model show-lyrics?
-                                   :on-change
-                                   #(let [nval (not @show-lyrics?)]
-                                      (reset! show-lyrics? nval)
-                                      (dispatch [::events/show-lyrics? nval]))]]]
-                                [h-box
-                                 :align :center
-                                 :children [[h-box
-                                             :children [(box-button "1" (speed-switch-fn 1))
-                                                        (box-button "2" (speed-switch-fn 2))
-                                                        (box-button "3" (speed-switch-fn 3))]]
-                                            #_[info-button :info dugun-info]]]
-                                (zmdi-butn2
+                                (zmdi-box-button
+                                 "zmdi zmdi-collection-item-1"
+                                 (speed-switch-fn 1))
+                                (zmdi-box-button
+                                 "zmdi zmdi-collection-item-2"
+                                 (speed-switch-fn 2))
+                                (zmdi-box-button
+                                 "zmdi zmdi-collection-item-3"
+                                 (speed-switch-fn 3))
+                                (zmdi-box-button
                                  "zmdi zmdi-more zmdi-hc-lg"
-                                 #(do (dispatch [::events/show-keyboard :more])))]]
+                                 {:disp-fn #(do (dispatch [::events/show-keyboard :more]))
+                                  :state (constantly false)})
+                                (zmdi-box-button
+                                 "zmdi zmdi-hearing"
+                                 {:disp-fn #(do (dispatch [::events/show-keyboard :more]))
+                                  :state (constantly false)})
+                                ]]
                     (let [swaras-3oct (swar36 @(subscribe [::subs/raga]))
                           but-style {:width (let [iw (.-innerWidth js/window)]
                                               (if (> iw 200)
