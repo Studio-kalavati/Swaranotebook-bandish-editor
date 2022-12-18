@@ -761,10 +761,8 @@
 
 (defn keyboard-more
   []
-  (let [
-        show-lyrics? (reagent/atom true)
-        newline-on-avartan? (reagent/atom true)
-        ]
+  (let [show-lyrics? (reagent/atom @(subscribe [::subs/show-lyrics?]))
+        newline-on-avartan? (reagent/atom @(subscribe [::subs/newline-on-avartan?]))]
     (fn []
       [v-box
        :gap      "0.5vh"
