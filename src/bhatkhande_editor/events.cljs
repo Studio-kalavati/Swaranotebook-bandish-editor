@@ -362,9 +362,9 @@
 
 (reg-event-fx
  ::show-keyboard
- (fn [{:keys [db]} [_ _]]
+ (fn [{:keys [db]} [_ ival]]
    {:db (update-in db [:edit-props :show-keyboard?]
-                   (constantly true))}))
+                   (constantly ival))}))
 
 (reg-event-fx
  ::refresh-comp
@@ -386,4 +386,7 @@
  (fn [{:keys [db]} [_ ival]]
    {:db (assoc db :show-lyrics? ival)}))
 
-
+(reg-event-fx
+ ::newline-on-avartan?
+ (fn [{:keys [db]} [_ ival]]
+   {:db (assoc db :newline-on-avartan? ival)}))

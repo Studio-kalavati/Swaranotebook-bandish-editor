@@ -151,7 +151,6 @@
         show-share-popup? (reagent/atom false)
         show-title-popup? (reagent/atom false)
         newsletter-signup? (reagent/atom true)
-        show-lyrics? (reagent/atom true)
         title-val (reagent/atom "")
         notes-per-beat (reagent/atom 1)]
     (fn []
@@ -198,7 +197,7 @@
                                     #(do (reset! show-raga-popup (not @show-raga-popup)))
                                     :state #(true? @show-raga-popup)})
                                   #_[info-button :info raga-info]]]
-                                [h-box :align :center
+                                #_[h-box :align :center
                                  :min-width "15vw"
                                  :children
                                  [[checkbox :model show-lyrics?
@@ -212,7 +211,10 @@
                                              :children [(box-button "1" (speed-switch-fn 1))
                                                         (box-button "2" (speed-switch-fn 2))
                                                         (box-button "3" (speed-switch-fn 3))]]
-                                            #_[info-button :info dugun-info]]]]]
+                                            #_[info-button :info dugun-info]]]
+                                (zmdi-butn2
+                                 "zmdi zmdi-more zmdi-hc-lg"
+                                 #(do (dispatch [::events/show-keyboard :more])))]]
                     (let [swaras-3oct (swar36 @(subscribe [::subs/raga]))
                           but-style {:width (let [iw (.-innerWidth js/window)]
                                               (if (> iw 200)
@@ -258,7 +260,7 @@
                                                          :background-color "coral"}
                                                  :class "btn btn-lg"
                                                  :on-click
-                                                 #(do (dispatch [::events/hide-keyboard]))}
+                                                 #(do (dispatch [::events/show-keyboard :hide]))}
                                                 [:i {:class "zmdi zmdi-chevron-down zmdi-hc-lg"}]]]
                                        (zmdi-butn2 "zmdi zmdi-print zmdi-hc-lg"
                                                    #(do (.print js/window)))
@@ -488,7 +490,8 @@
       (let [winhgt (.-innerHeight js/window)
             myhgt (- winhgt
                      @editor-height)
-            show-lyrics? @(subscribe [::subs/show-lyrics?])]
+            show-lyrics? @(subscribe [::subs/show-lyrics?])
+            newline-on-avartan? @(subscribe [::subs/newline-on-avartan?])]
         [:div
          [:div
           {:class "edit-composition"
@@ -691,16 +694,23 @@
                                                 {:max-height "70px"}))}
                                        (reduce conj
                                                [:svg {:xmlns "http://www.w3.org/2000/svg"
-                                                     ;; :viewBox "0 0 10 10"
                                                       }]
                                                images)])))
-                            (reduce conj [:div {:class "box-row"}])))
+                            #_(reduce conj [:div {:class "box-row"}])))
                  b1
                  (->> comp
                       :indexed-noteseq
                       (map vector (range))
                       (mapv bfn))
-                 fin (reduce conj [:div {:class "wrapper"}] b1)]
+
+                 fin
+                 (if newline-on-avartan?
+                   (->> b1
+                        (mapv #(reduce conj [:div {:class "box-row"}] %))
+                        (reduce conj [:div {:class "box-row"}]))
+                   (->> b1
+                        (reduce into [:div {:class "box-row"}])
+                        (conj [:div {:class "wrapper"}])))]
              fin)]]]))))
 
 (defn hidden-keyboard-footer
@@ -714,7 +724,7 @@
                  :style {:flex-flow "row wrap"}
                  :class "last-bar"
                  :children [(zmdi-butn2 "zmdi zmdi-comment-edit zmdi-hc-lg"
-                                        #(do (dispatch [::events/show-keyboard])))
+                                        #(do (dispatch [::events/show-keyboard :default])))
                             (zmdi-butn2 "zmdi zmdi-file-plus zmdi-hc-lg"
                                         #(do
                                            (dispatch [::events/refresh-comp
@@ -722,6 +732,48 @@
                                            (.pushState (.-history js/window)
                                                        #js {} ""
                                                        (.-origin (.-location js/window)))))]]]]))
+
+(defn keyboard-more
+  []
+  (let [
+        show-lyrics? (reagent/atom true)
+        newline-on-avartan? (reagent/atom true)
+        ]
+    (fn []
+      [v-box
+       :gap      "0.5vh"
+       :children [[h-box
+                   :justify :between
+                   :class "first-bar"
+                   :align :center
+                   :children [(zmdi-butn2
+                               "zmdi zmdi-arrow-left zmdi-hc-lg"
+                               #(do (dispatch [::events/show-keyboard :default])))]]
+                  (let []
+                    [v-box
+                     :gap "2vh"
+                     :class "middle-buttons"
+                     :style {:min-height "20vh"}
+                     :align :center
+                     :justify :center
+                     :children
+                     (into
+                      (let [raga-id (subscribe [::subs/raga])]
+                        [[checkbox
+                          :model show-lyrics?
+                          :label "Show Lyrics?"
+                          :style {:padding "20px"}
+                          :on-change
+                          #(let [nval (not @show-lyrics?)]
+                             (reset! show-lyrics? nval)
+                             (dispatch [::events/show-lyrics? nval]))]
+                         [checkbox
+                          :model newline-on-avartan?
+                          :label "Newline on each Avartan?"
+                          :on-change
+                          #(let [nval (not @newline-on-avartan?)]
+                             (reset! newline-on-avartan? nval)
+                             (dispatch [::events/newline-on-avartan? nval]))]]))])]])))
 
 (defn show-editor
   []
@@ -732,9 +784,13 @@
           :ref #(if (identity %)
                   (let [ch (.-offsetHeight %)]
                     (reset! editor-height ch)))}
-    (if @(subscribe [::subs/show-keyboard?])
-      [swara-buttons]
-      [hidden-keyboard-footer])]])
+    (let [istate @(subscribe [::subs/show-keyboard?])]
+      (println " keyboard state " istate)
+      (cond (= :more istate)
+            [keyboard-more]
+            (= :hide istate)
+            [hidden-keyboard-footer]
+            :else [swara-buttons]))]])
 
 
 (defn load-bandish

@@ -242,7 +242,7 @@
 
 (def default-edit-props {:raga :yaman
                          :note-pos {}
-                         :show-keyboard? true
+                         :show-keyboard :default 
                          :language-en? true
                          :note-index []})
 (defn comp-decorator
@@ -262,6 +262,7 @@
             :dispinfo (merge dispinfo m-dispinfo)
             :m-dispinfo m-dispinfo
             :audio-context ctx
+            :newline-on-avartan? true
             :show-lyrics? true
             :santoor-buffers (get-santoor-url-map ctx)
             :dim {:editor (mapv dispinfo [:x-end :y-end])}})))

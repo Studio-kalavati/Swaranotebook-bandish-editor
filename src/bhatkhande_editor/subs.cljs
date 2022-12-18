@@ -126,3 +126,8 @@
  ::show-lyrics?
  (fn [db [_ _]]
    (:show-lyrics? db)))
+
+(reg-sub
+ ::newline-on-avartan?
+ (fn [db [_ _]]
+   (:newline-on-avartan? db)))
