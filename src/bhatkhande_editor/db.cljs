@@ -1,6 +1,7 @@
 (ns bhatkhande-editor.db
   (:require
    [sargam.spec :as us]
+   [chronoid.core :as c]
    [reagent.core :as reagent]
    [sargam.talas :as talas :refer [taal-def]])
   (:require-macros [adzerk.env :as env]))
@@ -254,16 +255,25 @@
                             (constantly
                              (let [in (-> comp :index last)]
                                (zipmap [:row-index :bhaag-index :note-index :nsi] in))))}))
+(defn init-buffers
+  []
+  (let  [clock (c/clock)
+         _ (c/start! clock)
+         ctx (:context @clock)]
+    (println " ctx " ctx)
+    {:santoor-buffers (get-santoor-url-map ctx)
+     :clock clock
+     :audio-context ctx}))
+
 
 (def default-db
-  (let [ctx (js/AudioContext.)]
+  (let []
     (merge (comp-decorator init-comp)
+           (init-buffers)
            {:init-state {:cursor-color 0}
             :dispinfo (merge dispinfo m-dispinfo)
             :m-dispinfo m-dispinfo
-            :audio-context ctx
             :newline-on-avartan? true
             :show-lyrics? true
-            :santoor-buffers (get-santoor-url-map ctx)
             :dim {:editor (mapv dispinfo [:x-end :y-end])}})))
 

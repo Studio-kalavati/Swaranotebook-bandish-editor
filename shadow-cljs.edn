@@ -14,6 +14,7 @@
   [com.cognitect/transit-cljs "0.8.280"]
 
   [com.shark8me/re-frame-firebase "0.8.3-SNAPSHOT"]
+  [io.djy/chronoid "0.2.0"]
   [breaking-point "0.1.2"]
   [adzerk/env "0.4.0"]
   [binaryage/devtools "1.0.6"]
@@ -36,5 +37,5 @@
    :dev
    {:compiler-options
     {:closure-defines
-     { 
-      re-com.config/root-url-for-compiler-output "http://localhost:8290/js/compiled/app/cljs-runtime/"}}}}}}
+     {re-com.config/root-url-for-compiler-output
+      "http://localhost:8290/js/compiled/app/cljs-runtime/"}}}}}}

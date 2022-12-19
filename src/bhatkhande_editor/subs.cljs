@@ -131,3 +131,8 @@
  ::newline-on-avartan?
  (fn [db [_ _]]
    (:newline-on-avartan? db)))
+
+(reg-sub
+ ::playing?
+ (fn [db [_ _]]
+   (or (= :start (:play-state db)))))

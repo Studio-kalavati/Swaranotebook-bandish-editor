@@ -237,8 +237,8 @@
                                  {:disp-fn #(do (dispatch [::events/show-keyboard :more]))
                                   :state (constantly false)})
                                 (zmdi-box-button
-                                 "zmdi zmdi-hearing"
-                                 {:disp-fn #(do (dispatch [::events/show-keyboard :more]))
+                                 "zmdi zmdi-hc-lg zmdi-play-circle"
+                                 {:disp-fn #(do (dispatch [::events/show-keyboard :play]))
                                   :state (constantly false)})
                                 ]]
                     (let [swaras-3oct (swar36 @(subscribe [::subs/raga]))
@@ -759,6 +759,31 @@
                                                        #js {} ""
                                                        (.-origin (.-location js/window)))))]]]]))
 
+(defn play-keyboard-footer
+  []
+  (fn []
+    [v-box
+     :gap      "0.5vh"
+     :class "last-bar"
+     :children
+     [[h-box
+       :gap      "0.5vw"
+       :style {:flex-flow "row wrap"}
+       :children
+       [(if @(subscribe [::subs/playing?])
+          (zmdi-butn2
+           "zmdi zmdi-pause-circle zmdi-hc-4x"
+           #(do (dispatch [::events/pause])))
+          (zmdi-butn2
+           "zmdi zmdi-play-circle zmdi-hc-4x"
+           #(do (dispatch [::events/play]))))]]
+      [h-box
+       :gap      "0.5vw"
+       :style {:flex-flow "row wrap"}
+       :children [(zmdi-butn2 "zmdi zmdi-arrow-left zmdi-hc-2x"
+                              #(do (dispatch [::events/show-keyboard :default])))]]
+      ]]))
+
 (defn keyboard-more
   []
   (let [show-lyrics? (reagent/atom @(subscribe [::subs/show-lyrics?]))
@@ -809,11 +834,12 @@
                   (let [ch (.-offsetHeight %)]
                     (reset! editor-height ch)))}
     (let [istate @(subscribe [::subs/show-keyboard?])]
-      (println " keyboard state " istate)
       (cond (= :more istate)
             [keyboard-more]
             (= :hide istate)
             [hidden-keyboard-footer]
+            (= :play istate)
+            [play-keyboard-footer]
             :else [swara-buttons]))]])
 
 

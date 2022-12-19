@@ -3,6 +3,7 @@
    [re-frame.core :as re-frame
     :refer [debug reg-event-db reg-event-fx
             subscribe dispatch dispatch-sync]]
+   [chronoid.core :as c]
    [bhatkhande-editor.db :as db]
    ["firebase/app" :default firebase]
    ["firebase/auth" :default fbauth]
@@ -19,10 +20,13 @@
     [nindex ni]))
 
 (defn play-url
-  ([ctx absn]
-   (let []
+  ([ctx absn] (play-url 0 nil ctx absn))
+  ([start-at dur ctx absn ]
+   (let [ctime (.-currentTime ctx)]
      (.connect absn (.-destination ctx))
-     (.start absn))))
+     (if dur
+       (.start absn (+ ctime start-at) 0 dur)
+       (.start absn 0)))))
 
 (reg-event-db
  ::initialize-db
@@ -47,6 +51,14 @@
  ::set-active-panel
  (fn [{:keys [db]} [_ active-panel]]
    {:db (assoc db :active-panel active-panel)}))
+
+(defn play-shruti
+  [db shruti start-at dur]
+  (let [audctx (:audio-context db)
+        buf (@(:santoor-buffers db) shruti)
+        absn (new js/AudioBufferSourceNode audctx #js {"buffer" buf})]
+    (play-url start-at dur audctx absn)
+    absn))
 
 (reg-event-fx
  ::play-svara
@@ -390,3 +402,84 @@
  ::newline-on-avartan?
  (fn [{:keys [db]} [_ ival]]
    {:db (assoc db :newline-on-avartan? ival)}))
+
+(reg-event-fx
+ ::play
+ (fn [{:keys [db]} [_ _]]
+   (let [note-interval 0.5
+         {:keys [audio-context clock]} db
+         now (.-currentTime audio-context)
+         a1
+         (->> db :composition :noteseq
+              (map vector (range 0 (->> db :composition :noteseq count inc) note-interval))
+              (map (fn[[at {:keys [notes] :as ivec}]]
+                     (if (= 1 (count notes))
+                       [[(-> notes first :shruti) (+ now at) note-interval]]
+                       ;;if many notes in one beat, schedule them to play at equal intervals
+                       (let [sub-note-intervals (/ note-interval (-> notes count))]
+                         (mapv (fn[a b] [a (+ now b) sub-note-intervals])
+                               (map :shruti notes)
+                               (range at (+ at note-interval) sub-note-intervals))))))
+              (reduce into []))]
+     ;;might be creating repeated clocks
+     {:db (assoc db
+                 :clock clock
+                 :play-state :start
+                 :play-at-time a1
+                 :timer
+                 (-> (c/set-timeout! clock #(dispatch [::clock-tick-event]) 0)
+                     (c/repeat! 400)))
+      :dispatch [::clock-tick-event]})))
+
+(reg-event-fx
+ ::pause
+ (fn [{:keys [db]} [_ _]]
+   (c/clear! (:timer db))
+   {:db (-> (assoc db :play-state :pause)
+            (dissoc :timer))}))
+
+(reg-event-fx
+ ::stop
+ (fn [{:keys [db]} [_ _]]
+   (c/clear! (:timer db))
+   {:db (-> (assoc db :play-state :stop)
+            (dissoc :timer)
+            (assoc :play-note-index 0))}))
+
+(reg-event-fx
+ ::clock-tick-event
+ (fn [{:keys [db]} [_ _]]
+   (try
+     (let [at (.-currentTime (:audio-context db))
+           play-at-time (:play-at-time db)
+           max-note-index (count play-at-time)
+           play-note-index (or (:play-note-index db) 0)
+           past-notes-fn (fn[time-index start-index time-change-fn]
+                           (take-while
+                            (fn[i]
+                              (and (> max-note-index i)
+                                   (let [[_ iat idur] (time-index i)]
+                                     (>= at (time-change-fn iat)))))
+                            (iterate inc start-index)))
+           past-notes-to-play (past-notes-fn play-at-time play-note-index #(- % 0.5))
+           idb {:db (if (-> past-notes-to-play empty? not)
+                      (let [n-note-play-index
+                            (if (-> past-notes-to-play empty? not)
+                              (-> past-notes-to-play last inc)
+                              play-note-index)]
+                        (->> past-notes-to-play
+                             (mapv (fn[ indx]
+                                     (let [[inote iat idur] (play-at-time indx)
+                                           iat (- iat at)]
+                                       (play-shruti db inote (if (> iat 0) iat 0) idur)))))
+                        (assoc db :play-note-index n-note-play-index))
+                      db)}
+           ret
+           (if (= play-note-index (count play-at-time))
+             (do
+               (merge idb {:dispatch [::stop]}))
+             idb)]
+       ret)
+     (catch js/Error e
+       (println " caught error in clock-tick-event" e)
+       {}))))
