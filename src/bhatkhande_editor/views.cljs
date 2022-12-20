@@ -761,13 +761,17 @@
 
 (defn play-keyboard-footer
   []
-  (let [bpm (reagent/atom @(subscribe [::subs/bpm]))]
+  (let [
+        bpm (reagent/atom @(subscribe [::subs/bpm]))
+        metronome? (reagent/atom @(subscribe [::subs/metronome?]))
+        ]
     (fn []
       [v-box
        :gap      "0.5vh"
        :class "last-bar"
        :children
        [[h-box
+         ;;play/pause
          :gap      "0.5vw"
          :style {:flex-flow "row wrap"}
          :children
@@ -778,27 +782,40 @@
             (zmdi-butn2
              "zmdi zmdi-play-circle zmdi-hc-4x"
              #(do (dispatch [::events/play]))))]]
-        [v-box
+        [h-box
          :gap      "2vw"
          :style {:flex-flow "row wrap"}
          :align :center
          :justify :center
          :children
-         [[slider :model bpm
-           :min 60
-           :max 180
-           :step 15
-           :width "40vw"
-           :disabled? @(subscribe [::subs/playing?])
-           :on-change #(do (reset! bpm %)
-                           (dispatch [::events/set-bpm %]))]
-          [h-box
-           :gap "1vh"
-           :children
-           [[title :level :level3
-             :label "BPM"]
-            [title :level :level3
-             :label @bpm]]]]]
+         [
+          [v-box :children
+           [[slider :model bpm
+             :min 60
+             :max 180
+             :step 15
+             :width "40vw"
+             :disabled? @(subscribe [::subs/playing?])
+             :on-change #(do (reset! bpm %)
+                             (dispatch [::events/set-bpm %]))]
+            [h-box
+             :gap "1vh"
+             :children
+             [[title :level :level3
+               :label "BPM"]
+              [title :level :level3
+               :label @bpm]]]]]
+          [v-box
+           :align :center
+           :justify :center
+           :children [
+            [checkbox
+             :model metronome?
+             :label "Metronome"
+             :on-change
+             #(let [nval (not @metronome?)]
+                (reset! metronome? nval)
+                (dispatch [::events/metronome? nval]))]]]]]
 
         [h-box
          :gap      "0.5vw"

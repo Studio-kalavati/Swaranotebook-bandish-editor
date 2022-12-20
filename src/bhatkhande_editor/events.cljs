@@ -10,6 +10,7 @@
    ["firebase/storage" :default storage]
    ["firebase/firestore" :as firebase-firestore]
    [cognitect.transit :as t]
+   [sargam.talas :refer [taal-def]]
    ))
 
 (defn get-ns-index
@@ -55,7 +56,7 @@
 (defn play-shruti
   [db shruti start-at dur]
   (let [audctx (:audio-context db)
-        buf (@(:santoor-buffers db) shruti)
+        buf (@(:sample-buffers db) shruti)
         absn (new js/AudioBufferSourceNode audctx #js {"buffer" buf})]
     (play-url start-at dur audctx absn)
     absn))
@@ -64,7 +65,7 @@
  ::play-svara
  (fn [{:keys [db]} [_ shruti]]
    (let [audctx (:audio-context db)
-         buf (@(:santoor-buffers db) shruti)
+         buf (@(:sample-buffers db) shruti)
          absn (new js/AudioBufferSourceNode audctx
                    #js {"buffer" buf})]
      (if audctx
@@ -409,24 +410,43 @@
    {:db (assoc db :bpm ival)}))
 
 (reg-event-fx
+ ::metronome?
+ (fn [{:keys [db]} [_ ival]]
+   {:db (assoc db :metronome? ival)}))
+
+(reg-event-fx
  ::play
  (fn [{:keys [db]} [_ _]]
    (let [note-interval (/ 60 (:bpm db) )
-         _ (println " note interval " note-interval)
          {:keys [audio-context clock]} db
          now (.-currentTime audio-context)
+         taal (-> db :composition :taal)
+         metronome-on-at (set (->> taal-def taal
+                                        :bhaags
+                                        (reductions +) ;;[4 8 12 16]
+                                        (map inc) ;;get start of next bhaag
+                                        butlast ;;drop the last one and add the first note
+                                        (into [1])))
          a1
          (->> db :composition :noteseq
-              (map vector (range 0 (->> db :composition :noteseq count inc) note-interval))
-              (map (fn[[at {:keys [notes] :as ivec}]]
-                     (if (= 1 (count notes))
-                       [[(-> notes first :shruti) (+ now at) note-interval]]
-                       ;;if many notes in one beat, schedule them to play at equal intervals
-                       (let [sub-note-intervals (/ note-interval (-> notes count))]
-                         (mapv (fn[a b] [a (+ now b) sub-note-intervals])
-                               (map :shruti notes)
-                               (range at (+ at note-interval) sub-note-intervals))))))
-              (reduce into []))]
+              (map vector (range 0 (->> db :composition :noteseq count inc) note-interval)
+                   (range))
+              (map (fn[[at note-index {:keys [notes] :as ivec}]]
+                     ;;make 0 based to 1 based index
+                     (let [note-index (mod (inc note-index) (-> taal-def taal :num-beats))
+                           notseq
+                           (if (= 1 (count notes))
+                             [[(-> notes first :shruti) (+ now at) note-interval]]
+                             ;;if many notes in one beat, schedule them to play at equal intervals
+                             (let [sub-note-intervals (/ note-interval (-> notes count))]
+                               (mapv (fn[a b] [a (+ now b) sub-note-intervals])
+                                     (map :shruti notes)
+                                     (range at (+ at note-interval) sub-note-intervals))))]
+                       (if (and (:metronome? db) (metronome-on-at note-index))
+                         (into [[:tick2 (+ now at) note-interval]] notseq )
+                         notseq))))
+              (reduce into [])
+              #_(map (fn[[a b c]] [a (js/Number (.toFixed b 2)) (js/Number (.toFixed c 2))])))]
      ;;might be creating repeated clocks
      {:db (assoc db
                  :clock clock

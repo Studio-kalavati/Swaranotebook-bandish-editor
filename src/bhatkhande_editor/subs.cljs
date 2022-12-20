@@ -118,9 +118,9 @@
    (:audio-context db)))
 
 (reg-sub
- ::santoor-buffers
+ ::sample-buffers
  (fn [db [_ _]]
-   (:santoor-buffers db)))
+   (:sample-buffers db)))
 
 (reg-sub
  ::show-lyrics?
@@ -141,3 +141,8 @@
  ::bpm
  (fn [db [_ _]]
    (:bpm db)))
+
+(reg-sub
+ ::metronome?
+ (fn [db [_ _]]
+   (:metronome? db)))

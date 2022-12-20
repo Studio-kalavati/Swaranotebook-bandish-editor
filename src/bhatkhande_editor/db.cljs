@@ -193,7 +193,6 @@
    (.then (fn [r] (.decodeAudioData ctx r)))
    (.then
     (fn [resp]
-      (println " fetch url")
       (swap! imap assoc ikey resp)))))
 
 (defn get-santoor-url-map
@@ -211,6 +210,13 @@
                                     [i j])) [:ati-taar :s])
                        ivals)]
     imap))
+
+(defn get-metronome-url-map
+  [imap ctx]
+  (mapv (partial fetch-url imap ctx)
+        [:tick1 :tick2]
+        (map #(str "/sounds/metronome/metro" % ".mp3") [1 2]))
+  imap)
 
 ;;(def santoor-url-map (get-santoor-url-map))
 
@@ -259,9 +265,10 @@
   []
   (let  [clock (c/clock)
          _ (c/start! clock)
-         ctx (:context @clock)]
-    (println " ctx " ctx)
-    {:santoor-buffers (get-santoor-url-map ctx)
+         ctx (:context @clock)
+         bufatom (get-santoor-url-map ctx)
+         bufatom (get-metronome-url-map bufatom ctx)]
+    {:sample-buffers bufatom
      :clock clock
      :audio-context ctx}))
 
@@ -276,5 +283,6 @@
             :newline-on-avartan? true
             :show-lyrics? true
             :bpm 120
+            :metronome? true
             :dim {:editor (mapv dispinfo [:x-end :y-end])}})))
 
