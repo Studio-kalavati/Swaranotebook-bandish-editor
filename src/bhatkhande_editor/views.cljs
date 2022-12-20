@@ -764,65 +764,63 @@
   (let [
         bpm (reagent/atom @(subscribe [::subs/bpm]))
         metronome? (reagent/atom @(subscribe [::subs/metronome?]))
-        ]
+        show-settings? (reagent/atom false)]
     (fn []
       [v-box
-       :gap      "0.5vh"
-       :class "last-bar"
+       :class "first-bar"
        :children
-       [[h-box
-         ;;play/pause
-         :gap      "0.5vw"
-         :style {:flex-flow "row wrap"}
+       [
+        (when @show-settings?
+          [modal-panel
+           :backdrop-on-click #(reset! show-settings? false)
+           :child [:div {:class "popup" :style {:overflow-y :scroll :max-height "80vh"}}
+                   [v-box
+                    :gap "2vh"
+                    :class "body"
+                    :align :center
+                    :children
+                    [
+                     [v-box :children
+                      [[slider :model bpm
+                        :min 60
+                        :max 180
+                        :step 15
+                        :width "40vw"
+                        :disabled? @(subscribe [::subs/playing?])
+                        :on-change #(do (reset! bpm %)
+                                        (dispatch [::events/set-bpm %]))]
+                       [h-box
+                        :gap "1vh"
+                        :children
+                        [[title :level :level3
+                          :label "BPM"]
+                         [title :level :level3
+                          :label @bpm]]]]]
+                     [v-box
+                      :align :center
+                      :justify :center
+                      :children [
+                                 [checkbox
+                                  :model metronome?
+                                  :label "Metronome"
+                                  :on-change
+                                  #(let [nval (not @metronome?)]
+                                     (reset! metronome? nval)
+                                     (dispatch [::events/metronome? nval]))]]]]]]])
+        [h-box
+         :gap      "0.5vh"
          :children
-         [(if @(subscribe [::subs/playing?])
+         [(zmdi-butn2 "zmdi zmdi-arrow-left zmdi-hc-2x"
+                      #(do (dispatch [::events/show-keyboard :default])))
+          (if @(subscribe [::subs/playing?])
             (zmdi-butn2
              "zmdi zmdi-pause-circle zmdi-hc-4x"
              #(do (dispatch [::events/pause])))
             (zmdi-butn2
              "zmdi zmdi-play-circle zmdi-hc-4x"
-             #(do (dispatch [::events/play]))))]]
-        [h-box
-         :gap      "2vw"
-         :style {:flex-flow "row wrap"}
-         :align :center
-         :justify :center
-         :children
-         [
-          [v-box :children
-           [[slider :model bpm
-             :min 60
-             :max 180
-             :step 15
-             :width "40vw"
-             :disabled? @(subscribe [::subs/playing?])
-             :on-change #(do (reset! bpm %)
-                             (dispatch [::events/set-bpm %]))]
-            [h-box
-             :gap "1vh"
-             :children
-             [[title :level :level3
-               :label "BPM"]
-              [title :level :level3
-               :label @bpm]]]]]
-          [v-box
-           :align :center
-           :justify :center
-           :children [
-            [checkbox
-             :model metronome?
-             :label "Metronome"
-             :on-change
-             #(let [nval (not @metronome?)]
-                (reset! metronome? nval)
-                (dispatch [::events/metronome? nval]))]]]]]
-
-        [h-box
-         :gap      "0.5vw"
-         :style {:flex-flow "row wrap"}
-         :children [(zmdi-butn2 "zmdi zmdi-arrow-left zmdi-hc-2x"
-                                #(do (dispatch [::events/show-keyboard :default])))]]
-        ]])))
+             #(do (dispatch [::events/play]))))
+          (zmdi-butn2 "zmdi zmdi-settings zmdi-hc-2x"
+                      #(do (reset! show-settings? true)))]]]])))
 
 (defn keyboard-more
   []
