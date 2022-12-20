@@ -136,3 +136,8 @@
  ::playing?
  (fn [db [_ _]]
    (or (= :start (:play-state db)))))
+
+(reg-sub
+ ::bpm
+ (fn [db [_ _]]
+   (:bpm db)))

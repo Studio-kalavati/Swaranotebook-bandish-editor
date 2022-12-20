@@ -275,5 +275,6 @@
             :m-dispinfo m-dispinfo
             :newline-on-avartan? true
             :show-lyrics? true
+            :bpm 120
             :dim {:editor (mapv dispinfo [:x-end :y-end])}})))
 

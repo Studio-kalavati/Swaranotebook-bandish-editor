@@ -761,28 +761,51 @@
 
 (defn play-keyboard-footer
   []
-  (fn []
-    [v-box
-     :gap      "0.5vh"
-     :class "last-bar"
-     :children
-     [[h-box
-       :gap      "0.5vw"
-       :style {:flex-flow "row wrap"}
+  (let [bpm (reagent/atom @(subscribe [::subs/bpm]))]
+    (fn []
+      [v-box
+       :gap      "0.5vh"
+       :class "last-bar"
        :children
-       [(if @(subscribe [::subs/playing?])
-          (zmdi-butn2
-           "zmdi zmdi-pause-circle zmdi-hc-4x"
-           #(do (dispatch [::events/pause])))
-          (zmdi-butn2
-           "zmdi zmdi-play-circle zmdi-hc-4x"
-           #(do (dispatch [::events/play]))))]]
-      [h-box
-       :gap      "0.5vw"
-       :style {:flex-flow "row wrap"}
-       :children [(zmdi-butn2 "zmdi zmdi-arrow-left zmdi-hc-2x"
-                              #(do (dispatch [::events/show-keyboard :default])))]]
-      ]]))
+       [[h-box
+         :gap      "0.5vw"
+         :style {:flex-flow "row wrap"}
+         :children
+         [(if @(subscribe [::subs/playing?])
+            (zmdi-butn2
+             "zmdi zmdi-pause-circle zmdi-hc-4x"
+             #(do (dispatch [::events/pause])))
+            (zmdi-butn2
+             "zmdi zmdi-play-circle zmdi-hc-4x"
+             #(do (dispatch [::events/play]))))]]
+        [v-box
+         :gap      "2vw"
+         :style {:flex-flow "row wrap"}
+         :align :center
+         :justify :center
+         :children
+         [[slider :model bpm
+           :min 60
+           :max 180
+           :step 15
+           :width "40vw"
+           :disabled? @(subscribe [::subs/playing?])
+           :on-change #(do (reset! bpm %)
+                           (dispatch [::events/set-bpm %]))]
+          [h-box
+           :gap "1vh"
+           :children
+           [[title :level :level3
+             :label "BPM"]
+            [title :level :level3
+             :label @bpm]]]]]
+
+        [h-box
+         :gap      "0.5vw"
+         :style {:flex-flow "row wrap"}
+         :children [(zmdi-butn2 "zmdi zmdi-arrow-left zmdi-hc-2x"
+                                #(do (dispatch [::events/show-keyboard :default])))]]
+        ]])))
 
 (defn keyboard-more
   []

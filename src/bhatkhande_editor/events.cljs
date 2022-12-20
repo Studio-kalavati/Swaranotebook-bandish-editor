@@ -404,9 +404,15 @@
    {:db (assoc db :newline-on-avartan? ival)}))
 
 (reg-event-fx
+ ::set-bpm
+ (fn [{:keys [db]} [_ ival]]
+   {:db (assoc db :bpm ival)}))
+
+(reg-event-fx
  ::play
  (fn [{:keys [db]} [_ _]]
-   (let [note-interval 0.5
+   (let [note-interval (/ 60 (:bpm db) )
+         _ (println " note interval " note-interval)
          {:keys [audio-context clock]} db
          now (.-currentTime audio-context)
          a1
