@@ -166,8 +166,11 @@
         show-lang-popup (reagent/atom false)
         show-login-popup? (reagent/atom false)
         show-share-popup? (reagent/atom false)
+        show-settings-popup? (reagent/atom false)
         show-title-popup? (reagent/atom false)
         newsletter-signup? (reagent/atom true)
+        show-lyrics? (reagent/atom @(subscribe [::subs/show-lyrics?]))
+        newline-on-avartan? (reagent/atom @(subscribe [::subs/newline-on-avartan?]))
         title-val (reagent/atom "")
         notes-per-beat (reagent/atom 1)]
     (fn []
@@ -234,7 +237,7 @@
                                  (speed-switch-fn 3))
                                 (zmdi-box-button
                                  "zmdi zmdi-settings zmdi-hc-lg"
-                                 {:disp-fn #(do (dispatch [::events/show-keyboard :more]))
+                                 {:disp-fn #(do (reset! show-settings-popup? true))
                                   :state (constantly false)})
                                 (zmdi-box-button
                                  "zmdi zmdi-hc-lg zmdi-play-circle"
@@ -331,6 +334,46 @@
                                        (mk-button notes-per-beat {:shruti [:madhyam :-]})
                                        (mk-button notes-per-beat {:shruti [:madhyam :a]})
                                        (butn2 "⌫" #(dispatch [::events/delete-single-swara]))]])
+                         (when @show-settings-popup?
+                           [modal-panel
+                            :backdrop-on-click #(reset! show-settings-popup? false)
+                            :child
+                            [:div {:class "popup" :style {:width "85vw"}}
+                             [v-box
+                              :gap      "0.5vh"
+                              :children
+                              [(let []
+                                 [v-box
+                                  :gap "5vh"
+                                  :style {:min-height "20vh"}
+                                  :justify :center
+                                  :children
+                                  (let []
+                                    [[gap :size "2vh"]
+                                     [checkbox
+                                      :model show-lyrics?
+                                      :label "Show Lyrics?"
+                                      :on-change
+                                      #(let [nval (not @show-lyrics?)]
+                                         (reset! show-lyrics? nval)
+                                         (dispatch [::events/show-lyrics? nval]))]
+                                     [checkbox
+                                      :model newline-on-avartan?
+                                      :label "Newline on each Avartan?"
+                                      :on-change
+                                      #(let [nval (not @newline-on-avartan?)]
+                                         (reset! newline-on-avartan? nval)
+                                         (dispatch [::events/newline-on-avartan? nval]))]
+                                     [box
+                                      :align :center
+                                      :child
+                                      [button
+                                       :label "  OK  "
+                                       :style {:width "100px"}
+                                       :class "btn-hc-lg btn-primary "
+                                       :on-click #(do (reset! show-settings-popup? false))]]
+                                     [gap :size "2vh"]
+                                     ])])]]]])
                          (when @show-share-popup?
                            [modal-panel
                               :backdrop-on-click #(reset! show-share-popup? false)
@@ -841,7 +884,7 @@
           (zmdi-butn2 "zmdi zmdi-settings zmdi-hc-2x"
                       #(do (reset! show-settings? true)))]]]])))
 
-(defn keyboard-more
+#_(defn keyboard-more
   []
   (let [show-lyrics? (reagent/atom @(subscribe [::subs/show-lyrics?]))
         newline-on-avartan? (reagent/atom @(subscribe [::subs/newline-on-avartan?]))]
@@ -891,8 +934,8 @@
                   (let [ch (.-offsetHeight %)]
                     (reset! editor-height ch)))}
     (let [istate @(subscribe [::subs/show-keyboard?])]
-      (cond (= :more istate)
-            [keyboard-more]
+      (cond ;;(= :more istate)
+            ;;[keyboard-more]
             (= :hide istate)
             [hidden-keyboard-footer]
             (= :play istate)
