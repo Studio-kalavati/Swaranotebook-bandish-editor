@@ -8,12 +8,12 @@
 
 
 (env/def
-  apiKey nil
-  authDomain nil
-  projectId nil
-  storageBucket nil
-  messagingSenderId nil
-  appId nil)
+  apiKey :required
+  authDomain :required
+  projectId :required
+  storageBucket :required
+  messagingSenderId :required
+  appId :required)
 
 (defn get-bandish-url
   [path]
