@@ -233,7 +233,7 @@
                                  "zmdi zmdi-collection-item-3"
                                  (speed-switch-fn 3))
                                 (zmdi-box-button
-                                 "zmdi zmdi-more zmdi-hc-lg"
+                                 "zmdi zmdi-settings zmdi-hc-lg"
                                  {:disp-fn #(do (dispatch [::events/show-keyboard :more]))
                                   :state (constantly false)})
                                 (zmdi-box-button
@@ -764,7 +764,8 @@
   (let [
         bpm (reagent/atom @(subscribe [::subs/bpm]))
         metronome? (reagent/atom @(subscribe [::subs/metronome?]))
-        show-settings? (reagent/atom false)]
+        show-settings? (reagent/atom false)
+        tanpura? (reagent/atom true)]
     (fn []
       [v-box
        :class "first-bar"
@@ -773,7 +774,9 @@
         (when @show-settings?
           [modal-panel
            :backdrop-on-click #(reset! show-settings? false)
-           :child [:div {:class "popup" :style {:overflow-y :scroll :max-height "80vh"}}
+           :child [:div {:class "popup" :style {;;:overflow-y :scroll
+                                                :width "90vw"
+                                                }}
                    [v-box
                     :gap "2vh"
                     :class "body"
@@ -806,7 +809,21 @@
                                   :on-change
                                   #(let [nval (not @metronome?)]
                                      (reset! metronome? nval)
-                                     (dispatch [::events/metronome? nval]))]]]]]]])
+                                     (dispatch [::events/metronome? nval]))]]]
+                     [v-box
+                      :align :center
+                      :justify :center
+                      :children [
+                                 [checkbox
+                                  :model tanpura?
+                                  :label "Play Tanpura?"
+                                  :on-change
+                                  #(let [nval (not @tanpura?)]
+                                     (reset! tanpura? nval)
+                                     (dispatch [::events/tanpura? nval]))]]]
+                     [h-box :children
+                      [(zmdi-butn2 "zmdi zmdi-close zmdi-hc-2x"
+                                   #(reset! show-settings? false))]]]]]])
         [h-box
          :gap      "0.5vh"
          :children

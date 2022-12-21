@@ -146,3 +146,8 @@
  ::metronome?
  (fn [db [_ _]]
    (:metronome? db)))
+
+(reg-sub
+ ::tanpura?
+ (fn [db [_ _]]
+   (:tanpura? db)))

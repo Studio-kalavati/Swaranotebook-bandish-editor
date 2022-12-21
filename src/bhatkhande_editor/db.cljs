@@ -211,11 +211,17 @@
                        ivals)]
     imap))
 
-(defn get-metronome-url-map
+(defn get-metronome-sample-loc
   [imap ctx]
   (mapv (partial fetch-url imap ctx)
         [:tick1 :tick2]
         (map #(str "/sounds/metronome/metro" % ".mp3") [1 2]))
+  imap)
+
+(defn get-tanpura-sample-loc
+  [imap ctx]
+  (fetch-url imap ctx :tanpura
+             "/sounds/tanpura/c4.mp3")
   imap)
 
 ;;(def santoor-url-map (get-santoor-url-map))
@@ -267,7 +273,8 @@
          _ (c/start! clock)
          ctx (:context @clock)
          bufatom (get-santoor-url-map ctx)
-         bufatom (get-metronome-url-map bufatom ctx)]
+         bufatom (get-metronome-sample-loc bufatom ctx)
+         bufatom (get-tanpura-sample-loc bufatom ctx)]
     {:sample-buffers bufatom
      :clock clock
      :audio-context ctx}))
@@ -284,5 +291,6 @@
             :show-lyrics? true
             :bpm 120
             :metronome? true
+            :tanpura? true
             :dim {:editor (mapv dispinfo [:x-end :y-end])}})))
 

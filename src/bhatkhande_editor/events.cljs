@@ -20,6 +20,20 @@
         nindex (db/get-noteseq-index click-index (get-in db [:composition :taal]))]
     [nindex ni]))
 
+(defn sched-play-url
+  ([ctx start-at dur absn ] (sched-play-url ctx start-at dur absn {}))
+  ([ctx start-at dur absn options]
+   (let [ctime (.-currentTime ctx)
+         {:keys [gain] :or {gain 1}} options
+         gain-node (.createGain ctx)]
+     (set! (.-value (.-gain gain-node)) gain)
+     (-> (.connect absn gain-node)
+         (.connect (.-destination ctx)))
+
+     (if dur
+       (.start absn (+ ctime start-at) 0 dur)
+       (.start absn 0)))))
+
 (defn play-url
   ([ctx absn] (play-url 0 nil ctx absn))
   ([start-at dur ctx absn ]
@@ -54,11 +68,11 @@
    {:db (assoc db :active-panel active-panel)}))
 
 (defn play-shruti
-  [db shruti start-at dur]
+  [db [shruti start-at dur options]]
   (let [audctx (:audio-context db)
         buf (@(:sample-buffers db) shruti)
         absn (new js/AudioBufferSourceNode audctx #js {"buffer" buf})]
-    (play-url start-at dur audctx absn)
+    (sched-play-url audctx start-at dur absn options)
     absn))
 
 (reg-event-fx
@@ -415,6 +429,11 @@
    {:db (assoc db :metronome? ival)}))
 
 (reg-event-fx
+ ::tanpura?
+ (fn [{:keys [db]} [_ ival]]
+   {:db (assoc db :tanpura? ival)}))
+
+(reg-event-fx
  ::play
  (fn [{:keys [db]} [_ _]]
    (let [note-interval (/ 60 (:bpm db) )
@@ -445,8 +464,19 @@
                        (if (and (:metronome? db) (metronome-on-at note-index))
                          (into [[:tick2 (+ now at) note-interval]] notseq )
                          notseq))))
-              (reduce into [])
-              #_(map (fn[[a b c]] [a (js/Number (.toFixed b 2)) (js/Number (.toFixed c 2))])))]
+              (reduce into []))
+         a1 (if (:tanpura? db)
+              (let [last-note-time (- (-> a1 last second) now )
+                    sample-len 3
+                    ;;length of sample is 4 secs
+                    play-n-times (int (/ last-note-time sample-len))
+                    conj-vec (mapv 
+                              #(vector :tanpura (+ now (* % sample-len)) sample-len {:gain 0.5})
+                              (range (inc play-n-times)))]
+                #_(println " lnt " (vector now (-> a1 last second)) " - "last-note-time " times " play-n-times " conj-vec " conj-vec)
+                (vec (sort-by second
+                              (into a1 conj-vec))))
+              a1)]
      ;;might be creating repeated clocks
      {:db (assoc db
                  :clock clock
@@ -495,9 +525,11 @@
                               play-note-index)]
                         (->> past-notes-to-play
                              (mapv (fn[ indx]
-                                     (let [[inote iat idur] (play-at-time indx)
+                                     (let [[inote iat idur :as noteat] (play-at-time indx)
                                            iat (- iat at)]
-                                       (play-shruti db inote (if (> iat 0) iat 0) idur)))))
+                                       (play-shruti db [inote (if (> iat 0) iat 0) idur
+                                                        (if (= 4 (count noteat))
+                                                          (last noteat) {})])))))
                         (assoc db :play-note-index n-note-play-index))
                       db)}
            ret
