@@ -299,28 +299,29 @@
                                                      #(do (dispatch [::events/sign-out])))
                                          (zmdi-butn2 "zmdi zmdi-google-plus zmdi-hc-lg"
                                                      #(do (reset! show-login-popup? true))))
-                                       (when-let [share-url @(subscribe [::subs/share-url])]
-                                         (zmdi-butn2
-                                          "zmdi zmdi-share zmdi-hc-lg"
-                                          #(let []
-                                             (println " share url " share-url)
-                                             (if (.-share js/navigator)
-                                               (-> (.share js/navigator
-                                                           #js
-                                                           {"title" @title-val
-                                                            "text" " Check out this bandish I wrote"
-                                                            "url"
-                                                            (str
-                                                             (.-origin (.-location js/window))
-                                                             "/view/"
-                                                             share-url)})
-                                                   (.then (fn[i] (println " shared")))
-                                                   (.catch (fn[i]
-                                                             (println " share error"))))
-                                               ;;put in a popup if share is not enabled
-                                               (do
-                                                 (reset! show-share-popup? true))
-                                               ))))
+                                       (when-let [ctitle @(subscribe [::subs/comp-title])]
+                                         (let [share-url @(subscribe [::subs/share-url])]
+                                           (zmdi-butn2
+                                            "zmdi zmdi-share zmdi-hc-lg"
+                                            #(let []
+                                               (println " share url " share-url)
+                                               (if (.-share js/navigator)
+                                                 (-> (.share js/navigator
+                                                             #js
+                                                             {"title" @title-val
+                                                              "text" " Check out this bandish I wrote"
+                                                              "url"
+                                                              (str
+                                                               (.-origin (.-location js/window))
+                                                               "/view/"
+                                                               share-url)})
+                                                     (.then (fn[i] (println " shared")))
+                                                     (.catch (fn[i]
+                                                               (println " share error"))))
+                                                 ;;put in a popup if share is not enabled
+                                                 (do
+                                                   (reset! show-share-popup? true))
+                                                 )))))
                                        (when logged-in?
                                          (zmdi-butn2
                                           "zmdi zmdi-cloud-upload zmdi-hc-lg"
@@ -333,12 +334,11 @@
                          (when @show-share-popup?
                            [modal-panel
                               :backdrop-on-click #(reset! show-share-popup? false)
-                              :child [:div {:class "popup" :style {:overflow-y :scroll
-                                                                   :max-height "80vh"}}
+                              :child [:div {:class "popup" :style {;;:overflow :scroll
+                                                                   :max-width "85vh"}}
                                       [v-box
                                        :gap "2vh"
                                        :class "body"
-                                       :align :center
                                        :children
                                        [[box
                                          :align :center
@@ -346,14 +346,16 @@
                                          [title :level :level3
                                           :label "Copy this link to share the Bandish"]]
                                         [gap :size "3vh"]
+                                        [:p {:style {:display "inline-block"
+                                                     :word-wrap "break-word"}}
+                                         @(subscribe [::subs/share-url])]
                                         [box :align :center
-                                         :style {:max-width "40vw"}
                                          :child
-                                         [p @(subscribe [::subs/share-url])]]
-                                        [button
-                                         :label "  OK  " 
-                                         :class "btn-hc-lg btn-primary "
-                                         :on-click #(do (reset! show-share-popup? false))]]]]])
+                                         [button
+                                          :label "  OK  "
+                                          :style {:width "100px"}
+                                          :class "btn-hc-lg btn-primary "
+                                          :on-click #(do (reset! show-share-popup? false))]]]]]])
                          (when @show-title-popup?
                            (let []
                              [modal-panel
