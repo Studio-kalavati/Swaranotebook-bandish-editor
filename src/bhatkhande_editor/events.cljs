@@ -476,12 +476,24 @@
                 #_(println " lnt " (vector now (-> a1 last second)) " - "last-note-time " times " play-n-times " conj-vec " conj-vec)
                 (vec (sort-by second
                               (into a1 conj-vec))))
-              a1)]
-     ;;might be creating repeated clocks
+              a1)
+         ;;a1 contains notes, tanpura, beat sounds.
+         ;;we need another index that translates a note index to the visual index which
+         ;;contains just the notes
+         a2 (->> a1
+                 (map vector (range))
+                 ;;select only notes encoded as [:mandra :s]
+                 (filter (fn[[indx inote]] (vector? (first inote))))
+                 (map vector (range))
+                 (map (fn[[svara-index [nindex _]]] {nindex svara-index}))
+                 (apply merge))]
      {:db (assoc db
                  :clock clock
                  :play-state :start
                  :play-at-time a1
+                 :note-interval note-interval
+                 ;;translates the play-note index to the view-note index
+                 :play-to-view-map a2
                  :timer
                  (-> (c/set-timeout! clock #(dispatch [::clock-tick-event]) 0)
                      (c/repeat! 400)))
@@ -501,6 +513,12 @@
    {:db (-> (assoc db :play-state :stop)
             (dissoc :timer)
             (assoc :play-note-index 0))}))
+
+(reg-event-fx
+ ::register-elem
+ (fn [{:keys [db]} [_ index nsi elem]]
+   ;;(println " register elem "[ index nsi elem])
+   {:db (update-in db [:elem-index ] conj elem)}))
 
 (reg-event-fx
  ::clock-tick-event
@@ -526,10 +544,27 @@
                         (->> past-notes-to-play
                              (mapv (fn[ indx]
                                      (let [[inote iat idur :as noteat] (play-at-time indx)
-                                           iat (- iat at)]
+                                           iat (- iat at)
+                                           view-note-index ((:play-to-view-map db) indx)]
                                        (play-shruti db [inote (if (> iat 0) iat 0) idur
                                                         (if (= 4 (count noteat))
-                                                          (last noteat) {})])))))
+                                                          (last noteat) {})])
+                                       (when view-note-index
+                                         (let [notel (get-in (:elem-index db) [view-note-index])]
+                                           (set! (.-style notel) (str "fill-opacity:0.2"))
+                                           (->
+                                            (.animate
+                                             notel
+                                             #js [
+                                                  #js {"opacity" 0.5}
+                                                  #js {"opacity" 1 "offset" 0.2}
+                                                  #js {"opacity" 0}]
+                                             #js {"duration"
+                                                  (* 1000 2 (:note-interval db))})
+                                            (.addEventListener
+                                             "finish"
+                                             (fn[e]
+                                               (set! (.-style notel) "fill-opacity:0"))))))))))
                         (assoc db :play-note-index n-note-play-index))
                       db)}
            ret

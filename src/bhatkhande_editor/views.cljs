@@ -556,8 +556,7 @@
 (def editor-height (reagent/atom 0))
 (defn swara-display-area
   []
-  (let []
-    (fn []
+(fn []
       (let [winhgt (.-innerHeight js/window)
             myhgt (- winhgt
                      @editor-height)
@@ -582,9 +581,9 @@
                   (let [sctop (- (.-scrollHeight % ) myhgt)]
                     (set! (.-scrollTop %) sctop)))))}
           [:div {:class "com-edit"
-                 ;;:on-click (fn[i] (do (println " got on -click")))
                  }
-           (let [div-id "editor"
+           (let
+               [div-id "editor"
                  comp @(subscribe [::subs/composition])
                  _ (dispatch [::events/reset-note-index])
                  rect-style {:width 2 :height 30 :y 10}
@@ -593,15 +592,11 @@
                               "hindi" "english_SrR"))
                  draw-bhaag
                  (fn[row-index bhaag-index note-map-seq]
-                   (let [sahitya
-                         (get-in comp
-                                 [:noteseq
-                                  (db/get-noteseq-index
-                                   {:row-index row-index
-                                    :bhaag-index bhaag-index :note-index 0}
-                                   (:taal comp))
-                                  :lyrics])
-
+                   (let [nsindex (db/get-noteseq-index
+                                  {:row-index row-index
+                                   :bhaag-index bhaag-index :note-index 0}
+                                  (:taal comp))
+                         sahitya (get-in comp [:noteseq nsindex :lyrics])
                          sah-list (when sahitya (clojure.string/split sahitya #","))
                          r3
                          (->>
@@ -609,7 +604,18 @@
                           (map vector (range))
                           (reduce
                            (fn[{:keys [x images] :as acc} [note-index note]]
-                             (let [r2
+                             (let [
+                                   ;;this is the flat noteseq index.
+                                   ;;example: at position 11, we find
+                                   ;;11  --  {:notes [{:shruti [:madhyam :m+], :npb 3} {:shruti [:madhyam :g], :npb 3} {:shruti [:madhyam :r], :npb 3}]}
+                                   ;;which can have multiple notes in it.
+                                   nseq-index
+                                   (db/get-noteseq-index
+                                    {:row-index row-index
+                                     :bhaag-index bhaag-index
+                                     :note-index note-index}
+                                    (:taal comp))
+                                   r2
                                    (->>
                                     note
                                     :notes
@@ -623,10 +629,22 @@
                                                           :note-index note-index
                                                           :nsi nsi}
                                              cursor-rect
-                                             [:rect (assoc rect-style
-                                                           :x (+ x1 5) :y 5
-                                                           :height 50
-                                                           :class "blinking-cursor")]
+                                             (if (= :play @(subscribe [::subs/show-keyboard?]))
+                                               ;;show rect that animates on playing
+                                               [:rect
+                                                {:width 20 :height 30
+                                                 :fill "#f83600"
+                                                 :fill-opacity 0
+                                                 :ref #(when (identity %)
+                                                         (dispatch [::events/register-elem
+                                                                    nseq-index nsi %]))
+                                                 :x (+ x1 5) :y 5}]
+                                               ;;show cursor
+                                               [:rect (assoc rect-style
+                                                             :x (+ x1 5) :y 5
+                                                             :height 50
+                                                             :class "blinking-cursor")]
+                                               )
                                              ith-note
                                              (if-let [ival (image-map shruti)]
                                                [:image
@@ -652,11 +670,17 @@
                                                     (update-in [:images1] conj ith-note)
                                                     (update-in [:x1] + 20))
 
-                                             r3 (let [curpos @(subscribe [::subs/get-click-index])]
-                                                  (if (= note-xy-map curpos)
-                                                    (do
-                                                      (update-in r3 [:images1] conj cursor-rect))
-                                                    r3))
+                                             ;;if edit mode, a single cursor
+                                             ;;if play mode, add all rects
+                                             r3
+                                             (if (= :play @(subscribe [::subs/show-keyboard?]))
+                                               (update-in r3 [:images1] conj cursor-rect)
+                                               (let [curpos @(subscribe [::subs/get-click-index])]
+                                                 (if (= note-xy-map curpos)
+                                                   (do
+                                                     (update-in r3 [:images1] conj cursor-rect))
+                                                   r3))
+                                               )
                                              r3 (if-let [sah (get sah-list note-index)]
                                                   (if (= nsi 0)
                                                     (-> r3
@@ -782,7 +806,8 @@
                    (->> b1
                         (reduce into [:div {:class "box-row"}])
                         (conj [:div {:class "wrapper"}])))]
-             fin)]]]))))
+             fin)]]]))
+  )
 
 (defn hidden-keyboard-footer
   []

@@ -292,5 +292,7 @@
             :bpm 120
             :metronome? true
             :tanpura? true
+            ;;for storing svara images to light up
+            :elem-index []
             :dim {:editor (mapv dispinfo [:x-end :y-end])}})))
 
