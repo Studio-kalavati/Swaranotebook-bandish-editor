@@ -1006,10 +1006,15 @@
               [throbber :size :large]]]]]])
 
 (defn main-panel []
-  (let [active-panel (re-frame/subscribe [::subs/active-panel])
-        screen-height (re-frame/subscribe [::bp/screen-height])]
-    (println " active panel " @active-panel)
-    [re-com/v-box
+  (let [active-panel (subscribe [::subs/active-panel])
+        screen-height @(subscribe [::bp/screen-height])]
+    [v-box
      :src      (at)
      :height   "100%"
+     :style (if (and (not= :mobile @(subscribe [::bp/screen]))
+                     @(subscribe [::bp/landscape?]))
+              {:margin-right "auto"
+               :margin-left "auto"
+               :max-width (* 0.8 screen-height)}
+              {})
      :children [(routes/panels @active-panel)]]))
