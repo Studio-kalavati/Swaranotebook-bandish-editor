@@ -23,6 +23,7 @@
 (def routes
   (atom
    ["/" {"" :home
+         "list" :list-comps
          "view/" {[:path "/" :id]:load}}]))
 
 (defn parse

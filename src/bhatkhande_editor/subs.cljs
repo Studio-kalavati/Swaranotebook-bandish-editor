@@ -151,3 +151,8 @@
  ::tanpura?
  (fn [db [_ _]]
    (:tanpura? db)))
+
+(reg-sub
+ ::my-bandishes
+ (fn [db [_ _]]
+   (:my-bandishes db)))

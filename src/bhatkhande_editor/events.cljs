@@ -308,10 +308,24 @@
      {:dispatch [::set-active-panel :wait-for-save-completion]
       :db (update-in db [:composition :title] (constantly comp-title))})))
 
-#_(reg-event-fx
- ::submission-completed?
+(reg-event-fx
+ ::list-files
  (fn [{:keys [db]} [_ _]]
-   {:db db}))
+   (let [path (str  "/" (-> db :user :uid))
+         stor (.storage firebase)
+         storageRef (.ref stor path)]
+     (-> (.listAll storageRef)
+         (.then
+          (fn[i]
+            (let [fullpaths
+                  (->> (map #(.-fullPath %) (.-items i)))]
+              (dispatch [::my-bandishes fullpaths])))))
+     {})))
+
+(reg-event-fx
+ ::my-bandishes
+ (fn [{:keys [db]} [_ bandish-list]]
+   {:db (assoc db :my-bandishes bandish-list)}))
 
 (reg-event-fx
  ::update-bandish-url
@@ -350,7 +364,8 @@
            (.removeItem storage "sign-in")))
        {:db (-> db
                 (assoc :user user)
-                (dissoc :user-nil-times))})
+                (dissoc :user-nil-times))
+        :dispatch [::list-files]})
      ;;the first event is user nil and the second one has the user mapv
      ;;therefor if it is set nil twice, then show login popup
      {:db (update-in db [:user-nil-times] (fnil inc 1))})))

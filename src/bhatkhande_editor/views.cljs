@@ -827,7 +827,13 @@
                                                       (db/comp-decorator db/init-comp)])
                                            (.pushState (.-history js/window)
                                                        #js {} ""
-                                                       (.-origin (.-location js/window)))))]]]]))
+                                                       (.-origin (.-location js/window)))))
+                            (zmdi-butn2 "zmdi zmdi-view-list-alt zmdi-hc-lg"
+                                        #(do
+                                           (.pushState
+                                            (.-history js/window) #js {} ""
+                                            (str (.-origin (.-location js/window)) "/list"))
+                                           (dispatch [::events/set-active-panel :list-comps-panel])))]]]]))
 
 (defn play-keyboard-footer
   []
@@ -949,6 +955,40 @@
                              (reset! newline-on-avartan? nval)
                              (dispatch [::events/newline-on-avartan? nval]))]]))])]])))
 
+(defn list-comps
+  []
+  (fn []
+    (let [bands @(subscribe [::subs/my-bandishes])
+          bbox (mapv (fn[i0]
+                       (let [i (second (clojure.string/split i0 #"/"))
+                             titl (clojure.string/split i #"-")
+                             uuid (-> @(subscribe [::subs/user]) :uid)]
+                         [v-box
+                          :children
+                          [[hyperlink
+                            :style {:padding "10px 0px 10px 10vw"
+                                    :color "black"
+                                    :font-size "x-large"}
+                            :label (->> (clojure.string/split i #"-")
+                                             rest
+                                             (clojure.string/join "-"))
+                            :on-click
+                            (fn[]
+                              (dispatch [::events/get-bandish-json
+                                         {:path uuid :id
+                                          (clojure.string/join
+                                           "" (rest (clojure.string/split i0 #"/")))}]))]
+                           [box
+                            :align :center
+                            :child
+                            [line :size "1px" :color "floralwhite"
+                             :style {:width "80vw"}]]]]))
+                     bands)]
+      [:div
+       {:class "edit-composition"
+        :style {:min-height "100vh"}}
+       [v-box :children bbox]])))
+
 (defn show-editor
   []
   [:div
@@ -966,7 +1006,6 @@
             (= :play istate)
             [play-keyboard-footer]
             :else [swara-buttons]))]])
-
 
 (defn load-bandish
   []
@@ -987,6 +1026,10 @@
 (defmethod routes/panels :load-panel [] [load-bandish])
 
 (defmethod routes/panels :home-panel [] [show-editor])
+
+(defmethod routes/panels :list-comps-panel [] [list-comps])
+
+
 
 (defmethod routes/panels :wait-for-save-completion []
   [:div
