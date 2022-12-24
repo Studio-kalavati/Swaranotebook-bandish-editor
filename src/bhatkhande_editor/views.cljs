@@ -549,9 +549,7 @@
                                                          {:text-val @tval
                                                           :bhaag-index bhaag-index
                                                           :row-index row-index}])
-                                            (dispatch [::events/hide-text-popup])
-                                            )
-                                         ]]]]]))])])]]))))
+                                            (dispatch [::events/hide-text-popup]))]]]]]))])])]]))))
 
 (def editor-height (reagent/atom 0))
 (defn swara-display-area
@@ -580,8 +578,7 @@
                 (when (> (.-scrollHeight % ) myhgt)
                   (let [sctop (- (.-scrollHeight % ) myhgt)]
                     (set! (.-scrollTop %) sctop)))))}
-          [:div {:class "com-edit"
-                 }
+          [:div {:class "com-edit"}
            (let
                [div-id "editor"
                  comp @(subscribe [::subs/composition])
@@ -590,6 +587,8 @@
                  image-map (db/image-map
                             (if (= :hindi @(subscribe [::subs/lang]))
                               "hindi" "english_SrR"))
+                play-mode? (= :play @(subscribe [::subs/show-keyboard?]))
+                _ (println "play mode? " play-mode?)
                  draw-bhaag
                  (fn[row-index bhaag-index note-map-seq]
                    (let [nsindex (db/get-noteseq-index
@@ -629,7 +628,7 @@
                                                           :note-index note-index
                                                           :nsi nsi}
                                              cursor-rect
-                                             (if (= :play @(subscribe [::subs/show-keyboard?]))
+                                             (if play-mode?
                                                ;;show rect that animates on playing
                                                [:rect
                                                 {:width 20 :height 30
@@ -673,7 +672,7 @@
                                              ;;if edit mode, a single cursor
                                              ;;if play mode, add all rects
                                              r3
-                                             (if (= :play @(subscribe [::subs/show-keyboard?]))
+                                             (if play-mode?
                                                (update-in r3 [:images1] conj cursor-rect)
                                                (let [curpos @(subscribe [::subs/get-click-index])]
                                                  (if (= note-xy-map curpos)
@@ -862,7 +861,7 @@
                      [v-box :children
                       [[slider :model bpm
                         :min 60
-                        :max 180
+                        :max 300
                         :step 15
                         :width "40vw"
                         :disabled? @(subscribe [::subs/playing?])
