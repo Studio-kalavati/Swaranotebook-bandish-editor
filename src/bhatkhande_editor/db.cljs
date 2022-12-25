@@ -179,11 +179,13 @@
 
 (defn image-map
   [lang]
-  (zipmap (conj (vec (for [i [:mandra :madhyam :taar] j (take 12 us/i-note-seq)]
-                       [i j])) [:ati-taar :s])
-                       (mapv
-                        #(str "/images/swaras/" lang "/png/" % ".png" )
-                        (range 1 38))))
+  (-> 
+   (zipmap (conj (vec (for [i [:mandra :madhyam :taar] j (take 12 us/i-note-seq)]
+                        [i j])) [:ati-taar :s])
+           (mapv
+            #(str "/images/swaras/" lang "/png/" % ".png" )
+            (range 1 38)))
+   (assoc [:madhyam :a] (str "/images/swaras/common/png/avagraha.png"))))
 
 (defn fetch-url
   [imap ctx ikey iurl]
