@@ -9,7 +9,6 @@
    ["firebase/auth" :default fbauth]
    ["firebase/storage" :default storage]
    ["firebase/firestore" :as firebase-firestore]
-   ["@google-cloud/logging" :as logger]
    [cognitect.transit :as t]
    [sargam.talas :refer [taal-def]]
    ))
