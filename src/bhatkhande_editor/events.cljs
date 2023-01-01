@@ -9,6 +9,7 @@
    ["firebase/auth" :default fbauth]
    ["firebase/storage" :default storage]
    ["firebase/firestore" :as firebase-firestore]
+   ["@google-cloud/logging" :as logger]
    [cognitect.transit :as t]
    [sargam.talas :refer [taal-def]]
    ))
@@ -346,6 +347,7 @@
      ;;the local DB atom will not remember and will load its
      ;;original clean slate.
      (.setItem storage "sign-in" "inprogress")
+     (println " start sign in")
      {:db (-> db
               (dissoc :firebase-error))
       :firebase/google-sign-in {:sign-in-method :redirect}})))
@@ -359,6 +361,7 @@
 (reg-event-fx
  ::set-user
  (fn [{:keys [db]}[_ user]]
+   (println " set user " user)
    (if (and user (:email user))
      (let [storage (.-sessionStorage js/window)]
        (when storage
