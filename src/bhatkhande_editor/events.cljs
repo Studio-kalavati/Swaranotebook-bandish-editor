@@ -346,7 +346,6 @@
      ;;the local DB atom will not remember and will load its
      ;;original clean slate.
      (.setItem storage "sign-in" "inprogress")
-     (println " start sign in")
      {:db (-> db
               (dissoc :firebase-error))
       :firebase/google-sign-in {:sign-in-method :redirect}})))
@@ -360,7 +359,6 @@
 (reg-event-fx
  ::set-user
  (fn [{:keys [db]}[_ user]]
-   (println " set user " user)
    (if (and user (:email user))
      (let [storage (.-sessionStorage js/window)]
        (when storage
@@ -596,7 +594,7 @@
        (println " caught error in clock-tick-event" e)
        {}))))
 
-(reg-event-fx
+#_(reg-event-fx
  ::post-log
  (fn [{:keys [db]} [_ {:keys [payload ]}]]
    (let [body {"entries" [{"logName" (str "projects/" db/projectId "/logs/browserlog")
