@@ -47,7 +47,8 @@
  ::initialize-db
  (fn [_ _]
    (let [storage (.-sessionStorage js/window)
-         comp-str (.getItem storage "comp")]
+         comp-str (.getItem storage "comp")
+         ]
    (if comp-str
      (let [w (t/reader :json)
            comp (t/read w comp-str)
@@ -65,7 +66,8 @@
 (reg-event-fx
  ::set-active-panel
  (fn [{:keys [db]} [_ active-panel]]
-   {:db (assoc db :active-panel active-panel)}))
+   {:db (assoc db :active-panel active-panel)
+    :dispatch [::post-log {:payload (str "actice panel is " active-panel)}]}))
 
 (defn play-shruti
   [db [shruti start-at dur options]]
@@ -591,3 +593,20 @@
      (catch js/Error e
        (println " caught error in clock-tick-event" e)
        {}))))
+
+(reg-event-fx
+ ::post-log
+ (fn [{:keys [db]} [_ {:keys [payload ]}]]
+   (let [body {"entries" [{"logName" (str "projects/" db/projectId "/logs/browserlog")
+                           "resource" {"type" "global"
+                                       "labels" {"projectId" db/projectId}}
+                      "textPayload" payload} ]}]
+     (-> (js/fetch (str "https://logging.googleapis.com/v2/entries:write?key=" db/apiKey)
+          #js {"method" "post"
+               "body" (.stringify js/JSON (clj->js body))})
+         (.then (fn[i] (.text i)))
+         (.then (fn[i]
+                  (let []
+                    (println " i "i))))
+         (.catch (fn[i] (println " error " i ))))
+     {:db db})))
