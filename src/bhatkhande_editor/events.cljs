@@ -478,19 +478,54 @@
                                (mapv (fn[a b] [a (+ now b) sub-note-intervals])
                                      (map :shruti notes)
                                      (range at (+ at note-interval) sub-note-intervals))))]
-                       (if (and (:metronome? db) (metronome-on-at note-index))
-                         (into [[:tick2 (+ now at) note-interval]] notseq )
-                         notseq))))
+                       notseq)))
               (reduce into []))
+         metro-tick-seq
+         (->> db :composition :noteseq
+                  (map vector (range 0 (->> db :composition :noteseq count inc) note-interval)
+                       (range))
+                  (map (fn[[at note-index {:keys [notes] :as ivec}]]
+                         (let [note-index (mod (inc note-index) (-> taal-def taal :num-beats))]
+                           (if (and (:metronome? db) (metronome-on-at note-index))
+                             [[:tick2 (+ now at) note-interval]]
+                             []))))
+                  (reduce into []))
+         ;;find note indexes where duration should be long if followed by avagraha
+         ;;returns a list of 2-tuples, where first is index and second is duration of note
+         avagraha-note-indexes
+         (->> a1
+                 (map vector (range))
+                 reverse
+                 (reduce
+                  (fn [iacc [indx [inote iat idur :as in0]]]
+                    (if (= inote [:madhyam :a])
+                      (-> iacc
+                          (update-in [:indx] (constantly indx))
+                          (update-in [:duracc] + idur))
+                      (if (> (-> iacc :duracc) 0)
+                        (-> iacc
+                            (update-in [:acc]
+                                       (fn[j]
+                                         (into j [(mapv iacc [:indx :duracc])])))
+                            (assoc :indx nil :duracc 0))
+                        iacc)))
+                  {:indx nil :duracc 0 :acc []})
+                 :acc
+                 (map (fn[[a b]] [(dec a) b])))
+         ;;update the noteindex from the previous var to have longer durations
+         a1 (->> (reduce (fn[acc i]
+                           (update-in acc [(first i)] (fn[[a b c]] [a b (+ c (second i))])))
+                         a1 avagraha-note-indexes)
+                 (into metro-tick-seq)
+                 (sort-by second))
          a1 (if (:tanpura? db)
               (let [last-note-time (- (-> a1 last second) now )
                     sample-len 3
                     ;;length of sample is 4 secs
                     play-n-times (int (/ last-note-time sample-len))
-                    conj-vec (mapv 
+                    conj-vec (mapv
                               #(vector :tanpura (+ now (* % sample-len)) sample-len {:gain 0.5})
                               (range (inc play-n-times)))]
-                #_(println " lnt " (vector now (-> a1 last second)) " - "last-note-time " times " play-n-times " conj-vec " conj-vec)
                 (vec (sort-by second
                               (into a1 conj-vec))))
               a1)
