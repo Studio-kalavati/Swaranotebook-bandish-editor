@@ -559,7 +559,9 @@
             myhgt (- winhgt
                      @editor-height)
             show-lyrics? @(subscribe [::subs/show-lyrics?])
-            newline-on-avartan? @(subscribe [::subs/newline-on-avartan?])]
+            newline-on-avartan? @(subscribe [::subs/newline-on-avartan?])
+            play-mode? (= :play @(subscribe [::subs/show-keyboard?]))
+            _ (println "play mode? " play-mode?)]
         [:div
          [:div
           {:class "edit-composition"
@@ -574,10 +576,14 @@
               (let [iel (.querySelector js/document ".edit-composition")
                     padding (.-padding (js->clj (.getComputedStyle js/window iel)))
                     intpadding (int (if padding
-                                      (first (.split (first (.split padding " ")) "px")) " is nil"))]
-                (when (> (.-scrollHeight % ) myhgt)
-                  (let [sctop (- (.-scrollHeight % ) myhgt)]
-                    (set! (.-scrollTop %) sctop)))))}
+                                      (first (.split (first
+                                                      (.split padding " ")) "px")) " is nil"))]
+                (dispatch [::events/set-music-notes-element %])
+                (if play-mode? 
+                    (set! (.-scrollTop %) 0)
+                    (when (> (.-scrollHeight % ) myhgt)
+                      (let [sctop (- (.-scrollHeight % ) myhgt)]
+                        (set! (.-scrollTop %) sctop))))))}
           [:div {:class "com-edit"}
            (let
                [div-id "editor"
@@ -587,8 +593,6 @@
                  image-map (db/image-map
                             (if (= :hindi @(subscribe [::subs/lang]))
                               "hindi" "english_SrR"))
-                play-mode? (= :play @(subscribe [::subs/show-keyboard?]))
-                _ (println "play mode? " play-mode?)
                  draw-bhaag
                  (fn[row-index bhaag-index note-map-seq]
                    (let [nsindex (db/get-noteseq-index

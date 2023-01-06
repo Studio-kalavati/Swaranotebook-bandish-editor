@@ -592,7 +592,36 @@
                       (let [n-note-play-index
                             (if (-> past-notes-to-play empty? not)
                               (-> past-notes-to-play last inc)
-                              play-note-index)]
+                              play-note-index)
+                            scroll-fn
+                            (fn[indx]
+                              (let [[inote iat idur :as noteat] (play-at-time indx)
+                                    view-note-index ((:play-to-view-map db) indx)]
+                                (when view-note-index
+                                  (let [notel (get-in (:elem-index db) [view-note-index])
+                                        bcr (.getBoundingClientRect notel)]
+                                    (js/setTimeout
+                                     (fn[]
+                                       (do
+                                         (let [mnotes-div (:music-notes-element db)
+                                               cur-sctop (.-scrollTop mnotes-div)
+                                               last-y (.-y bcr)
+                                               ch (.-clientHeight mnotes-div)
+                                               htdiff (- last-y cur-sctop)
+                                               perc (/ htdiff ch)]
+                                           (when (> perc 0.2)
+                                             (let [inc-by (* 0.2 htdiff)]
+                                               (.scrollTo
+                                                mnotes-div
+                                                (clj->js {"top" (+ inc-by cur-sctop)
+                                                          "behavior" "smooth"}))))
+                                           ;;at the end, scroll to top
+                                           (when (= (dec max-note-index) view-note-index)
+                                             (.scrollTo mnotes-div
+                                                        (clj->js {"top" 0 "behavior"
+                                                                  "smooth"}))))))
+                                     600)))))
+                            ]
                         (->> past-notes-to-play
                              (mapv (fn[ indx]
                                      (let [[inote iat idur :as noteat] (play-at-time indx)
@@ -602,7 +631,8 @@
                                                         (if (= 4 (count noteat))
                                                           (last noteat) {})])
                                        (when view-note-index
-                                         (let [notel (get-in (:elem-index db) [view-note-index])]
+                                         (let [notel (get-in (:elem-index db) [view-note-index])
+                                               bcr (.getBoundingClientRect notel)]
                                            (set! (.-style notel) (str "fill-opacity:0.2"))
                                            (->
                                             (.animate
@@ -617,6 +647,7 @@
                                              "finish"
                                              (fn[e]
                                                (set! (.-style notel) "fill-opacity:0"))))))))))
+                        (->> past-notes-to-play last scroll-fn)
                         (assoc db :play-note-index n-note-play-index))
                       db)}
            ret
@@ -628,6 +659,11 @@
      (catch js/Error e
        (println " caught error in clock-tick-event" e)
        {}))))
+
+(reg-event-fx
+ ::set-music-notes-element
+ (fn [{:keys [db]} [_ elem]]
+   {:db (assoc db :music-notes-element elem)}))
 
 #_(reg-event-fx
  ::post-log
