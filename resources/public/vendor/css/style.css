@@ -1639,6 +1639,7 @@ input[type="search"]
         margin: auto;
 	min-height: inherit;
         border: 0;
+        overflow: hidden;
     }
     .com-edit li
     {
