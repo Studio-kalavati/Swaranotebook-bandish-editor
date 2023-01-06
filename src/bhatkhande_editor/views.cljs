@@ -560,8 +560,7 @@
                      @editor-height)
             show-lyrics? @(subscribe [::subs/show-lyrics?])
             newline-on-avartan? @(subscribe [::subs/newline-on-avartan?])
-            play-mode? (= :play @(subscribe [::subs/show-keyboard?]))
-            _ (println "play mode? " play-mode?)]
+            play-mode? (= :play @(subscribe [::subs/show-keyboard?]))]
         [:div
          [:div
           {:class "edit-composition"
@@ -579,7 +578,7 @@
                                       (first (.split (first
                                                       (.split padding " ")) "px")) " is nil"))]
                 (dispatch [::events/set-music-notes-element %])
-                (if play-mode? 
+                (if play-mode?
                     (set! (.-scrollTop %) 0)
                     (when (> (.-scrollHeight % ) myhgt)
                       (let [sctop (- (.-scrollHeight % ) myhgt)]

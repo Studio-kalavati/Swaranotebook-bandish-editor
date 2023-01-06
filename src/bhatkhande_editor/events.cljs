@@ -480,6 +480,7 @@
                                      (range at (+ at note-interval) sub-note-intervals))))]
                        notseq)))
               (reduce into []))
+         num-notes (count a1)
          metro-tick-seq
          (->> db :composition :noteseq
                   (map vector (range 0 (->> db :composition :noteseq count inc) note-interval)
@@ -544,6 +545,7 @@
                  :play-state :start
                  :play-at-time a1
                  :note-interval note-interval
+                 :num-notes num-notes
                  ;;translates the play-note index to the view-note index
                  :play-to-view-map a2
                  :timer
@@ -616,12 +618,11 @@
                                                 (clj->js {"top" (+ inc-by cur-sctop)
                                                           "behavior" "smooth"}))))
                                            ;;at the end, scroll to top
-                                           (when (= (dec max-note-index) view-note-index)
+                                           (when (= (dec (:num-notes db)) view-note-index)
                                              (.scrollTo mnotes-div
                                                         (clj->js {"top" 0 "behavior"
                                                                   "smooth"}))))))
-                                     600)))))
-                            ]
+                                     600)))))]
                         (->> past-notes-to-play
                              (mapv (fn[ indx]
                                      (let [[inote iat idur :as noteat] (play-at-time indx)
