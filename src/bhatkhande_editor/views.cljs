@@ -908,17 +908,17 @@
         [h-box
          :gap      "0.5vh"
          :children
-         [(zmdi-butn2 "zmdi zmdi-arrow-left zmdi-hc-2x"
-                      #(do (dispatch [::events/set-mode :edit])))
-          (if @(subscribe [::subs/playing?])
-            (zmdi-butn2
+         (if @(subscribe [::subs/playing?])
+           [(zmdi-butn2
              "zmdi zmdi-pause-circle zmdi-hc-4x"
-             #(do (dispatch [::events/pause])))
+             #(do (dispatch [::events/pause])))]
+           [(zmdi-butn2 "zmdi zmdi-arrow-left zmdi-hc-2x"
+                        #(do (dispatch [::events/set-mode :edit])))
             (zmdi-butn2
              "zmdi zmdi-play-circle zmdi-hc-4x"
-             #(do (dispatch [::events/play]))))
-          (zmdi-butn2 "zmdi zmdi-settings zmdi-hc-2x"
-                      #(do (reset! show-settings? true)))]]]])))
+             #(do (dispatch [::events/play])))
+            (zmdi-butn2 "zmdi zmdi-settings zmdi-hc-2x"
+                        #(do (reset! show-settings? true)))])]]])))
 
 (defn list-comps
   []

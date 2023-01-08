@@ -431,12 +431,12 @@
 (reg-event-fx
  ::show-lyrics?
  (fn [{:keys [db]} [_ ival]]
-   {:db (assoc db :show-lyrics? ival)}))
+   {:db (update-in db [:props :show-lyrics?] (constantly ival))}))
 
 (reg-event-fx
  ::newline-on-avartan?
  (fn [{:keys [db]} [_ ival]]
-   {:db (assoc db :newline-on-avartan? ival)}))
+   {:db (update-in db [:props :newline-on-avartan?] (constantly ival))}))
 
 (reg-event-fx
  ::set-bpm
@@ -547,6 +547,7 @@
                  :clock clock
                  :play-state :start
                  :play-at-time a1
+                 :play-note-index 0
                  :note-interval note-interval
                  :num-notes num-notes
                  ;;translates the play-note index to the view-note index
