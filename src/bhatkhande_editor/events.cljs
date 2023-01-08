@@ -594,6 +594,7 @@
                                      (>= at (time-change-fn iat)))))
                             (iterate inc start-index)))
            past-notes-to-play (past-notes-fn play-at-time play-note-index #(- % 0.5))
+           _ (println " pntp " past-notes-to-play)
            idb {:db (if (-> past-notes-to-play empty? not)
                       (let [n-note-play-index
                             (if (-> past-notes-to-play empty? not)
@@ -638,20 +639,24 @@
                                        (when view-note-index
                                          (let [notel (get-in (:elem-index db) [view-note-index])
                                                bcr (.getBoundingClientRect notel)]
-                                           (set! (.-style notel) (str "fill-opacity:0.2"))
-                                           (->
-                                            (.animate
-                                             notel
-                                             #js [
-                                                  #js {"opacity" 0.5}
-                                                  #js {"opacity" 1 "offset" 0.2}
-                                                  #js {"opacity" 0}]
-                                             #js {"duration"
-                                                  (* 1000 2 (:note-interval db))})
-                                            (.addEventListener
-                                             "finish"
-                                             (fn[e]
-                                               (set! (.-style notel) "fill-opacity:0"))))))))))
+                                           (js/setTimeout
+                                            (fn []
+                                              (set! (.-style notel)
+                                                    (str "fill-opacity:0.2"))
+                                              (->
+                                               (.animate
+                                                notel
+                                                #js [
+                                                     #js {"opacity" 0.5}
+                                                     #js {"opacity" 1 "offset" 0.2}
+                                                     #js {"opacity" 0}]
+                                                #js {"duration"
+                                                     (* 1000 2 (:note-interval db))})
+                                               (.addEventListener
+                                                "finish"
+                                                (fn[e]
+                                                  (set! (.-style notel) "fill-opacity:0")))))
+                                            (* 1000 iat))))))))
                         (->> past-notes-to-play last scroll-fn)
                         (assoc db :play-note-index n-note-play-index))
                       db)}
