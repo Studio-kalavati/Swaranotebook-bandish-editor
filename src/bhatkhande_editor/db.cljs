@@ -226,8 +226,6 @@
              "/sounds/tanpura/c4.mp3")
   imap)
 
-;;(def santoor-url-map (get-santoor-url-map))
-
 (defn percentage-95
   [i]
   (let [ iw (js/parseInt i)]
@@ -254,21 +252,28 @@
    :sam-khaali 35
    :font-size 20 :spacing 10 :text-align :left})
 
+(def default-props {:raga :yaman
+                    :note-pos {}
+                    :mode :edit
+                    :language-en? true
+                    :newline-on-avartan? true
+                    :show-lyrics? true
+                    :bpm 120
+                    :metronome? true
+                    :tanpura? true
+                    :note-index []})
 
-(def default-edit-props {:raga :yaman
-                         :note-pos {}
-                         :show-keyboard :default 
-                         :language-en? true
-                         :note-index []})
 (defn comp-decorator
   [comp0]
   (let [comp (add-indexes comp0)]
     {:composition comp
-     :edit-props (update-in default-edit-props
-                            [:cursor-pos]
-                            (constantly
-                             (let [in (-> comp :index last)]
-                               (zipmap [:row-index :bhaag-index :note-index :nsi] in))))}))
+     :props (update-in
+             default-props
+             [:cursor-pos]
+             (constantly
+              (let [in (-> comp :index last)]
+                (zipmap [:row-index :bhaag-index :note-index :nsi] in))))}))
+
 (defn init-buffers
   []
   (let  [clock (c/clock)
@@ -289,11 +294,6 @@
            {:init-state {:cursor-color 0}
             :dispinfo (merge dispinfo m-dispinfo)
             :m-dispinfo m-dispinfo
-            :newline-on-avartan? true
-            :show-lyrics? true
-            :bpm 120
-            :metronome? true
-            :tanpura? true
             ;;for storing svara images to light up
             :elem-index []
             :dim {:editor (mapv dispinfo [:x-end :y-end])}})))

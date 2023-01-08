@@ -3,6 +3,7 @@
    [re-frame.core :as re-frame :refer [subscribe dispatch dispatch-sync]]
    [re-com.core :as re-com :refer [title
                                    hyperlink v-box h-box
+                                   hyperlink-href
                                    single-dropdown
                                    border
                                    input-textarea
@@ -241,7 +242,7 @@
                                   :state (constantly false)})
                                 (zmdi-box-button
                                  "zmdi zmdi-hc-lg zmdi-play-circle"
-                                 {:disp-fn #(do (dispatch [::events/show-keyboard :play]))
+                                 {:disp-fn #(do (dispatch [::events/set-mode :play]))
                                   :state (constantly false)})
                                 ]]
                     (let [swaras-3oct (swar36 @(subscribe [::subs/raga]))
@@ -289,7 +290,8 @@
                                                          :background-color "coral"}
                                                  :class "btn btn-lg"
                                                  :on-click
-                                                 #(do (dispatch [::events/show-keyboard :hide]))}
+                                                 #(do (dispatch
+                                                       [::events/set-mode :edit-hidden-keyboard]))}
                                                 [:i {:class "zmdi zmdi-chevron-down zmdi-hc-lg"}]]]
                                        (zmdi-butn2 "zmdi zmdi-print zmdi-hc-lg"
                                                    #(do (.print js/window)))
@@ -560,7 +562,7 @@
                      @editor-height)
             show-lyrics? @(subscribe [::subs/show-lyrics?])
             newline-on-avartan? @(subscribe [::subs/newline-on-avartan?])
-            play-mode? (= :play @(subscribe [::subs/show-keyboard?]))]
+            play-mode? (= :play @(subscribe [::subs/mode]))]
         [:div
          [:div
           {:class "edit-composition"
@@ -822,11 +824,12 @@
                  :style {:flex-flow "row wrap"}
                  :class "last-bar"
                  :children [(zmdi-butn2 "zmdi zmdi-comment-edit zmdi-hc-lg"
-                                        #(do (dispatch [::events/show-keyboard :default])))
+                                        #(do (dispatch [::events/set-mode :edit])))
                             (zmdi-butn2 "zmdi zmdi-file-plus zmdi-hc-lg"
                                         #(do
                                            (dispatch [::events/refresh-comp
-                                                      (db/comp-decorator db/init-comp)])
+                                                      db/init-comp
+                                                      #_(db/comp-decorator db/init-comp)])
                                            (.pushState (.-history js/window)
                                                        #js {} ""
                                                        (.-origin (.-location js/window)))))
@@ -906,7 +909,7 @@
          :gap      "0.5vh"
          :children
          [(zmdi-butn2 "zmdi zmdi-arrow-left zmdi-hc-2x"
-                      #(do (dispatch [::events/show-keyboard :default])))
+                      #(do (dispatch [::events/set-mode :edit])))
           (if @(subscribe [::subs/playing?])
             (zmdi-butn2
              "zmdi zmdi-pause-circle zmdi-hc-4x"
@@ -917,46 +920,6 @@
           (zmdi-butn2 "zmdi zmdi-settings zmdi-hc-2x"
                       #(do (reset! show-settings? true)))]]]])))
 
-#_(defn keyboard-more
-  []
-  (let [show-lyrics? (reagent/atom @(subscribe [::subs/show-lyrics?]))
-        newline-on-avartan? (reagent/atom @(subscribe [::subs/newline-on-avartan?]))]
-    (fn []
-      [v-box
-       :gap      "0.5vh"
-       :children [[h-box
-                   :justify :between
-                   :class "first-bar"
-                   :align :center
-                   :children [(zmdi-butn2
-                               "zmdi zmdi-arrow-left zmdi-hc-lg"
-                               #(do (dispatch [::events/show-keyboard :default])))]]
-                  (let []
-                    [v-box
-                     :gap "2vh"
-                     :class "middle-buttons"
-                     :style {:min-height "20vh"}
-                     :align :center
-                     :justify :center
-                     :children
-                     (into
-                      (let [raga-id (subscribe [::subs/raga])]
-                        [[checkbox
-                          :model show-lyrics?
-                          :label "Show Lyrics?"
-                          :style {:padding "20px"}
-                          :on-change
-                          #(let [nval (not @show-lyrics?)]
-                             (reset! show-lyrics? nval)
-                             (dispatch [::events/show-lyrics? nval]))]
-                         [checkbox
-                          :model newline-on-avartan?
-                          :label "Newline on each Avartan?"
-                          :on-change
-                          #(let [nval (not @newline-on-avartan?)]
-                             (reset! newline-on-avartan? nval)
-                             (dispatch [::events/newline-on-avartan? nval]))]]))])]])))
-
 (defn list-comps
   []
   (fn []
@@ -964,22 +927,29 @@
           bbox (mapv (fn[i0]
                        (let [i (second (clojure.string/split i0 #"/"))
                              titl (clojure.string/split i #"-")
-                             uuid (-> @(subscribe [::subs/user]) :uid)]
+                             uuid (-> @(subscribe [::subs/user]) :uid)
+                             id (clojure.string/join
+                                 "" (rest (clojure.string/split i0 #"/")))
+                             iurl (db/get-long-url (str uuid "/" id))]
+                         (println " iurl " iurl)
                          [v-box
                           :children
-                          [[hyperlink
+                          [[hyperlink-href
                             :style {:padding "10px 0px 10px 10vw"
                                     :color "black"
                                     :font-size "x-large"}
                             :label (->> (clojure.string/split i #"-")
                                              rest
                                              (clojure.string/join "-"))
-                            :on-click
-                            (fn[]
-                              (dispatch [::events/get-bandish-json
-                                         {:path uuid :id
-                                          (clojure.string/join
-                                           "" (rest (clojure.string/split i0 #"/")))}]))]
+                            :href iurl
+                            #_:on-click
+                            #_(fn[]
+                              (let [
+                                    ]
+                                (println " id " iurl)
+                                (dispatch [::events/get-bandish-json
+                                           {:path uuid :id id}])
+                                (.pushState (.-history js/window) #js {} "" iurl)))]
                            [box
                             :align :center
                             :child
@@ -1000,10 +970,9 @@
           :ref #(if (identity %)
                   (let [ch (.-offsetHeight %)]
                     (reset! editor-height ch)))}
-    (let [istate @(subscribe [::subs/show-keyboard?])]
-      (cond ;;(= :more istate)
-            ;;[keyboard-more]
-            (= :hide istate)
+    (let [istate @(subscribe [::subs/mode])]
+      (println " istate " istate)
+      (cond (= :edit-hidden-keyboard istate)
             [hidden-keyboard-footer]
             (= :play istate)
             [play-keyboard-footer]

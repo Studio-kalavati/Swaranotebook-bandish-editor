@@ -7,7 +7,7 @@
 (reg-sub
  ::lang
  (fn [db]
-   (if (-> db :edit-props :language-en?)
+   (if (-> db :props :language-en?)
      :english :hindi)))
 
 (reg-sub
@@ -22,27 +22,33 @@
    (:active-panel db)))
 
 (reg-sub
- ::edit-props
+ ::props
  (fn [db _]
-   (-> db :edit-props)))
+   (-> db :props)))
 
 (reg-sub
  ::raga
- :<- [::edit-props]
- (fn [edit-props _]     
-   (-> edit-props :raga)))
+ :<- [::props]
+ (fn [props _]     
+   (-> props :raga)))
 
 (reg-sub
  ::x-switch
- :<- [::edit-props]
- (fn [edit-props _]     
-   (-> edit-props :x-switch)))
+ :<- [::props]
+ (fn [props _]     
+   (-> props :x-switch)))
 
 (reg-sub
  ::error-message
- :<- [::edit-props]
- (fn [edit-props _]     
-   (-> edit-props :error-message)))
+ :<- [::props]
+ (fn [props _]     
+   (-> props :error-message)))
+
+(reg-sub
+ ::mode
+ :<- [::props]
+ (fn [props _]
+   (-> props :mode)))
 
 (reg-sub
  ::swaramap
@@ -70,12 +76,12 @@
 (reg-sub
  ::get-click-index
  (fn [db [_ _]]
-   (get-in db [:edit-props :cursor-pos])))
+   (get-in db [:props :cursor-pos])))
 
 (reg-sub
  ::show-text-popup
  (fn [db [_ _]]
-   (get-in db [:edit-props :show-text-popup])))
+   (get-in db [:props :show-text-popup])))
 
 (reg-sub
  ::get-sahitya
@@ -89,8 +95,7 @@
 (reg-sub
  ::get-note-pos
  (fn [db [_ [bhaag-row-index bhaag-index note-index]]]
-   (println "sub "[bhaag-row-index bhaag-index note-index])
-   (get-in db [:edit-props :note-pos bhaag-row-index bhaag-index note-index])))
+   (get-in db [:props :note-pos bhaag-row-index bhaag-index note-index])))
 
 (reg-sub
  ::user
@@ -101,11 +106,6 @@
  ::bandish-url
  (fn [db [_ _]]
    (:bandish-url db)))
-
-(reg-sub
- ::show-keyboard?
- (fn [db [_ _]]
-   (get-in db [:edit-props :show-keyboard?])))
 
 (reg-sub
  ::share-url
@@ -124,13 +124,15 @@
 
 (reg-sub
  ::show-lyrics?
- (fn [db [_ _]]
-   (:show-lyrics? db)))
+ :<- [::props]
+ (fn [props [_ _]]
+   (:show-lyrics? props)))
 
 (reg-sub
  ::newline-on-avartan?
- (fn [db [_ _]]
-   (:newline-on-avartan? db)))
+ :<- [::props]
+ (fn [props [_ _]]
+   (:newline-on-avartan? props)))
 
 (reg-sub
  ::playing?
@@ -139,18 +141,21 @@
 
 (reg-sub
  ::bpm
- (fn [db [_ _]]
-   (:bpm db)))
+ :<- [::props]
+ (fn [props [_ _]]
+   (:bpm props)))
 
 (reg-sub
  ::metronome?
- (fn [db [_ _]]
-   (:metronome? db)))
+ :<- [::props]
+ (fn [props [_ _]]
+   (:metronome? props)))
 
 (reg-sub
  ::tanpura?
- (fn [db [_ _]]
-   (:tanpura? db)))
+ :<- [::props]
+ (fn [props [_ _]]
+   (:tanpura? props)))
 
 (reg-sub
  ::my-bandishes

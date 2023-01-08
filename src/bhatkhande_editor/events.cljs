@@ -10,13 +10,12 @@
    ["firebase/storage" :default storage]
    ["firebase/firestore" :as firebase-firestore]
    [cognitect.transit :as t]
-   [sargam.talas :refer [taal-def]]
-   ))
+   [sargam.talas :refer [taal-def]]))
 
 (defn get-ns-index
   [db]
   (let [{:keys [row-index bhaag-index note-index ni] :as click-index}
-        (get-in db [:edit-props :cursor-pos])
+        (get-in db [:props :cursor-pos])
         nindex (db/get-noteseq-index click-index (get-in db [:composition :taal]))]
     [nindex ni]))
 
@@ -47,16 +46,17 @@
  ::initialize-db
  (fn [_ _]
    (let [storage (.-sessionStorage js/window)
-         comp-str (.getItem storage "comp")
-         ]
-   (if comp-str
-     (let [w (t/reader :json)
-           comp (t/read w comp-str)
-           {:keys [composition edit-props]} (db/comp-decorator comp)]
-       (-> db/default-db
-           (update-in [:composition] (constantly composition))
-           (update-in [:edit-props] (constantly edit-props))))
-     db/default-db))))
+         comp-str (.getItem storage "comp")]
+     ;;dont read comp-str if not refresh.
+     (if comp-str
+       (let [w (t/reader :json)
+             comp (t/read w comp-str)
+             {:keys [composition props]} (db/comp-decorator comp)]
+         (println " updated db to set edit props")
+         (-> db/default-db
+             (update-in [:composition] (constantly composition))
+             (update-in [:props] (constantly props))))
+       db/default-db))))
 
 (reg-event-fx
   ::navigate
@@ -66,8 +66,7 @@
 (reg-event-fx
  ::set-active-panel
  (fn [{:keys [db]} [_ active-panel]]
-   {:db (assoc db :active-panel active-panel)
-    :dispatch [::post-log {:payload (str "actice panel is " active-panel)}]}))
+   {:db (assoc db :active-panel active-panel)}))
 
 (defn play-shruti
   [db [shruti start-at dur options]]
@@ -94,7 +93,7 @@
 (reg-event-fx
  ::conj-svara
  (fn [{:keys [db]} [_ {:keys [svara notes-per-beat]}]]
-   (let [cpos (get-in db [:edit-props :cursor-pos ] )
+   (let [cpos (get-in db [:props :cursor-pos ] )
          next-index(get-in db [:composition :index-forward-seq (vals cpos)])
          prev-index (get-in db [:composition :index-backward-seq (vals cpos)])
          note-index
@@ -146,7 +145,7 @@
              (update-in [:composition] db/add-indexes))
          ndb
          (-> ndb
-             (update-in [:edit-props :cursor-pos]
+             (update-in [:props :cursor-pos]
                         (constantly
                          (cond
                            (= updated-cursor :next-note-cursor)
@@ -209,7 +208,7 @@
  (fn [{:keys [db]} [_ {:keys [row-index bhaag-index text-val] :as imap}]]
    {:db
     (-> db
-        (update-in [:edit-props :show-text-popup]
+        (update-in [:props :show-text-popup]
                    (constantly imap)))}))
 
 (reg-event-fx
@@ -217,14 +216,14 @@
  (fn [{:keys [db]} [_ _]]
    {:db
     (-> db
-        (update-in [:edit-props :show-text-popup]
+        (update-in [:props :show-text-popup]
                    (constantly false)))}))
 
 (reg-event-fx
  ::delete-single-swara
  (fn [{:keys [db]} [_ _]]
    (let [[note-index note-sub-index] (get-ns-index db)
-         cpos (get-in db [:edit-props :cursor-pos ] )
+         cpos (get-in db [:props :cursor-pos ] )
          index-entry (get-in db [:composition :index-backward-seq (vals cpos)])]
      #_(println " delete index "[note-index note-sub-index]
               " cpos " cpos
@@ -241,7 +240,7 @@
                               (into (subvec % 0 (dec note-index)) (subvec % note-index)))]
                         res))
           (update-in [:composition] db/add-indexes)
-          (update-in [:edit-props :cursor-pos]
+          (update-in [:props :cursor-pos]
                      (constantly
                       (let [res 
                             (if (= 0 note-index)
@@ -258,7 +257,7 @@
 (reg-event-fx
  ::set-raga
  (fn [{:keys [db]} [_ raga]]
-   {:db (update-in db [:edit-props :raga] (constantly raga))
+   {:db (update-in db [:props :raga] (constantly raga))
     :dispatch [::save-to-localstorage]
     }))
 
@@ -272,17 +271,17 @@
 (reg-event-fx
  ::toggle-lang
  (fn [{:keys [db]} [_ _]]
-   {:db (update-in db [:edit-props :language-en?] not)}))
+   {:db (update-in db [:props :language-en?] not)}))
 
 (reg-event-fx
  ::set-click-index
  (fn [{:keys [db]} [_ click-index]]
-   {:db (update-in db [:edit-props :cursor-pos] (constantly click-index))}))
+   {:db (update-in db [:props :cursor-pos] (constantly click-index))}))
 
 (reg-event-fx
  ::reset-note-index
  (fn [{:keys [db]} [_ _]]
-   (let [ndb (update-in db [:edit-props :note-index ] (constantly []))]
+   (let [ndb (update-in db [:props :note-index ] (constantly []))]
      {:db ndb})))
 
 (defn to-trans [x]
@@ -384,6 +383,13 @@
    {:db (assoc db :bandish-id id)}))
 
 (reg-event-fx
+ ::set-query-params
+ (fn [{:keys [db]} [_ qp]]
+   (let [nep (-> (update-in db [:props] merge qp)
+                 (update-in [:props :mode] keyword))]
+     {:db nep})))
+
+(reg-event-fx
  ::get-bandish-json
  (fn [{:keys [db]} [_ {:keys [path id]}]]
    (let [tr (t/reader :json)]
@@ -392,31 +398,28 @@
           #js {"method" "get"})
          (.then (fn[i] (.text i)))
          (.then (fn[i]
-                  (let [imap (js->clj (t/read tr i))
-                        res (db/comp-decorator imap)]
-                    (dispatch [::refresh-comp res]))))
+                  (let [imap (js->clj (t/read tr i))]
+                    (dispatch [::refresh-comp imap]))))
          (.catch (fn[i] (println " error " i ))))
      {:db db})))
 
 (reg-event-fx
- ::hide-keyboard
- (fn [{:keys [db]} [_ _]]
-   {:db (update-in db [:edit-props :show-keyboard?]
-                   (constantly false))}))
-
-(reg-event-fx
- ::show-keyboard
+ ::set-mode
  (fn [{:keys [db]} [_ ival]]
-   {:db (update-in db [:edit-props :show-keyboard?]
+   {:db (update-in db [:props :mode]
                    (constantly ival))}))
 
 (reg-event-fx
  ::refresh-comp
- (fn [{:keys [db]} [_ {:keys [composition edit-props]}]]
-   {:db (-> db
-            (update-in [:composition] (constantly composition))
-            (update-in [:edit-props] (constantly edit-props)))
-    :dispatch [::navigate :home]}))
+ (fn [{:keys [db]} [_ {:keys [composition] :as inp}]]
+   (let [comp (db/add-indexes inp)]
+     {:db (-> db
+              (update-in [:composition] (constantly comp))
+              (update-in [:props :cursor-pos]
+                         (constantly
+                          (let [in (-> comp :index last)]
+                            (zipmap [:row-index :bhaag-index :note-index :nsi] in)))))
+      :dispatch [::set-active-panel :home-panel]})))
 
 (reg-event-fx
  ::init-audio-ctx
@@ -438,22 +441,22 @@
 (reg-event-fx
  ::set-bpm
  (fn [{:keys [db]} [_ ival]]
-   {:db (assoc db :bpm ival)}))
+   {:db (update-in db [:props :bpm] (constantly ival))}))
 
 (reg-event-fx
  ::metronome?
  (fn [{:keys [db]} [_ ival]]
-   {:db (assoc db :metronome? ival)}))
+   {:db (update-in db [:props :metronome?] (constantly ival))}))
 
 (reg-event-fx
  ::tanpura?
  (fn [{:keys [db]} [_ ival]]
-   {:db (assoc db :tanpura? ival)}))
+   {:db (update-in db [:props :tanpura?] (constantly ival))}))
 
 (reg-event-fx
  ::play
  (fn [{:keys [db]} [_ _]]
-   (let [note-interval (/ 60 (:bpm db) )
+   (let [note-interval (/ 60 (-> db :props :bpm) )
          {:keys [audio-context clock]} db
          now (.-currentTime audio-context)
          taal (-> db :composition :taal)
@@ -519,7 +522,7 @@
                          a1 avagraha-note-indexes)
                  (into metro-tick-seq)
                  (sort-by second))
-         a1 (if (:tanpura? db)
+         a1 (if (-> db :props :tanpura?)
               (let [last-note-time (- (-> a1 last second) now )
                     sample-len 3
                     ;;length of sample is 4 secs

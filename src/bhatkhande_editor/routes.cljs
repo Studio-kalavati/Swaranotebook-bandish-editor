@@ -3,8 +3,8 @@
    [bidi.bidi :as bidi]
    [pushy.core :as pushy]
    [re-frame.core :as re-frame]
-[re-com.core :as re-com :refer [
-                                   border
+   [cemerick.url :as curl]
+   [re-com.core :as re-com :refer [border
                                    box
                                    throbber
                                    modal-panel]]
@@ -26,9 +26,17 @@
          "list" :list-comps
          "view/" {[:path "/" :id]:load}}]))
 
+(defn match-route-with-query-params
+  [route path & {:as options}]
+  (let [query-params (->> (:query (curl/url path))
+                          (map (fn [[k v]] [(keyword k) v]))
+                          (into {}))]
+    (-> (bidi/match-route* route path options)
+        (assoc :query-params query-params))))
+
 (defn parse
   [url]
-  (bidi/match-route @routes url))
+  (match-route-with-query-params @routes url))
 
 (defn url-for
   [& args]
@@ -37,10 +45,14 @@
 (defn dispatch
   [route]
   (let [panel (keyword (str (name (:handler route)) "-panel"))]
+    (println "  params "(-> route ))
     (when-let [id  (-> route :route-params :id)]
       (re-frame/dispatch [::events/get-bandish-json
                           {:path (-> route :route-params :path)
                            :id id}]))
+    (when-let [qp (:query-params route)]
+      (re-frame/dispatch [::events/set-query-params qp]))
+
     (re-frame/dispatch [::events/set-active-panel panel])))
 
 (defonce history

@@ -12,7 +12,7 @@
   [clj-commons/pushy "0.3.10"]
   [studiokalavati/sargam-spec "0.1.12"]
   [com.cognitect/transit-cljs "0.8.280"]
-
+  [com.cemerick/url "0.1.1"]
   [com.shark8me/re-frame-firebase "0.8.3-SNAPSHOT"]
   [io.djy/chronoid "0.2.0"]
   [breaking-point "0.1.2"]
