@@ -23,3 +23,7 @@
 
 # lfs
 .lfsconfig
+
+# local config
+cors-config
+fbconf
