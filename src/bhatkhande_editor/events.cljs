@@ -9,8 +9,17 @@
    ["firebase/auth" :default fbauth]
    ["firebase/storage" :default storage]
    ["firebase/firestore" :as firebase-firestore]
+   ["posthog-js" :default posthog]
    [cognitect.transit :as t]
    [sargam.talas :refer [taal-def]]))
+
+(def log-event
+  (re-frame.core/->interceptor
+   :id      :log-event
+   :after  (fn [context]
+             (let [[k v] (-> context :coeffects :event)]
+                (.capture (-> context :coeffects :db :posthog) (str k) v "")
+                context))))
 
 (defn get-ns-index
   [db]
@@ -46,17 +55,20 @@
  ::initialize-db
  (fn [_ _]
    (let [storage (.-sessionStorage js/window)
-         comp-str (.getItem storage "comp")]
+         comp-str (.getItem storage "comp")
+         ph (.init posthog db/posthogKey #js {"api_host" "https://app.posthog.com" })]
      ;;dont read comp-str if not refresh.
-     (if comp-str
-       (let [w (t/reader :json)
-             comp (t/read w comp-str)
-             {:keys [composition props]} (db/comp-decorator comp)]
-         (println " updated db to set edit props")
-         (-> db/default-db
-             (update-in [:composition] (constantly composition))
-             (update-in [:props] (constantly props))))
-       db/default-db))))
+     (println " ph " ph)
+     (-> (if comp-str
+           (let [w (t/reader :json)
+                 comp (t/read w comp-str)
+                 {:keys [composition props]} (db/comp-decorator comp)]
+             (println " updated db to set edit props")
+             (-> db/default-db
+                 (update-in [:composition] (constantly composition))
+                 (update-in [:props] (constantly props))))
+           db/default-db)
+         (assoc :posthog ph)))))
 
 (reg-event-fx
   ::navigate
@@ -65,6 +77,7 @@
 
 (reg-event-fx
  ::set-active-panel
+ [log-event]
  (fn [{:keys [db]} [_ active-panel]]
    {:db (assoc db :active-panel active-panel)}))
 
@@ -256,6 +269,7 @@
 
 (reg-event-fx
  ::set-raga
+ [log-event]
  (fn [{:keys [db]} [_ raga]]
    {:db (update-in db [:props :raga] (constantly raga))
     :dispatch [::save-to-localstorage]
@@ -263,6 +277,7 @@
 
 (reg-event-fx
  ::set-taal
+ [log-event]
  (fn [{:keys [db]} [_ taal]]
    (let [ncomp (db/add-indexes (assoc (get-in db [:composition]) :taal taal))]
      {:db (update-in db [:composition] (constantly ncomp))
@@ -270,6 +285,7 @@
 
 (reg-event-fx
  ::toggle-lang
+ [log-event]
  (fn [{:keys [db]} [_ _]]
    {:db (update-in db [:props :language-en?] not)}))
 
@@ -291,6 +307,7 @@
 ;; media and cloud
 (reg-event-fx
  ::upload-comp-json
+ [log-event]
  (fn [{:keys [db]} [_ comp-title]]
    (let [comp-title (if comp-title comp-title (get-in db [:composition :title]))
          comp (to-trans (select-keys (-> db :composition) [:noteseq :taal]))
@@ -311,6 +328,7 @@
 
 (reg-event-fx
  ::list-files
+ [log-event]
  (fn [{:keys [db]} [_ _]]
    (let [path (str  "/" (-> db :user :uid))
          stor (.storage firebase)
@@ -325,6 +343,7 @@
 
 (reg-event-fx
  ::my-bandishes
+ [log-event]
  (fn [{:keys [db]} [_ bandish-list]]
    {:db (assoc db :my-bandishes bandish-list)}))
 
@@ -338,6 +357,7 @@
 
 (reg-event-fx
  ::sign-in
+ [log-event]
  (fn [{:keys [db]} _]
    (let [storage (.-sessionStorage js/window)]
      ;;set a local storage because
@@ -351,12 +371,14 @@
 
 (reg-event-fx
  ::sign-out
+ [log-event]
  (fn [{:keys [db]} _]
    {:db (dissoc db :user)
     :firebase/sign-out nil}))
 
 (reg-event-fx
  ::set-user
+ [log-event]
  (fn [{:keys [db]}[_ user]]
    (if (and user (:email user))
      (let [storage (.-sessionStorage js/window)]
@@ -373,6 +395,7 @@
 
 (reg-event-fx
  ::firebase-error
+ [log-event]
  (fn [{:keys [db]} _]
    (println " fb auth error ")
    {:db db}))
@@ -391,6 +414,7 @@
 
 (reg-event-fx
  ::get-bandish-json
+ [log-event]
  (fn [{:keys [db]} [_ {:keys [path id]}]]
    (let [tr (t/reader :json)]
      (-> (js/fetch
@@ -405,12 +429,14 @@
 
 (reg-event-fx
  ::set-mode
+ [log-event]
  (fn [{:keys [db]} [_ ival]]
    {:db (update-in db [:props :mode]
                    (constantly ival))}))
 
 (reg-event-fx
  ::refresh-comp
+ [log-event]
  (fn [{:keys [db]} [_ {:keys [composition] :as inp}]]
    (let [comp (db/add-indexes inp)]
      {:db (-> db
@@ -455,6 +481,7 @@
 
 (reg-event-fx
  ::play
+ [log-event]
  (fn [{:keys [db]} [_ _]]
    (let [note-interval (/ 60 (-> db :props :bpm) )
          {:keys [audio-context clock]} db
@@ -559,6 +586,7 @@
 
 (reg-event-fx
  ::pause
+ [log-event]
  (fn [{:keys [db]} [_ _]]
    (c/clear! (:timer db))
    {:db (-> (assoc db :play-state :pause)
@@ -566,6 +594,7 @@
 
 (reg-event-fx
  ::stop
+ [log-event]
  (fn [{:keys [db]} [_ _]]
    (c/clear! (:timer db))
    {:db (-> (assoc db :play-state :stop)
@@ -594,7 +623,6 @@
                                      (>= at (time-change-fn iat)))))
                             (iterate inc start-index)))
            past-notes-to-play (past-notes-fn play-at-time play-note-index #(- % 0.5))
-           _ (println " pntp " past-notes-to-play)
            idb {:db (if (-> past-notes-to-play empty? not)
                       (let [n-note-play-index
                             (if (-> past-notes-to-play empty? not)
@@ -655,7 +683,8 @@
                                                (.addEventListener
                                                 "finish"
                                                 (fn[e]
-                                                  (set! (.-style notel) "fill-opacity:0")))))
+                                                  (set! (.-style notel)
+                                                        (str "fill-opacity:0"))))))
                                             (* 1000 iat))))))))
                         (->> past-notes-to-play last scroll-fn)
                         (assoc db :play-note-index n-note-play-index))

@@ -13,7 +13,8 @@
   projectId :required
   storageBucket :required
   messagingSenderId :required
-  appId :required)
+  appId :required
+  posthogKey :required)
 
 (defn get-bandish-url
   [path]
