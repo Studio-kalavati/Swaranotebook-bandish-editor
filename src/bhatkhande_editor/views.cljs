@@ -356,39 +356,47 @@
                             [:div {:class "popup" :style {:width "85vw"}}
                              [v-box
                               :gap      "0.5vh"
+                              :class "body"
                               :children
-                              [(let []
-                                 [v-box
-                                  :gap "5vh"
-                                  :style {:min-height "20vh"}
-                                  :justify :center
-                                  :children
-                                  (let []
-                                    [[gap :size "2vh"]
-                                     [checkbox
-                                      :model show-lyrics?
-                                      :label "Show Lyrics?"
-                                      :on-change
-                                      #(let [nval (not @show-lyrics?)]
-                                         (reset! show-lyrics? nval)
-                                         (dispatch [::events/show-lyrics? nval]))]
-                                     [checkbox
-                                      :model newline-on-avartan?
-                                      :label "Newline on each Avartan?"
-                                      :on-change
-                                      #(let [nval (not @newline-on-avartan?)]
-                                         (reset! newline-on-avartan? nval)
-                                         (dispatch [::events/newline-on-avartan? nval]))]
-                                     [box
-                                      :align :center
-                                      :child
-                                      [button
-                                       :label "  OK  "
-                                       :style {:width "100px"}
-                                       :class "btn-hc-lg btn-primary "
-                                       :on-click #(do (reset! show-settings-popup? false))]]
-                                     [gap :size "2vh"]
-                                     ])])]]]])
+                              [[gap :size "2vh"]
+                               [h-box
+                                :align :center
+                                :justify :center
+                                :children
+                                [[checkbox
+                                  :model show-lyrics?
+                                  :style {:width "auto" :height "20px" }
+                                  :on-change
+                                  #(let [nval (not @show-lyrics?)]
+                                     (reset! show-lyrics? nval)
+                                     (dispatch [::events/show-lyrics? nval]))]
+                                 [gap :size "20px"]
+                                 [title :label "Show Lyrics?"
+                                  :level :level3]]]
+                               [h-box
+                                :align :center
+                                :justify :center
+                                :children
+                                [[checkbox
+                                  :model newline-on-avartan?
+                                  :style {:width "auto" :height "20px" }
+                                  :on-change
+                                  #(let [nval (not @newline-on-avartan?)]
+                                     (reset! newline-on-avartan? nval)
+                                     (dispatch [::events/newline-on-avartan? nval]))]
+                                 [gap :size "20px"]
+                                 [title :label "Newline on each Avartan?"
+                                  :level :level3]]]
+                               [gap :size "50px"]
+                               [box
+                                :align :center
+                                :child
+                                [button
+                                 :label "  OK  "
+                                 :style {:width "100px"}
+                                 :class "btn-hc-lg btn-primary "
+                                 :on-click #(do (reset! show-settings-popup? false))]]
+                               [gap :size "2vh"]]]]])
                          (when @show-share-popup?
                            [modal-panel
                               :backdrop-on-click #(reset! show-share-popup? false)
