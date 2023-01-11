@@ -1,0 +1,4 @@
+[context.my]
+  command = "lein uberjar"
+  publish = "resources/public"
+
