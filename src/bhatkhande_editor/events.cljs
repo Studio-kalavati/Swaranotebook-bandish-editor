@@ -538,11 +538,11 @@
          num-notes (count a1)
          metro-tick-seq
          (->> db :composition :noteseq
-                  (map vector (range 0 (->> db :composition :noteseq count inc) note-interval)
-                       (range))
-                  (map (fn[[at note-index {:keys [notes] :as ivec}]]
+              (map vector (range 0 (->> db :composition :noteseq count inc) note-interval)
+                   (range))
+              (map (fn[[at note-index {:keys [notes] :as ivec}]]
                          (let [note-index (mod (inc note-index) (-> taal-def taal :num-beats))]
-                           (if (and (:metronome? db) (metronome-on-at note-index))
+                           (if (and (-> db :props :metronome?) (metronome-on-at note-index))
                              [[:tick2 (+ now at) note-interval]]
                              []))))
                   (reduce into []))
