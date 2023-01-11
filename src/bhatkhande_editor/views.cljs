@@ -29,7 +29,7 @@
    [sargam.ragas :refer [varjit-svaras]]
    [sargam.talas :refer [taal-def]]
    [sargam.languages :refer [lang-labels]]
-
+   [sargam.spec :as us]
    [reagent.core :as reagent]
    [cognitect.transit :as t]
    [bhatkhande-editor.events :as events]
@@ -54,8 +54,9 @@
   "generate a vector of size 3, one each for base middle and top octaves.
   It generates the swaras for a given raga id"
   [raga-id]
-  (let [varjit-set (varjit-svaras raga-id)
-        com (remove varjit-set mswaras)
+  (let [com (if (= :custom raga-id)
+              @(subscribe [::subs/custom-svaras])
+              (remove (varjit-svaras raga-id) mswaras))
         fnx (fn[saptak] (mapv #(assoc {} :shruti (vector saptak %)) com))
         res [(fnx :mandra) (fnx :madhyam) (fnx :taar)]]
     res))
@@ -163,6 +164,7 @@
                                [:p "Select one beat to have 1, 2 or 3 notes in it."]]]
         show-partname-popup (reagent/atom false)
         show-raga-popup (reagent/atom false)
+        show-select-svaras-popup (reagent/atom false)
         show-taal-popup (reagent/atom false)
         show-lang-popup (reagent/atom false)
         show-login-popup? (reagent/atom false)
@@ -173,7 +175,13 @@
         show-lyrics? (reagent/atom @(subscribe [::subs/show-lyrics?]))
         newline-on-avartan? (reagent/atom @(subscribe [::subs/newline-on-avartan?]))
         title-val (reagent/atom "")
-        notes-per-beat (reagent/atom 1)]
+        notes-per-beat (reagent/atom 1)
+        octave-notes-list (mapv (fn[_ istate] (reagent/atom istate))
+                                (range 12)
+                                ;;all shuddha svaras true
+                                [true false true false true true false true
+                                 false true false true])
+        ]
     (fn []
       (let [sbp (vec (repeat 21 (reagent/atom false)))
             speed-switch-fn (fn[i] {:disp-fn #(reset! notes-per-beat i)
@@ -224,6 +232,10 @@
                                      #_(ragas raga)
                                      "Rag")
                                    {:disp-fn
+                                    #(do (reset! show-select-svaras-popup
+                                                 (not @show-select-svaras-popup)))
+                                    :state #(true? @show-select-svaras-popup)}
+                                   #_{:disp-fn
                                     #(do (reset! show-raga-popup (not @show-raga-popup)))
                                     :state #(true? @show-raga-popup)})
                                   #_[info-button :info raga-info]]]
@@ -331,7 +343,8 @@
                                          (zmdi-butn2
                                           "zmdi zmdi-cloud-upload zmdi-hc-lg"
                                           (if-let [ctitle @(subscribe [::subs/comp-title])]
-                                            #(dispatch [::events/upload-comp-json])
+                                            (do
+                                              #(dispatch [::events/upload-comp-json]))
                                             #(reset! show-title-popup? true))))
                                        (mk-button notes-per-beat {:shruti [:madhyam :-]})
                                        (mk-button notes-per-beat {:shruti [:madhyam :a]})
@@ -405,8 +418,9 @@
                            (let []
                              [modal-panel
                               :backdrop-on-click #(reset! show-title-popup? false)
-                              :child [:div {:class "popup" :style {:overflow-y :scroll
-                                                                   :max-height "80vh"}}
+                              :child [:div {:class "popup"
+                                            :style {:overflow-y :scroll
+                                                    :max-height "80vh"}}
                                       [v-box
                                        :gap "2vh"
                                        :class "body"
@@ -421,7 +435,8 @@
                                          [input-text
                                           :src (at)
                                           :model            title-val
-                                          :style {:font-size "large" :width "200px" :text-align "center"}
+                                          :style {:font-size "large" :width "200px"
+                                                  :text-align "center"}
                                           :on-change        #(reset! title-val %)]]
                                         [button
                                          :label " Save "
@@ -488,6 +503,80 @@
                                          :align :center
                                          :children children]]]]]))
 
+                         (when @show-select-svaras-popup
+                           (let [
+                                 box-fn (fn[model-atom lab]
+                                          [h-box
+                                           :style  {
+                                                    :width "100px"
+                                                    }
+                                           :align :center
+                                           :justify :center
+                                           :children
+                                           [[checkbox
+                                             :model model-atom
+                                             :label-style (if @model-atom  {:color "#f83600"})
+                                             :on-change
+                                             #(do
+                                                (reset! model-atom (not @model-atom)))
+                                             :style {:width "auto"
+                                                     :height "20px" }
+                                             ]
+                                            [gap :size "20px"]
+                                            [title :label lab :level :level2
+                                             :style {:color (if @model-atom
+                                                              "#f83600" "#000000")}]]])
+                                 children (mapv box-fn octave-notes-list
+                                                ["S" "r" "R" "g" "G" "m" "M" "P"
+                                                 "d" "D" "n" "N"])]
+                             [modal-panel
+                              :backdrop-on-click #(reset! show-select-svaras-popup false)
+                              :child [:div {:class "popup" :style {:overflow-y :scroll
+                                                                   :max-height "80vh"}}
+                                      [v-box
+                                       :gap "2vh"
+                                       :class "body"
+                                       :children
+                                       [[box
+                                         :align :center
+                                         :child [title :level :level3
+                                                 :label "Select Svaras"]]
+                                        [h-box
+                                         :align :center
+                                         :justify :center
+                                         :style {:min-width "100px" :flex-flow "row wrap"}
+                                         :children children]
+                                        [v-box
+                                         :align :center
+                                         :justify :center
+                                         :children
+                                         [[button
+                                           :label "OK"
+                                           :style (assoc but-style
+                                                         :background-color "#f83600")
+                                           :on-click
+                                           #(do
+                                              (dispatch [::events/set-custom-svaras
+                                                         (->> 
+                                                          (map vector (take 12 us/i-note-seq)
+                                                               (map deref octave-notes-list))
+                                                          (filter (fn[[a b]] (when b a)))
+                                                          (map first))])
+                                              (reset! show-select-svaras-popup
+                                                      (not @show-select-svaras-popup)))
+                                           :class "btn btn-default"]
+                                          [gap :size "2vh"]
+                                          [button
+                                           :label "Select Raga"
+                                           ;;:style but-style
+                                           :on-click
+                                           #(do
+                                              (reset! show-select-svaras-popup
+                                                      (not @show-select-svaras-popup))
+                                              (reset! show-raga-popup
+                                                      (not @show-raga-popup)))
+                                           :class "btn btn-default"]
+                                          ]]]]]]))
                          (when @show-raga-popup
                            (let [raga-labels (mapv (fn[[a b]] {:id a  :label b})
                                                    (:raga-labels @(subscribe [::subs/lang-data])))
@@ -516,7 +605,17 @@
                                                  :label "Show Swaras from Raga"]]
                                         [v-box
                                          :align :center
-                                         :children children]]]]]))
+                                         :children children]
+                                        [box
+                                         :align :center
+                                         :child
+                                         [button
+                                          :label "Cancel"
+                                          :on-click
+                                          #(do
+                                             (reset! show-raga-popup
+                                                     (not @show-raga-popup)))
+                                          :class "btn btn-default"]]]]]]))
                          (when-let [{:keys [row-index bhaag-index]}
                                     @(subscribe [::subs/show-text-popup])]
                            (let [text-val
@@ -931,7 +1030,6 @@
                              id (clojure.string/join
                                  "" (rest (clojure.string/split i0 #"/")))
                              iurl (db/get-long-url (str uuid "/" id))]
-                         (println " iurl " iurl)
                          [v-box
                           :children
                           [[hyperlink-href
@@ -971,7 +1069,6 @@
                   (let [ch (.-offsetHeight %)]
                     (reset! editor-height ch)))}
     (let [istate @(subscribe [::subs/mode])]
-      (println " istate " istate)
       (cond (= :edit-hidden-keyboard istate)
             [hidden-keyboard-footer]
             (= :play istate)

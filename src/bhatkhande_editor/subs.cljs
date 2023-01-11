@@ -129,6 +129,12 @@
    (:show-lyrics? props)))
 
 (reg-sub
+ ::custom-svaras
+ :<- [::props]
+ (fn [props [_ _]]
+   (:custom-svaras props)))
+
+(reg-sub
  ::newline-on-avartan?
  :<- [::props]
  (fn [props [_ _]]

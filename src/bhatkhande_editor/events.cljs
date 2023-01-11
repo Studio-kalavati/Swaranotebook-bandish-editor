@@ -268,11 +268,21 @@
       :dispatch [::save-to-localstorage]})))
 
 (reg-event-fx
+ ::set-custom-svaras
+ [log-event]
+ (fn [{:keys [db]} [_ svaras]]
+   {:db
+    (-> (update-in db [:props :raga] (constantly :custom))
+        (update-in [:props :custom-svaras] (constantly svaras)))
+   ;; :dispatch [::save-to-localstorage]
+    }))
+
+(reg-event-fx
  ::set-raga
  [log-event]
  (fn [{:keys [db]} [_ raga]]
    {:db (update-in db [:props :raga] (constantly raga))
-    :dispatch [::save-to-localstorage]
+    ;;:dispatch [::save-to-localstorage]
     }))
 
 (reg-event-fx
@@ -305,14 +315,21 @@
     (t/write w x)))
 
 ;; media and cloud
+
 (reg-event-fx
  ::upload-comp-json
  [log-event]
  (fn [{:keys [db]} [_ comp-title]]
-   (let [comp-title (if comp-title comp-title (get-in db [:composition :title]))
-         comp (to-trans (select-keys (-> db :composition) [:noteseq :taal]))
-         uuid (last (.split (.toString (random-uuid)) #"-"))
-         path (str (-> db :user :uid) "/" uuid "-" comp-title)
+   (let [comp (->
+               (select-keys (-> db :composition) [:noteseq :taal])
+               (assoc :title comp-title)
+               to-trans)
+         path (if-let [p2 (-> db :props :id)]
+                ;;if the current path is a pre-saved comp, use that and overwrite
+                (str (-> db :user :uid) "/" p2)
+                (str (-> db :user :uid) "/"
+                     (last (.split (.toString (random-uuid)) #"-"))
+                     "-" comp-title))
          stor (.storage firebase)
          storageRef (.ref stor)
          file-ref  (.child storageRef path)]
@@ -413,9 +430,15 @@
      {:db nep})))
 
 (reg-event-fx
+ ::set-url-path
+ (fn [{:keys [db]} [_ {:keys [path id]}]]
+   (println " sup "[path id])
+   {:db (update-in db [:props] assoc :path path :id id)}))
+
+(reg-event-fx
  ::get-bandish-json
  [log-event]
- (fn [{:keys [db]} [_ {:keys [path id]}]]
+ (fn [{:keys [db]} [_ {:keys [path id] :as urlparams}]]
    (let [tr (t/reader :json)]
      (-> (js/fetch
           (db/get-bandish-url (str path "/" id))
@@ -423,6 +446,7 @@
          (.then (fn[i] (.text i)))
          (.then (fn[i]
                   (let [imap (js->clj (t/read tr i))]
+                    (dispatch [::set-url-path urlparams])
                     (dispatch [::refresh-comp imap]))))
          (.catch (fn[i] (println " error " i ))))
      {:db db})))
@@ -438,13 +462,14 @@
  ::refresh-comp
  [log-event]
  (fn [{:keys [db]} [_ {:keys [composition] :as inp}]]
-   (let [comp (db/add-indexes inp)]
-     {:db (-> db
-              (update-in [:composition] (constantly comp))
-              (update-in [:props :cursor-pos]
-                         (constantly
-                          (let [in (-> comp :index last)]
-                            (zipmap [:row-index :bhaag-index :note-index :nsi] in)))))
+   (let [comp (db/add-indexes inp)
+         ndb (-> db
+                 (update-in [:composition] (constantly comp))
+                 (update-in [:props :cursor-pos]
+                            (constantly
+                             (let [in (-> comp :index last)]
+                               (zipmap [:row-index :bhaag-index :note-index :nsi] in)))))]
+     {:db ndb
       :dispatch [::set-active-panel :home-panel]})))
 
 (reg-event-fx
