@@ -3,3 +3,12 @@
   to = "/index.html"
   status = 200
   force = true 
+
+[context.production]
+  command = "npm install && npm run release"
+  publish = "resources/public"
+
+[context.my]
+  command = "lein uberjar"
+  publish = "resources/public"
+
