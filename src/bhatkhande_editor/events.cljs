@@ -58,12 +58,10 @@
          comp-str (.getItem storage "comp")
          ph (.init posthog db/posthogKey #js {"api_host" "https://app.posthog.com" })]
      ;;dont read comp-str if not refresh.
-     (println " ph " ph)
      (-> (if comp-str
            (let [w (t/reader :json)
                  comp (t/read w comp-str)
                  {:keys [composition props]} (db/comp-decorator comp)]
-             (println " updated db to set edit props")
              (-> db/default-db
                  (update-in [:composition] (constantly composition))
                  (update-in [:props] (constantly props))))
@@ -307,7 +305,9 @@
 (reg-event-fx
  ::reset-note-index
  (fn [{:keys [db]} [_ _]]
-   (let [ndb (update-in db [:props :note-index ] (constantly []))]
+   (let [ndb
+         (-> (update-in db [:props :note-index ] (constantly []))
+             (update-in [:elem-index ] (constantly [])))]
      {:db ndb})))
 
 (defn to-trans [x]
@@ -432,7 +432,6 @@
 (reg-event-fx
  ::set-url-path
  (fn [{:keys [db]} [_ {:keys [path id]}]]
-   (println " sup "[path id])
    {:db (update-in db [:props] assoc :path path :id id)}))
 
 (reg-event-fx
@@ -690,8 +689,7 @@
                                                         (if (= 4 (count noteat))
                                                           (last noteat) {})])
                                        (when view-note-index
-                                         (let [notel (get-in (:elem-index db) [view-note-index])
-                                               bcr (.getBoundingClientRect notel)]
+                                         (let [notel (get-in (:elem-index db) [view-note-index])]
                                            (js/setTimeout
                                             (fn []
                                               (set! (.-style notel)

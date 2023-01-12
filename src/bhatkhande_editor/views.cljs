@@ -321,7 +321,6 @@
                                            (zmdi-butn2
                                             "zmdi zmdi-share zmdi-hc-lg"
                                             #(let []
-                                               (println " share url " share-url)
                                                (if (.-share js/navigator)
                                                  (-> (.share js/navigator
                                                              #js
@@ -696,7 +695,7 @@
            (let
                [div-id "editor"
                  comp @(subscribe [::subs/composition])
-                 _ (dispatch [::events/reset-note-index])
+                 _ (dispatch-sync [::events/reset-note-index])
                  rect-style {:width 2 :height 30 :y 10}
                  image-map (db/image-map
                             (if (= :hindi @(subscribe [::subs/lang]))
