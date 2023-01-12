@@ -257,8 +257,8 @@
                     :note-pos {}
                     :mode :edit
                     :language-en? true
-                    :newline-on-avartan? true
-                    :show-lyrics? true
+                    :newline-on-avartan? false
+                    :show-lyrics false
                     :bpm 120
                     :metronome? true
                     :tanpura? true

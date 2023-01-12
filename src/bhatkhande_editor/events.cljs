@@ -482,7 +482,7 @@
 (reg-event-fx
  ::show-lyrics?
  (fn [{:keys [db]} [_ ival]]
-   {:db (update-in db [:props :show-lyrics?] (constantly ival))}))
+   {:db (update-in db [:props :show-lyrics] (constantly ival))}))
 
 (reg-event-fx
  ::newline-on-avartan?

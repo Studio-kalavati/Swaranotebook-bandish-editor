@@ -126,7 +126,7 @@
  ::show-lyrics?
  :<- [::props]
  (fn [props [_ _]]
-   (:show-lyrics? props)))
+   (:show-lyrics props)))
 
 (reg-sub
  ::custom-svaras
