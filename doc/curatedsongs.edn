@@ -1,3 +1,4 @@
 {:songs
- [{:iurl "https://bandish.netlify.app/view/vlB9hVgb5OdKcadbhOOYyzKwvpl2/34e847c547ba-aasu-bharihai"
-   :song-title "Ye Aasu Bhari Hai"}]}
+ [{:iurl "https://bandish.netlify.app/view/vlB9hVgb5OdKcadbhOOYyzKwvpl2/34e847c547ba-aasu-bharihai?mode=play&bpm=200"
+   :song-title "Ye Aasu Bhari Hai"
+   :description "Notations for Ye Aasu Bhari hai, sung by Mukesh for the film Parvarish(1958). The composer is Datta Ram"}]}

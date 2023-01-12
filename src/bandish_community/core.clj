@@ -23,10 +23,10 @@
       (str  ".html")))
 
 (defn isong
-  [{:keys [iurl song-title]}]
+  [{:keys [iurl song-title description]}]
   [:div
-   [:a {:href iurl }
-    song-title]])
+   [:a {:href (str iurl "&mode=play") } song-title]
+   [:p description]])
 
 (html/deftemplate list-template "pagetemplates/listtemplate.html"
   [songs]
@@ -46,6 +46,7 @@
 (comment
   (def data1
     [{:iurl "https://bandish.netlify.app/view/vlB9hVgb5OdKcadbhOOYyzKwvpl2/34e847c547ba-aasu-bharihai"
+      :description "abcd"
       :song-title "Ye aasu Bhari Hai"}])
   (generate-list {:basepath "resources/public/index.html"
                   :song-list data1}))
@@ -89,13 +90,6 @@
                      :song-list song-list})]
     (sitemap-list "resources/public/" song-list)))
 
-(comment
-  (-> k2 first :songs-list  first :filepath )
-  (->> k2 (map :songs-list) (map #(map :filepath %))
-       (mapv (fn[i]
-               (mapv #(clojure.string/replace
-                       % root "https://svaracollective.com/") i))))
-  )
 (defn zip-str [s]
   (let [istr (slurp s)]
     (zip/xml-zip 
