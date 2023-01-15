@@ -190,6 +190,7 @@
 
 (defn fetch-url
   [imap ctx ikey iurl]
+  (println " ikey " ikey " url " iurl)
   (->
    (js/fetch iurl)
    (.then (fn [r] (.arrayBuffer r)))
@@ -219,6 +220,17 @@
   (mapv (partial fetch-url imap ctx)
         [:tick1 :tick2]
         (map #(str "/sounds/metronome/metro" % ".mp3") [1 2]))
+  imap)
+
+(defn get-tabla-sample-loc
+  [imap ctx]
+  (let [ifn (fn[taal]
+              (let [paths (map #(str "/sounds/tabla/" taal "/" taal % "bpm.mp3")
+                               (range 60 310 15))
+                    kws (map #(keyword (str taal % "bpm"))
+                             (range 60 310 15))]
+                (mapv (partial fetch-url imap ctx) kws paths)))]
+    (count (mapv ifn ["ektaal" "dadra" "rupak" "teentaal" "jhaptaal" "kehrwa"])))
   imap)
 
 (defn get-tanpura-sample-loc
@@ -282,7 +294,9 @@
          ctx (:context @clock)
          bufatom (get-santoor-url-map ctx)
          bufatom (get-metronome-sample-loc bufatom ctx)
-         bufatom (get-tanpura-sample-loc bufatom ctx)]
+         bufatom (get-tanpura-sample-loc bufatom ctx)
+         bufatom (get-tabla-sample-loc bufatom ctx)]
+    (println " bufatom " @bufatom)
     {:sample-buffers bufatom
      :clock clock
      :audio-context ctx}))

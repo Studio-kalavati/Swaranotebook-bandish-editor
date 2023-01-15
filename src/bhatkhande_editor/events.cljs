@@ -287,6 +287,7 @@
  ::set-taal
  [log-event]
  (fn [{:keys [db]} [_ taal]]
+   (println " set taal " taal)
    (let [ncomp (db/add-indexes (assoc (get-in db [:composition]) :taal taal))]
      {:db (update-in db [:composition] (constantly ncomp))
       :dispatch [::save-to-localstorage]})))
@@ -507,10 +508,12 @@
  ::play
  [log-event]
  (fn [{:keys [db]} [_ _]]
-   (let [note-interval (/ 60 (-> db :props :bpm) )
+   (let [bpm (-> db :props :bpm)
+         note-interval (/ 60 bpm)
          {:keys [audio-context clock]} db
          now (.-currentTime audio-context)
          taal (-> db :composition :taal)
+         num-beats (:num-beats (taal-def taal))
          metronome-on-at (set (->> taal-def taal
                                         :bhaags
                                         (reductions +) ;;[4 8 12 16]
@@ -545,6 +548,13 @@
                              [[:tick2 (+ now at) note-interval]]
                              []))))
                   (reduce into []))
+         taal-len-in-secs (* num-beats note-interval)
+         num-cycles (inc (int (/ (->> db :composition :noteseq count dec) num-beats)))
+         tabla-beat-seq
+         (mapv #(vector
+                 (-> (str (name taal) bpm "bpm") keyword)
+                 (+ now (* taal-len-in-secs %)) taal-len-in-secs)
+               (range num-cycles))
          ;;find note indexes where duration should be long if followed by avagraha
          ;;returns a list of 2-tuples, where first is index and second is duration of note
          avagraha-note-indexes
@@ -571,7 +581,8 @@
          a1 (->> (reduce (fn[acc i]
                            (update-in acc [(first i)] (fn[[a b c]] [a b (+ c (second i))])))
                          a1 avagraha-note-indexes)
-                 (into metro-tick-seq)
+                 (into tabla-beat-seq)
+                 ;(into metro-tick-seq)
                  (sort-by second))
          a1 (if (-> db :props :tanpura?)
               (let [last-note-time (- (-> a1 last second) now )
