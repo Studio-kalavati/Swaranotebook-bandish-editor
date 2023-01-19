@@ -190,7 +190,6 @@
 
 (defn fetch-url
   [imap ctx ikey iurl]
-  (println " ikey " ikey " url " iurl)
   (->
    (js/fetch iurl)
    (.then (fn [r] (.arrayBuffer r)))
@@ -272,7 +271,7 @@
                     :newline-on-avartan? false
                     :show-lyrics false
                     :bpm 120
-                    :metronome? true
+                    :beat-mode :metronome
                     :tanpura? true
                     :note-index []})
 

@@ -152,10 +152,10 @@
    (:bpm props)))
 
 (reg-sub
- ::metronome?
+ ::beat-mode
  :<- [::props]
  (fn [props [_ _]]
-   (:metronome? props)))
+   (:beat-mode props)))
 
 (reg-sub
  ::tanpura?

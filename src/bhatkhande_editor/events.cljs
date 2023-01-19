@@ -287,7 +287,6 @@
  ::set-taal
  [log-event]
  (fn [{:keys [db]} [_ taal]]
-   (println " set taal " taal)
    (let [ncomp (db/add-indexes (assoc (get-in db [:composition]) :taal taal))]
      {:db (update-in db [:composition] (constantly ncomp))
       :dispatch [::save-to-localstorage]})))
@@ -316,33 +315,67 @@
     (t/write w x)))
 
 ;; media and cloud
+(reg-event-fx
+ ::update-bandish-url
+ (fn [{:keys [db]} [_ bandish-url]]
+   {:db
+    (-> db
+        (update-in [:bandish-url]
+                   (constantly bandish-url)))}))
+
+(defn upload-comp
+  [path bandish]
+  (let [stor (.storage firebase)
+        storageRef (.ref stor)
+        file-ref  (.child storageRef path)]
+    (-> (.putString file-ref bandish)
+        (.then
+         (fn[i]
+           (dispatch [::update-bandish-url path])
+           (.pushState (.-history js/window) #js {} ""
+                       (db/get-long-url path))
+           (dispatch [::set-active-panel :home-panel]))))))
 
 (reg-event-fx
- ::upload-comp-json
+ ::upload-new-comp
  [log-event]
  (fn [{:keys [db]} [_ comp-title]]
+   (let [ndb (if comp-title
+               (update-in db [:composition :title] (constantly comp-title))
+               db)
+         comp (->
+               (select-keys (-> ndb :composition) [:noteseq :taal])
+               to-trans)
+         path (str (-> ndb :user :uid) "/"
+                   (last (.split (.toString (random-uuid)) #"-"))
+                   "-" comp-title)
+         #_(if-let [p2 (-> ndb :props :id)]
+                ;;if the current path is another users pre-saved comp,
+                ;;use that and overwrite
+                (str (-> ndb :user :uid) "/" p2)
+                )]
+     (upload-comp path comp)
+     {:dispatch [::set-active-panel :wait-for-save-completion]
+      :db ndb})))
+
+(reg-event-fx
+ ::upsert-comp
+ [log-event]
+ (fn [{:keys [db]} [_ _]]
    (let [comp (->
                (select-keys (-> db :composition) [:noteseq :taal])
-               (assoc :title comp-title)
                to-trans)
-         path (if-let [p2 (-> db :props :id)]
-                ;;if the current path is a pre-saved comp, use that and overwrite
-                (str (-> db :user :uid) "/" p2)
-                (str (-> db :user :uid) "/"
-                     (last (.split (.toString (random-uuid)) #"-"))
-                     "-" comp-title))
-         stor (.storage firebase)
-         storageRef (.ref stor)
-         file-ref  (.child storageRef path)]
-     (-> (.putString file-ref comp)
-         (.then
-          (fn[i]
-            (dispatch [::update-bandish-url path])
-            (.pushState (.-history js/window) #js {} ""
-                        (db/get-long-url path))
-            (dispatch [::set-active-panel :home-panel]))))
+         comp-title (get-in db [:composition :title])
+         path
+         (if-let [p2 (-> db :props :id)]
+             ;;if the current path is a pre-saved comp, use that and overwrite
+             (str (-> db :user :uid) "/" p2)
+             (str (-> db :user :uid) "/"
+                  (last (.split (.toString (random-uuid)) #"-"))
+                  "-" comp-title))]
+     (upload-comp path comp)
      {:dispatch [::set-active-panel :wait-for-save-completion]
-      :db (update-in db [:composition :title] (constantly comp-title))})))
+      :db db})))
 
 (reg-event-fx
  ::list-files
@@ -365,13 +398,7 @@
  (fn [{:keys [db]} [_ bandish-list]]
    {:db (assoc db :my-bandishes bandish-list)}))
 
-(reg-event-fx
- ::update-bandish-url
- (fn [{:keys [db]} [_ bandish-url]]
-   {:db
-    (-> db
-        (update-in [:bandish-url]
-                   (constantly bandish-url)))}))
+
 
 (reg-event-fx
  ::sign-in
@@ -495,9 +522,9 @@
    {:db (update-in db [:props :bpm] (constantly ival))}))
 
 (reg-event-fx
- ::metronome?
+ ::beat-mode
  (fn [{:keys [db]} [_ ival]]
-   {:db (update-in db [:props :metronome?] (constantly ival))}))
+   {:db (update-in db [:props :beat-mode] (constantly ival))}))
 
 (reg-event-fx
  ::tanpura?
@@ -544,7 +571,8 @@
                    (range))
               (map (fn[[at note-index {:keys [notes] :as ivec}]]
                          (let [note-index (mod (inc note-index) (-> taal-def taal :num-beats))]
-                           (if (and (-> db :props :metronome?) (metronome-on-at note-index))
+                           (if (and (-> db :props :beat-mode (= :metronome))
+                                    (metronome-on-at note-index))
                              [[:tick2 (+ now at) note-interval]]
                              []))))
                   (reduce into []))
@@ -581,8 +609,8 @@
          a1 (->> (reduce (fn[acc i]
                            (update-in acc [(first i)] (fn[[a b c]] [a b (+ c (second i))])))
                          a1 avagraha-note-indexes)
-                 (into tabla-beat-seq)
-                 ;(into metro-tick-seq)
+                 (into (if (-> db :props :beat-mode (= :tabla))
+                         tabla-beat-seq metro-tick-seq))
                  (sort-by second))
          a1 (if (-> db :props :tanpura?)
               (let [last-note-time (- (-> a1 last second) now )
@@ -639,8 +667,10 @@
 (reg-event-fx
  ::register-elem
  (fn [{:keys [db]} [_ index nsi elem]]
-   ;;(println " register elem "[ index nsi elem])
-   {:db (update-in db [:elem-index ] conj elem)}))
+   {:db
+    (if (= 0 index)
+      (update-in db [:elem-index ] (constantly [elem]))
+      (update-in db [:elem-index ] conj elem))}))
 
 (reg-event-fx
  ::clock-tick-event

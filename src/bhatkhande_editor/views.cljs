@@ -325,7 +325,8 @@
                                                  (-> (.share js/navigator
                                                              #js
                                                              {"title" @title-val
-                                                              "text" " Check out this bandish I wrote"
+                                                              "text"
+                                                              " Check out this bandish I wrote \n"
                                                               "url"
                                                               (str
                                                                (.-origin (.-location js/window))
@@ -336,15 +337,15 @@
                                                                (println " share error"))))
                                                  ;;put in a popup if share is not enabled
                                                  (do
-                                                   (reset! show-share-popup? true))
-                                                 )))))
+                                                   (reset! show-share-popup? true)))))))
                                        (when logged-in?
                                          (zmdi-butn2
                                           "zmdi zmdi-cloud-upload zmdi-hc-lg"
-                                          (if-let [ctitle @(subscribe [::subs/comp-title])]
-                                            (do
-                                              #(dispatch [::events/upload-comp-json]))
-                                            #(reset! show-title-popup? true))))
+                                          #(reset! show-title-popup? true)))
+                                       (when (and logged-in? @(subscribe [::subs/comp-title]))
+                                         (zmdi-butn2
+                                          "zmdi zmdi-floppy zmdi-hc-lg"
+                                          #(dispatch [::events/upsert-comp])))
                                        (mk-button notes-per-beat {:shruti [:madhyam :-]})
                                        (mk-button notes-per-beat {:shruti [:madhyam :a]})
                                        (butn2 "⌫" #(dispatch [::events/delete-single-swara]))]])
@@ -450,10 +451,8 @@
                                          :class "btn-hc-lg btn-primary "
                                          :on-click #(let [tv (clojure.string/replace @title-val
                                                                                      #" " "-")]
-
                                                       (reset! show-title-popup? false)
-                                                      (dispatch [::events/upload-comp-json
-                                                                 tv]))]]]]]))
+                                                      (dispatch [::events/upload-new-comp tv]))]]]]]))
                          (when @show-login-popup?
                            (let []
                              [modal-panel
@@ -662,261 +661,262 @@
 (def editor-height (reagent/atom 0))
 (defn swara-display-area
   []
-(fn []
-      (let [winhgt (.-innerHeight js/window)
-            myhgt (- winhgt
-                     @editor-height)
-            show-lyrics? @(subscribe [::subs/show-lyrics?])
-            newline-on-avartan? @(subscribe [::subs/newline-on-avartan?])
-            play-mode? (= :play @(subscribe [::subs/mode]))]
-        [:div
-         [:div
-          {:class "edit-composition"
-           :style {:overflow-y "scroll"
-                   :max-height myhgt
-                   :height myhgt
-                   :min-height myhgt
-                   :flex-flow "column" :flex "1 0 0px"}
-           ;;this code sets the scroll bar to the bottom, so that the last type text is seen.
-           :ref
-           #(if (identity %)
-              (let [iel (.querySelector js/document ".edit-composition")
-                    padding (.-padding (js->clj (.getComputedStyle js/window iel)))
-                    intpadding (int (if padding
-                                      (first (.split (first
-                                                      (.split padding " ")) "px")) " is nil"))]
-                (dispatch [::events/set-music-notes-element %])
-                (if play-mode?
-                    (set! (.-scrollTop %) 0)
-                    (when (> (.-scrollHeight % ) myhgt)
-                      (let [sctop (- (.-scrollHeight % ) myhgt)]
-                        (set! (.-scrollTop %) sctop))))))}
-          [:div {:class "com-edit"}
-           (let
-               [div-id "editor"
-                 comp @(subscribe [::subs/composition])
-                 _ (dispatch-sync [::events/reset-note-index])
-                 rect-style {:width 2 :height 30 :y 10}
-                 image-map (db/image-map
-                            (if (= :hindi @(subscribe [::subs/lang]))
-                              "hindi" "english_SrR"))
-                 draw-bhaag
-                 (fn[row-index bhaag-index note-map-seq]
-                   (let [nsindex (db/get-noteseq-index
-                                  {:row-index row-index
-                                   :bhaag-index bhaag-index :note-index 0}
-                                  (:taal comp))
-                         sahitya (get-in comp [:noteseq nsindex :lyrics])
-                         sah-list (when sahitya (clojure.string/split sahitya #","))
-                         r3
-                         (->>
-                          note-map-seq
-                          (map vector (range))
-                          (reduce
-                           (fn[{:keys [x images] :as acc} [note-index note]]
-                             (let [
-                                   ;;this is the flat noteseq index.
-                                   ;;example: at position 11, we find
-                                   ;;11  --  {:notes [{:shruti [:madhyam :m+], :npb 3} {:shruti [:madhyam :g], :npb 3} {:shruti [:madhyam :r], :npb 3}]}
-                                   ;;which can have multiple notes in it.
-                                   nseq-index
-                                   (db/get-noteseq-index
-                                    {:row-index row-index
-                                     :bhaag-index bhaag-index
-                                     :note-index note-index}
-                                    (:taal comp))
-                                   r2
-                                   (->>
-                                    note
-                                    :notes
-                                    (map vector (range))
-                                    (reduce
-                                     (fn[{:keys [x1 images1] :as acc1}
-                                         [nsi {:keys [shruti] :as cur-note}]]
-                                       ;;create all notes in a single beat.
-                                       (let [note-xy-map {:row-index row-index
-                                                          :bhaag-index bhaag-index
-                                                          :note-index note-index
-                                                          :nsi nsi}
-                                             cursor-rect
-                                             (if play-mode?
-                                               ;;show rect that animates on playing
-                                               [:rect
-                                                {:width 20 :height 30
-                                                 :fill "#f83600"
-                                                 :fill-opacity 0
-                                                 :ref #(when (identity %)
-                                                         (dispatch [::events/register-elem
-                                                                    nseq-index nsi %]))
-                                                 :x (+ x1 5) :y 5}]
-                                               ;;show cursor
-                                               [:rect (assoc rect-style
-                                                             :x (+ x1 5) :y 5
-                                                             :height 50
-                                                             :class "blinking-cursor")]
-                                               )
-                                             ith-note
-                                             (if-let [ival (image-map shruti)]
-                                               [:image
-                                                {:height 32 :width 32
-                                                 :href ival
-                                                 :on-click
-                                                 (fn[i]
-                                                   (do
-                                                     (dispatch [::events/set-click-index
-                                                                ;;for multi-note, always show on the first
-                                                                (assoc note-xy-map
-                                                                       :nsi 0)])))
-                                                 :x x1 :y 5}]
-                                               ;;- and S
-                                               (do
-                                                 [:text {:x (+ 10 x1) :y 30
-                                                         :on-click
-                                                         (fn[i]
-                                                           (dispatch [::events/set-click-index
-                                                                      note-xy-map]))}
-                                                  (name (second shruti))]))
-                                             r3 (-> acc1
-                                                    (update-in [:images1] conj ith-note)
-                                                    (update-in [:x1] + 20))
+  (fn []
+    (let [winhgt (.-innerHeight js/window)
+          myhgt (- winhgt
+                   @editor-height)
+          show-lyrics? @(subscribe [::subs/show-lyrics?])
+          newline-on-avartan? @(subscribe [::subs/newline-on-avartan?])
+          play-mode? (= :play @(subscribe [::subs/mode]))]
+      [:div
+       [:div
+        {:class "edit-composition"
+         :style {:overflow-y "scroll"
+                 :max-height myhgt
+                 :height myhgt
+                 :min-height myhgt
+                 :flex-flow "column" :flex "1 0 0px"}
+         ;;this code sets the scroll bar to the bottom, so that the last type text is seen.
+         :ref
+         #(if (identity %)
+            (let [iel (.querySelector js/document ".edit-composition")
+                  padding (.-padding (js->clj (.getComputedStyle js/window iel)))
+                  intpadding (int (if padding
+                                    (first (.split (first
+                                                    (.split padding " ")) "px")) " is nil"))]
+              (dispatch [::events/set-music-notes-element %])
+              (if play-mode?
+                (set! (.-scrollTop %) 0)
+                (when (> (.-scrollHeight % ) myhgt)
+                  (let [sctop (- (.-scrollHeight % ) myhgt)]
+                    (set! (.-scrollTop %) sctop))))))}
+        [:div {:class "com-edit"}
 
-                                             ;;if edit mode, a single cursor
-                                             ;;if play mode, add all rects
-                                             r3
-                                             (if play-mode?
-                                               (update-in r3 [:images1] conj cursor-rect)
-                                               (let [curpos @(subscribe [::subs/get-click-index])]
-                                                 (if (= note-xy-map curpos)
-                                                   (do
-                                                     (update-in r3 [:images1] conj cursor-rect))
-                                                   r3))
-                                               )
-                                             r3 (if-let [sah (get sah-list note-index)]
-                                                  (if (= nsi 0)
-                                                    (-> r3
-                                                        (update-in
-                                                         [:images1]
-                                                         conj
-                                                         [:text {:x (+ 10 x1)
-                                                                 :style {:font-size "15px"}
-                                                                 :y 60} sah]))
-                                                    r3)
-                                                  r3)]
-                                         r3))
-                                     {:x1 x :images1 []}))
+         ;;(when play-mode? (dispatch-sync [::events/reset-note-index]))
+         (let
+             [div-id "editor"
+              comp @(subscribe [::subs/composition])
+              rect-style {:width 2 :height 30 :y 10}
+              image-map (db/image-map
+                         (if (= :hindi @(subscribe [::subs/lang]))
+                           "hindi" "english_SrR"))
+              draw-bhaag
+              (fn[row-index bhaag-index note-map-seq]
+                (let [nsindex (db/get-noteseq-index
+                               {:row-index row-index
+                                :bhaag-index bhaag-index :note-index 0}
+                               (:taal comp))
+                      sahitya (get-in comp [:noteseq nsindex :lyrics])
+                      sah-list (when sahitya (clojure.string/split sahitya #","))
+                      r3
+                      (->>
+                       note-map-seq
+                       (map vector (range))
+                       (reduce
+                        (fn[{:keys [x images] :as acc} [note-index note]]
+                          (let [
+                                ;;this is the flat noteseq index.
+                                ;;example: at position 11, we find
+                                ;;11  --  {:notes [{:shruti [:madhyam :m+], :npb 3} {:shruti [:madhyam :g], :npb 3} {:shruti [:madhyam :r], :npb 3}]}
+                                ;;which can have multiple notes in it.
+                                nseq-index
+                                (db/get-noteseq-index
+                                 {:row-index row-index
+                                  :bhaag-index bhaag-index
+                                  :note-index note-index}
+                                 (:taal comp))
+                                r2
+                                (->>
+                                 note
+                                 :notes
+                                 (map vector (range))
+                                 (reduce
+                                  (fn[{:keys [x1 images1] :as acc1}
+                                      [nsi {:keys [shruti] :as cur-note}]]
+                                    ;;create all notes in a single beat.
+                                    (let [note-xy-map {:row-index row-index
+                                                       :bhaag-index bhaag-index
+                                                       :note-index note-index
+                                                       :nsi nsi}
+                                          cursor-rect
+                                          (if play-mode?
+                                            ;;show rect that animates on playing
+                                            [:rect
+                                             {:width 20 :height 30
+                                              :fill "#f83600"
+                                              :fill-opacity 0
+                                              :ref #(when (identity %)
+                                                      (dispatch [::events/register-elem
+                                                                 nseq-index nsi %]))
+                                              :x (+ x1 5) :y 5}]
+                                            ;;show cursor
+                                            [:rect (assoc rect-style
+                                                          :x (+ x1 5) :y 5
+                                                          :height 50
+                                                          :class "blinking-cursor")]
+                                            )
+                                          ith-note
+                                          (if-let [ival (image-map shruti)]
+                                            [:image
+                                             {:height 32 :width 32
+                                              :href ival
+                                              :on-click
+                                              (fn[i]
+                                                (do
+                                                  (dispatch [::events/set-click-index
+                                                             ;;for multi-note, always show on the first
+                                                             (assoc note-xy-map
+                                                                    :nsi 0)])))
+                                              :x x1 :y 5}]
+                                            ;;- and S
+                                            (do
+                                              [:text {:x (+ 10 x1) :y 30
+                                                      :on-click
+                                                      (fn[i]
+                                                        (dispatch [::events/set-click-index
+                                                                   note-xy-map]))}
+                                               (name (second shruti))]))
+                                          r3 (-> acc1
+                                                 (update-in [:images1] conj ith-note)
+                                                 (update-in [:x1] + 20))
 
-                                   r5(-> acc
-                                         (update-in [:x] (constantly (:x1 r2)))
-                                         (update-in [:images] into (:images1 r2)))
-                                   ;;if more than 1 note in a single beat,
-                                   ;;draw the ellipse under the notes
-                                   r6 (if (> (count (:notes note)) 1)
-                                        (update-in r5 [:images]
-                                                   conj
-                                                   [:polyline
-                                                    {:points
-                                                     (let [y0 40
-                                                           sl 5]
-                                                       ;;line with ends curved up
-                                                       (str (+ sl x) "," y0 " "
-                                                            (+ x ( * 2 sl)) "," (+ y0 sl) " "
-                                                            (:x1 r2) "," (+ y0 sl) " "
-                                                            (+ sl (:x1 r2)) "," y0))
-                                                     :stroke "black"
-                                                     :fill "none"}])
-                                        r5)
-                                   ;;add sam-khaali
-                                   r7 (if (and (= 0 note-index))
-                                        (update-in r6
-                                                   [:images] conj
-                                                   [:text {:x 14
-                                                           :y  (if show-lyrics? 88 60)
-                                                           :style {:font-size "15px"}}
-                                                    (let [t @(subscribe [::subs/taal])
-                                                          sk-index
-                                                          (->> taal-def t :bhaags
-                                                               (take bhaag-index)
-                                                               (apply +)
-                                                               inc)]
-                                                      (get (-> taal-def t :sam-khaali )
-                                                           sk-index))])
-                                        r6)
-                                   r8 (update-in
-                                       r7
-                                       [:images] conj)]
-                               r8))
-                           {:x 5 :images []}))
+                                          ;;if edit mode, a single cursor
+                                          ;;if play mode, add all rects
+                                          r3
+                                          (if play-mode?
+                                            (update-in r3 [:images1] conj cursor-rect)
+                                            (let [curpos @(subscribe [::subs/get-click-index])]
+                                              (if (= note-xy-map curpos)
+                                                (do
+                                                  (update-in r3 [:images1] conj cursor-rect))
+                                                r3))
+                                            )
+                                          r3 (if-let [sah (get sah-list note-index)]
+                                               (if (= nsi 0)
+                                                 (-> r3
+                                                     (update-in
+                                                      [:images1]
+                                                      conj
+                                                      [:text {:x (+ 10 x1)
+                                                              :style {:font-size "15px"}
+                                                              :y 60} sah]))
+                                                 r3)
+                                               r3)]
+                                      r3))
+                                  {:x1 x :images1 []}))
 
-                         images
-                         (if show-lyrics?
-                           (-> (:images r3)
-                             (into (let [tv @(subscribe [::subs/get-sahitya
-                                                         [row-index bhaag-index]])]
-                                     [
-                                      [:defs
-                                       [:linearGradient {:id "sahitya-fill"}
-                                        [:stop {:offset "0%" :stop-color "gray"}]
-                                        [:stop {:offset "100%" :stop-color "lightgray"}]]]
-                                      [:rect
-                                       {:x 5 :y 48
-                                        :width (:x r3) :height 25
-                                        :rx "5"
-                                        :style
-                                        (let [m {:font-size "15px"}]
-                                          (merge m
-                                                 (if sahitya
-                                                   {:fill "transparent"}
-                                                   {:fill "url(#sahitya-fill)"})))
-                                        :on-click
-                                        (fn[i]
-                                          (dispatch [::events/show-text-popup
-                                                     {:row-index row-index
-                                                      :text-val (if tv tv "")
-                                                      :bhaag-index bhaag-index}]))}]])))
-                           (:images r3))
-                         x-end (:x r3)]
-                     ;;add vertical bars for bhaag
-                     ;;2 bars if the avartan starts
-                     {:images (if (= 0 bhaag-index)
-                                (into images
-                                      [[:rect (assoc rect-style :x 0)]
-                                       [:rect (assoc rect-style :x 3)]])
-                                (conj images [:rect (assoc rect-style :x 0)]))
-                      :x x-end}))
-                 ;;returns  list of lists
-                 ;;each element is one avartan
-                 ;;each subelement is one bhaag.
-                 bfn (fn[[row-index bhaag]]
-                       (->> bhaag
-                            (map vector (range))
-                            (mapv (fn[[indx i]]
-                                    (let [{:keys [images x]} (draw-bhaag row-index indx i )]
-                                      [:div {:class "bhaag-item" :style
-                                             (merge
-                                              {:max-width (+ x 20)}
-                                              (if @(subscribe [::subs/show-lyrics?])
-                                                {}
-                                                {:max-height "70px"}))}
-                                       (reduce conj
-                                               [:svg {:xmlns "http://www.w3.org/2000/svg"
-                                                      }]
-                                               images)])))
-                            #_(reduce conj [:div {:class "box-row"}])))
-                 b1
-                 (->> comp
-                      :indexed-noteseq
-                      (map vector (range))
-                      (mapv bfn))
+                                r5(-> acc
+                                      (update-in [:x] (constantly (:x1 r2)))
+                                      (update-in [:images] into (:images1 r2)))
+                                ;;if more than 1 note in a single beat,
+                                ;;draw the ellipse under the notes
+                                r6 (if (> (count (:notes note)) 1)
+                                     (update-in r5 [:images]
+                                                conj
+                                                [:polyline
+                                                 {:points
+                                                  (let [y0 40
+                                                        sl 5]
+                                                    ;;line with ends curved up
+                                                    (str (+ sl x) "," y0 " "
+                                                         (+ x ( * 2 sl)) "," (+ y0 sl) " "
+                                                         (:x1 r2) "," (+ y0 sl) " "
+                                                         (+ sl (:x1 r2)) "," y0))
+                                                  :stroke "black"
+                                                  :fill "none"}])
+                                     r5)
+                                ;;add sam-khaali
+                                r7 (if (and (= 0 note-index))
+                                     (update-in r6
+                                                [:images] conj
+                                                [:text {:x 14
+                                                        :y  (if show-lyrics? 88 60)
+                                                        :style {:font-size "15px"}}
+                                                 (let [t @(subscribe [::subs/taal])
+                                                       sk-index
+                                                       (->> taal-def t :bhaags
+                                                            (take bhaag-index)
+                                                            (apply +)
+                                                            inc)]
+                                                   (get (-> taal-def t :sam-khaali )
+                                                        sk-index))])
+                                     r6)
+                                r8 (update-in
+                                    r7
+                                    [:images] conj)]
+                            r8))
+                        {:x 5 :images []}))
 
-                 fin
-                 (if newline-on-avartan?
-                   (->> b1
-                        (mapv #(reduce conj [:div {:class "box-row"}] %))
-                        (reduce conj [:div {:class "box-row"}]))
-                   (->> b1
-                        (reduce into [:div {:class "box-row"}])
-                        (conj [:div {:class "wrapper"}])))]
-             fin)]]]))
+                      images
+                      (if show-lyrics?
+                        (-> (:images r3)
+                            (into (let [tv @(subscribe [::subs/get-sahitya
+                                                        [row-index bhaag-index]])]
+                                    [
+                                     [:defs
+                                      [:linearGradient {:id "sahitya-fill"}
+                                       [:stop {:offset "0%" :stop-color "gray"}]
+                                       [:stop {:offset "100%" :stop-color "lightgray"}]]]
+                                     [:rect
+                                      {:x 5 :y 48
+                                       :width (:x r3) :height 25
+                                       :rx "5"
+                                       :style
+                                       (let [m {:font-size "15px"}]
+                                         (merge m
+                                                (if sahitya
+                                                  {:fill "transparent"}
+                                                  {:fill "url(#sahitya-fill)"})))
+                                       :on-click
+                                       (fn[i]
+                                         (dispatch [::events/show-text-popup
+                                                    {:row-index row-index
+                                                     :text-val (if tv tv "")
+                                                     :bhaag-index bhaag-index}]))}]])))
+                        (:images r3))
+                      x-end (:x r3)]
+                  ;;add vertical bars for bhaag
+                  ;;2 bars if the avartan starts
+                  {:images (if (= 0 bhaag-index)
+                             (into images
+                                   [[:rect (assoc rect-style :x 0)]
+                                    [:rect (assoc rect-style :x 3)]])
+                             (conj images [:rect (assoc rect-style :x 0)]))
+                   :x x-end}))
+              ;;returns  list of lists
+              ;;each element is one avartan
+              ;;each subelement is one bhaag.
+              bfn (fn[[row-index bhaag]]
+                    (->> bhaag
+                         (map vector (range))
+                         (mapv (fn[[indx i]]
+                                 (let [{:keys [images x]} (draw-bhaag row-index indx i )]
+                                   [:div {:class "bhaag-item" :style
+                                          (merge
+                                           {:max-width (+ x 20)}
+                                           (if @(subscribe [::subs/show-lyrics?])
+                                             {}
+                                             {:max-height "70px"}))}
+                                    (reduce conj
+                                            [:svg {:xmlns "http://www.w3.org/2000/svg"
+                                                   }]
+                                            images)])))
+                         #_(reduce conj [:div {:class "box-row"}])))
+              b1
+              (->> comp
+                   :indexed-noteseq
+                   (map vector (range))
+                   (mapv bfn))
+
+              fin
+              (if newline-on-avartan?
+                (->> b1
+                     (mapv #(reduce conj [:div {:class "box-row"}] %))
+                     (reduce conj [:div {:class "box-row"}]))
+                (->> b1
+                     (reduce into [:div {:class "box-row"}])
+                     (conj [:div {:class "wrapper"}])))]
+           fin)]]]))
   )
 
 (defn hidden-keyboard-footer
@@ -950,7 +950,7 @@
   []
   (let [
         bpm (reagent/atom @(subscribe [::subs/bpm]))
-        metronome? (reagent/atom @(subscribe [::subs/metronome?]))
+        beat-mode (reagent/atom @(subscribe [::subs/beat-mode]))
         show-settings? (reagent/atom false)
         tanpura? (reagent/atom true)]
     (fn []
@@ -989,14 +989,18 @@
                      [v-box
                       :align :center
                       :justify :center
-                      :children [
-                                 [checkbox
-                                  :model metronome?
-                                  :label "Metronome"
-                                  :on-change
-                                  #(let [nval (not @metronome?)]
-                                     (reset! metronome? nval)
-                                     (dispatch [::events/metronome? nval]))]]]
+                      :children
+                      [(doall (for [c ["metronome" "tabla"]]
+                                ^{:key c}
+                                [radio-button :src (at)
+                                 :label       c
+                                 :value       (let [k (keyword c)] k)
+                                 :model       beat-mode
+                                 ;;:style {:min-width "200px"}
+                                 :on-change   #(do 
+                                                   (reset! beat-mode %)
+                                                   (dispatch [::events/beat-mode
+                                                              (keyword @beat-mode)]))]))]]
                      [v-box
                       :align :center
                       :justify :center
