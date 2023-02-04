@@ -249,6 +249,9 @@
                                  "zmdi zmdi-collection-item-3"
                                  (speed-switch-fn 3))
                                 (zmdi-box-button
+                                 "zmdi zmdi-collection-item-4"
+                                 (speed-switch-fn 4))
+                                (zmdi-box-button
                                  "zmdi zmdi-settings zmdi-hc-lg"
                                  {:disp-fn #(do (reset! show-settings-popup? true))
                                   :state (constantly false)})
