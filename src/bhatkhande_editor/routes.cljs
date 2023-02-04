@@ -2,7 +2,7 @@
   (:require
    [bidi.bidi :as bidi]
    [pushy.core :as pushy]
-   [re-frame.core :as re-frame]
+   [re-frame.core :as re-frame :refer [dispatch]]
    [cemerick.url :as curl]
    [re-com.core :as re-com :refer [border
                                    box
@@ -42,21 +42,22 @@
   [& args]
   (apply bidi/path-for (into [@routes] args)))
 
-(defn dispatch
+(defn dispatch-route
   [route]
   (let [panel (keyword (str (name (:handler route)) "-panel"))]
-    (println "  params "(-> route ))
+    (println "  params " (-> route ) " panel " panel)
     (when-let [id  (-> route :route-params :id)]
-      (re-frame/dispatch [::events/get-bandish-json
+      (dispatch [::events/set-mode :edit])
+      (dispatch [::events/get-bandish-json
                           {:path (-> route :route-params :path)
                            :id id}]))
     (when-let [qp (:query-params route)]
-      (re-frame/dispatch [::events/set-query-params qp]))
+      (dispatch [::events/set-query-params qp]))
 
-    (re-frame/dispatch [::events/set-active-panel panel])))
+    (dispatch [::events/set-active-panel panel])))
 
 (defonce history
-  (pushy/pushy dispatch parse))
+  (pushy/pushy dispatch-route parse))
 
 (defn navigate!
   [handler]

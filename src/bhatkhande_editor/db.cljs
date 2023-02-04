@@ -295,7 +295,6 @@
          bufatom (get-metronome-sample-loc bufatom ctx)
          bufatom (get-tanpura-sample-loc bufatom ctx)
          bufatom (get-tabla-sample-loc bufatom ctx)]
-    (println " bufatom " @bufatom)
     {:sample-buffers bufatom
      :clock clock
      :audio-context ctx}))
