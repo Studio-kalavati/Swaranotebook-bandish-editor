@@ -278,19 +278,19 @@
                           [[h-box
                             :gap      "0.5vw"
                             :children (mapv (partial mk-button
-                                                     {:border-top
-                                                      "5px solid black"}
+                                                     {:font-size "large ":border-top "5px solid black"}
                                                      notes-per-beat)
                                             (swaras-3oct 2))]
                            [h-box
                             :gap      "0.5vw"
                             :children (mapv (partial mk-button
+                                                     {:font-size "large "}
                                                      notes-per-beat)
                                             (swaras-3oct 1))]
                            [h-box
                             :gap      "0.5vw"
                             :children (mapv (partial mk-button
-                                                     {:border-bottom "5px solid black"}
+                                                     {:font-size "large " :border-bottom "5px solid black"}
                                                      notes-per-beat)
                                             (swaras-3oct 0))]])
 
@@ -707,7 +707,6 @@
               rect-style {:width 2 :height 30 :y 10}
               image-map (db/image-map
                          (let [ilang @(subscribe [::subs/lang])]
-                           (println " ilang " ilang)
                            (if (or (= :bangla ilang) (= :hindi ilang))
                              (name ilang)
                              "english_SrR")))
