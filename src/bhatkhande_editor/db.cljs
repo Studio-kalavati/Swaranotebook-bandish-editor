@@ -267,7 +267,7 @@
 (def default-props {:raga :yaman
                     :note-pos {}
                     :mode :edit
-                    :language-en? true
+                    :lang :english
                     :newline-on-avartan? false
                     :show-lyrics false
                     :bpm 120
@@ -310,4 +310,3 @@
             ;;for storing svara images to light up
             :elem-index []
             :dim {:editor (mapv dispinfo [:x-end :y-end])}})))
-
