@@ -87,8 +87,9 @@
 (defn mk-button
   ([beat-mode swaralem] (mk-button {} beat-mode swaralem))
   ([style notes-per-beat {:keys [shruti] :as sh}]
-   (let [msmap @(subscribe [::subs/swaramap])]
-     (butn2 (msmap (second shruti))
+   (let [msmap @(subscribe [::subs/swaramap])
+         m2 (msmap (second shruti))]
+     (butn2 m2
             #(do
                ;;since on IOS it needs a input to start the audio context
                (dispatch-sync [::events/play-svara shruti])
@@ -200,9 +201,13 @@
                                  [(box-button
                                    rag-box-style
                                    (let [lang @(subscribe [::subs/lang])]
-                                     (if (= :hindi lang)
-                                       ;;"S R G" "सा रे ग"
-                                       "S R" "सा रे"))
+                                     (cond
+                                       (= :hindi lang)
+                                       "সা  রে"
+                                       (= :bangla lang)
+                                       "S R"
+                                       (= :english lang)
+                                       "सा रे"))
                                    {:disp-fn
                                     #(do (dispatch [::events/toggle-lang] ))
                                     :state (constantly false)})]]
@@ -701,8 +706,11 @@
               comp @(subscribe [::subs/composition])
               rect-style {:width 2 :height 30 :y 10}
               image-map (db/image-map
-                         (if (= :hindi @(subscribe [::subs/lang]))
-                           "hindi" "english_SrR"))
+                         (let [ilang @(subscribe [::subs/lang])]
+                           (println " ilang " ilang)
+                           (if (or (= :bangla ilang) (= :hindi ilang))
+                             (name ilang)
+                             "english_SrR")))
               draw-bhaag
               (fn[row-index bhaag-index note-map-seq]
                 (let [nsindex (db/get-noteseq-index

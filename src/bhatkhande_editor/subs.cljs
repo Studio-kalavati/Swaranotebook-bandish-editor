@@ -7,8 +7,7 @@
 (reg-sub
  ::lang
  (fn [db]
-   (if (-> db :props :language-en?)
-     :english :hindi)))
+   (-> db :props :lang)))
 
 (reg-sub
  ::lang-data

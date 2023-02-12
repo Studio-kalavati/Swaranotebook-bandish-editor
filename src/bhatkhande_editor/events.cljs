@@ -295,7 +295,13 @@
  ::toggle-lang
  [log-event]
  (fn [{:keys [db]} [_ _]]
-   {:db (update-in db [:props :language-en?] not)}))
+   (println " curlang " (get-in db [:props :lang]))
+   {:db (update-in db [:props :lang]
+                   (fn[i]
+                     (cond
+                       (= i :english) :hindi
+                       (= i :hindi) :bangla
+                       :else :english)))}))
 
 (reg-event-fx
  ::set-click-index
