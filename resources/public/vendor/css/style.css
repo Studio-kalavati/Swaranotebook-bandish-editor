@@ -1325,7 +1325,7 @@ input[type="search"]
 .edit-composition
 {
     padding: 30px 0;
-    background: linear-gradient(90deg, #fe8c00 0%, #f83600 100%);
+    background: linear-gradient(92deg, rgb(255, 127, 56) 0.00%, rgb(255, 196, 108) 54.60%); 
     overflow: auto;
 }
 .edit-composition .com-edit
