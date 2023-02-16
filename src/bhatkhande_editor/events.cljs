@@ -295,7 +295,6 @@
  ::toggle-lang
  [log-event]
  (fn [{:keys [db]} [_ _]]
-   (println " curlang " (get-in db [:props :lang]))
    {:db (update-in db [:props :lang]
                    (fn[i]
                      (cond

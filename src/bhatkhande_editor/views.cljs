@@ -667,6 +667,7 @@
                                             (dispatch [::events/hide-text-popup]))]]]]]))])])]]))))
 
 (def editor-height (reagent/atom 0))
+(def cursor-y (reagent/atom 0))
 (defn swara-display-area
   []
   (fn []
@@ -695,19 +696,21 @@
               (dispatch [::events/set-music-notes-element %])
               (if play-mode?
                 (set! (.-scrollTop %) 0)
-                (when (> (.-scrollHeight % ) myhgt)
-                  (let [sctop (- (.-scrollHeight % ) myhgt)]
-                    (set! (.-scrollTop %) sctop))))))}
+                (do
+                  (when (> (.-scrollHeight % ) myhgt)
+                    (let [sctop  (- (.-scrollHeight % ) myhgt)
+                          curpos (+ @cursor-y (.-scrollTop %))]
+                      #_(println " setting sctop to  "  sctop " cursor-y " @cursor-y " myhgt " myhgt
+                               " sctop "(.-scrollHeight % ) " cur sroll top "(.-scrollTop %))
+                      (when (> curpos sctop )
+                        (set! (.-scrollTop %) sctop))))))))}
         [:div {:class "com-edit"}
-
-         ;;(when play-mode? (dispatch-sync [::events/reset-note-index]))
          (let
              [div-id "editor"
               comp @(subscribe [::subs/composition])
               rect-style {:width 2 :height 30 :y 10}
               image-map (db/image-map
                          (let [ilang @(subscribe [::subs/lang])]
-                           (println " ilang " ilang)
                            (if (or (= :bangla ilang) (= :hindi ilang))
                              (name ilang)
                              "english_SrR")))
@@ -774,6 +777,7 @@
                                               :on-click
                                               (fn[i]
                                                 (do
+                                                  (reset! cursor-y (.-pageY i))
                                                   (dispatch [::events/set-click-index
                                                              ;;for multi-note, always show on the first
                                                              (assoc note-xy-map
