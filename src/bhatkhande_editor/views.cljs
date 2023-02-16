@@ -700,7 +700,6 @@
                   (when (> (.-scrollHeight % ) myhgt)
                     (let [sctop  (- (.-scrollHeight % ) myhgt)
                           curpos (+ @cursor-y (.-scrollTop %))]
-                      (println " curpos " (vector curpos  (.-scrollHeight % ) myhgt sctop))
                       #_(println " setting sctop to  "  sctop " cursor-y " @cursor-y " myhgt " myhgt
                                " sctop "(.-scrollHeight % ) " cur sroll top "(.-scrollTop %))
                       (when (> curpos sctop )
