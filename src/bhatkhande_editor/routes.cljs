@@ -45,7 +45,6 @@
 (defn dispatch-route
   [route]
   (let [panel (keyword (str (name (:handler route)) "-panel"))]
-    (println "  params " (-> route ) " panel " panel)
     (when-let [id  (-> route :route-params :id)]
       (dispatch [::events/set-mode :edit])
       (dispatch [::events/get-bandish-json

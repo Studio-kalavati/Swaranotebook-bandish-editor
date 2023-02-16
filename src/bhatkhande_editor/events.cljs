@@ -349,7 +349,7 @@
                (update-in db [:composition :title] (constantly comp-title))
                db)
          comp (->
-               (select-keys (-> ndb :composition) [:noteseq :taal])
+               (select-keys (-> ndb :composition) [:noteseq :taal :title])
                to-trans)
          path (str (-> ndb :user :uid) "/"
                    (last (.split (.toString (random-uuid)) #"-"))
