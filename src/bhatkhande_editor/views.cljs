@@ -309,24 +309,25 @@
                                                          :background-color "coral"}
                                                  :class "btn btn-lg"
                                                  :on-click
-                                                 #(do (dispatch
-                                                       [::events/set-mode :edit-hidden-keyboard]))}
-                                                [:i {:class "zmdi zmdi-chevron-down zmdi-hc-lg"}]]]
+                                                 #(do
+                                                    (dispatch [::events/set-active-panel :menu-panel]))}
+                                                [:i {:class "zmdi zmdi-menu zmdi-hc-2x"}]]]
                                        (zmdi-butn2 "zmdi zmdi-print zmdi-hc-lg"
                                                    #(do (.print js/window)))
                                        #_(zmdi-butn2 "zmdi zmdi-download zmdi-hc-lg"
                                                    #(let [comp @(subscribe [::subs/composition])]
                                                       (download-link
                                                        (select-keys comp [:noteseq :taal]))))
-                                       (if logged-in?
+                                       #_(if logged-in?
                                          (zmdi-butn2 "zmdi zmdi-sign-in zmdi-hc-lg"
                                                      #(do (dispatch [::events/sign-out])))
                                          (zmdi-butn2 "zmdi zmdi-google-plus zmdi-hc-lg"
                                                      #(do (reset! show-login-popup? true))))
-                                       (when logged-in?
-                                         (zmdi-butn2
-                                          "zmdi zmdi-cloud-upload zmdi-hc-lg"
-                                          #(reset! show-title-popup? true)))
+                                       (zmdi-butn2
+                                        "zmdi zmdi-cloud-upload zmdi-hc-lg"
+                                        #(if logged-in?
+                                           (reset! show-title-popup? true)
+                                           (reset! show-login-popup? true)))
                                        (when (and logged-in? @(subscribe [::subs/comp-title]))
                                          (zmdi-butn2
                                           "zmdi zmdi-floppy zmdi-hc-lg"
@@ -997,6 +998,95 @@
             (zmdi-butn2 "zmdi zmdi-settings zmdi-hc-2x"
                         #(do (reset! show-settings? true)))])]]])))
 
+(defn menu
+  []
+  (let []
+    (fn []
+      (let [icon-style {:padding "10px 0px 10px 10vw" :color "black" :font-size "x-large"}
+            logged-in? @(subscribe [::subs/user])
+            text-style {:padding "10px 5vw 10px 1px"}
+            bbox
+            [v-box
+             :justify :center
+             :children
+             [
+              (let [ifn #(do
+                           (.pushState
+                            (.-history js/window) #js {} ""
+                            (str (.-origin (.-location js/window)) "/list"))
+                           (dispatch [::events/set-active-panel :list-comps-panel]))]
+                [h-box :justify :between :align :center :children
+                 [[box
+                   :style icon-style
+                   :size "1"
+                   :child
+                   [md-icon-button :md-icon-name "zmdi zmdi-view-list-alt zmdi-hc-lg"
+                    :on-click ifn]]
+                  [gap :size "20px"]
+                  [box
+                   :style text-style
+                   :size "10" :child
+                   [hyperlink :label "My Notations"
+                    :style {:font-size "x-large" :color "black"}
+                    :on-click ifn]]]])
+              [box :align :center :child [line :size "1px" :color "floralwhite" :style {:width "80vw"}]]
+              (let [ifn #(do
+                           (dispatch [::events/refresh-comp db/init-comp])
+                           (.pushState (.-history js/window)
+                                       #js {} ""
+                                       (.-origin (.-location js/window))))]
+                [h-box :justify :between :align :center :children
+                 [[box :size "1"
+                   :style icon-style
+                   :child
+                   [md-icon-button :md-icon-name "zmdi zmdi-file-plus zmdi-hc-lg"
+                    :on-click ifn]]
+                  [gap :size "20px"]
+                  [box
+                   :style text-style
+                   :size "10" :child
+                   [hyperlink :label "New Notation"
+                    :style {:font-size "x-large" :color "black"}
+                    :on-click ifn]]]])
+              [box :align :center :child [line :size "1px" :color "floralwhite" :style {:width "80vw"}]]
+              (when logged-in?
+                (let [ifn #(do
+                             (dispatch [::events/sign-out])
+                             (dispatch [::events/set-active-panel :home-panel]))]
+                  [h-box :justify :between :align :center :children
+                   [[box :size "1"
+                     :style icon-style
+                     :child
+                     [md-icon-button :md-icon-name "zmdi zmdi-assignment-return zmdi-hc-lg"
+                      :on-click ifn]]
+                    [gap :size "20px"]
+                    [box
+                     :style text-style
+                     :size "10" :child
+                     [hyperlink :label "Log out"
+                      :style {:font-size "x-large" :color "black"}
+                      :on-click ifn]]]]))
+
+              [box :align :center :child [line :size "1px" :color "floralwhite" :style {:width "80vw"}]]
+              (let [ifn #(do (dispatch [::events/set-active-panel :home-panel]))]
+                [h-box :justify :between :align :center :children
+                 [[box :size "1"
+                   :style icon-style
+                   :child
+                   [md-icon-button :md-icon-name "zmdi zmdi-chevron-left zmdi-hc-lg"
+                    :on-click ifn]]
+                  [gap :size "20px"]
+                  [box
+                   :style text-style
+                   :size "10" :child
+                   [hyperlink :label "Back"
+                    :style {:font-size "x-large" :color "black"}
+                    :on-click ifn]]]])]]]
+        [:div
+         {:class "edit-composition"
+          :style {:min-height "100vh"}}
+         bbox]))))
+
 (defn list-comps
   []
   (let [delete-comp (reagent/atom nil)
@@ -1151,6 +1241,8 @@
 (defmethod routes/panels :home-panel [] [show-editor])
 
 (defmethod routes/panels :list-comps-panel [] [list-comps])
+
+(defmethod routes/panels :menu-panel [] [menu])
 
 
 
