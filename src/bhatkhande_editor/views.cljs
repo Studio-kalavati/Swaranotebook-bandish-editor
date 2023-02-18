@@ -169,7 +169,6 @@
         show-taal-popup (reagent/atom false)
         show-lang-popup (reagent/atom false)
         show-login-popup? (reagent/atom false)
-        show-share-popup? (reagent/atom false)
         show-settings-popup? (reagent/atom false)
         show-title-popup? (reagent/atom false)
         newsletter-signup? (reagent/atom true)
@@ -324,28 +323,6 @@
                                                      #(do (dispatch [::events/sign-out])))
                                          (zmdi-butn2 "zmdi zmdi-google-plus zmdi-hc-lg"
                                                      #(do (reset! show-login-popup? true))))
-                                       (when-let [ctitle @(subscribe [::subs/comp-title])]
-                                         (let [share-url @(subscribe [::subs/share-url])]
-                                           (zmdi-butn2
-                                            "zmdi zmdi-share zmdi-hc-lg"
-                                            #(let []
-                                               (if (.-share js/navigator)
-                                                 (-> (.share js/navigator
-                                                             #js
-                                                             {"title" @title-val
-                                                              "text"
-                                                              " Check out this bandish I wrote \n"
-                                                              "url"
-                                                              (str
-                                                               (.-origin (.-location js/window))
-                                                               "/view/"
-                                                               share-url)})
-                                                     (.then (fn[i] (println " shared")))
-                                                     (.catch (fn[i]
-                                                               (println " share error"))))
-                                                 ;;put in a popup if share is not enabled
-                                                 (do
-                                                   (reset! show-share-popup? true)))))))
                                        (when logged-in?
                                          (zmdi-butn2
                                           "zmdi zmdi-cloud-upload zmdi-hc-lg"
@@ -405,31 +382,6 @@
                                  :class "btn-hc-lg btn-primary "
                                  :on-click #(do (reset! show-settings-popup? false))]]
                                [gap :size "2vh"]]]]])
-                         (when @show-share-popup?
-                           [modal-panel
-                              :backdrop-on-click #(reset! show-share-popup? false)
-                              :child [:div {:class "popup" :style {;;:overflow :scroll
-                                                                   :max-width "85vh"}}
-                                      [v-box
-                                       :gap "2vh"
-                                       :class "body"
-                                       :children
-                                       [[box
-                                         :align :center
-                                         :child
-                                         [title :level :level3
-                                          :label "Copy this link to share the Bandish"]]
-                                        [gap :size "3vh"]
-                                        [:p {:style {:display "inline-block"
-                                                     :word-wrap "break-word"}}
-                                         @(subscribe [::subs/share-url])]
-                                        [box :align :center
-                                         :child
-                                         [button
-                                          :label "  OK  "
-                                          :style {:width "100px"}
-                                          :class "btn-hc-lg btn-primary "
-                                          :on-click #(do (reset! show-share-popup? false))]]]]]])
                          (when @show-title-popup?
                            (let []
                              [modal-panel
@@ -1047,43 +999,120 @@
 
 (defn list-comps
   []
-  (fn []
-    (let [bands @(subscribe [::subs/my-bandishes])
-          bbox (mapv (fn[i0]
-                       (let [i (second (clojure.string/split i0 #"/"))
-                             titl (clojure.string/split i #"-")
-                             uuid (-> @(subscribe [::subs/user]) :uid)
-                             id (clojure.string/join
-                                 "" (rest (clojure.string/split i0 #"/")))
-                             iurl (db/get-long-url (str uuid "/" id))]
-                         [v-box
-                          :children
-                          [[hyperlink-href
-                            :style {:padding "10px 0px 10px 10vw"
-                                    :color "black"
-                                    :font-size "x-large"}
-                            :label (->> (clojure.string/split i #"-")
-                                             rest
-                                             (clojure.string/join "-"))
-                            :href iurl
-                            #_:on-click
-                            #_(fn[]
-                              (let [
-                                    ]
-                                (println " id " iurl)
-                                (dispatch [::events/get-bandish-json
-                                           {:path uuid :id id}])
-                                (.pushState (.-history js/window) #js {} "" iurl)))]
-                           [box
-                            :align :center
-                            :child
-                            [line :size "1px" :color "floralwhite"
-                             :style {:width "80vw"}]]]]))
-                     bands)]
-      [:div
-       {:class "edit-composition"
-        :style {:min-height "100vh"}}
-       [v-box :children bbox]])))
+  (let [delete-comp (reagent/atom nil)
+        share-comp (reagent/atom nil)]
+    (fn []
+      (let [bands @(subscribe [::subs/my-bandishes])
+            bbox (mapv (fn[i0]
+                         (let [i (second (clojure.string/split i0 #"/"))
+                               titl (clojure.string/split i #"-")
+                               uuid (-> @(subscribe [::subs/user]) :uid)
+                               id (clojure.string/join
+                                   "" (rest (clojure.string/split i0 #"/")))
+                               iurl (db/get-long-url (str uuid "/" id))
+                               title-label (->> (clojure.string/split i #"-")
+                                                rest
+                                                (clojure.string/join "-"))]
+                           [v-box
+                            :children
+                            [[h-box
+                              :justify :between
+                              :align :center
+                              :children
+                              [[hyperlink-href
+                                :style {:padding "10px 0px 10px 10vw"
+                                        :color "black"
+                                        :font-size "x-large"}
+                                :label title-label
+                                :href iurl]
+                               [h-box
+                                :style {:padding "10px 5vw 10px 1px"}
+                                :gap "4vw"
+                                :children
+                                [[box :size "1"
+                                  :child
+                                  [md-icon-button :md-icon-name "zmdi zmdi-share"
+                                   :on-click (fn[i]
+                                               (if (.-share js/navigator)
+                                                 (-> (.share js/navigator
+                                                             #js
+                                                             {"title" title-label
+                                                              "text"
+                                                              " Check out this notation \n"
+                                                              "url"
+                                                              (db/get-long-url i0)})
+                                                     (.then (fn[i] (println " shared")))
+                                                     (.catch (fn[i]
+                                                               (println " share error"))))
+                                                 ;;put in a popup if share is not enabled
+                                                 (do
+                                                   (reset! share-comp i0))))]]
+                                 [box :size "1" :child [md-icon-button :md-icon-name "zmdi zmdi-delete "
+                                                        :on-click (fn[i] (reset! delete-comp i0))]]]]]]
+                             [box
+                              :align :center
+                              :child
+                              [line :size "1px" :color "floralwhite"
+                               :style {:width "80vw"}]]
+                             ]]))
+                       bands)
+            confirm-panel [modal-panel
+                           :child [:div {:class "popup"
+                                         :style {:overflow-y :scroll
+                                                 :max-height "80vh"}}
+                                   [v-box
+                                    :gap "2vh"
+                                    :class "body"
+                                    :align :center
+                                    :children
+                                    [[box :align :center
+                                      :child
+                                      [title :level :level3 :label "Delete? "]]
+
+                                     [h-box :children
+                                      [[button :label "Cancel"
+                                        :on-click (fn[i] (reset! delete-comp nil))]
+                                       [gap :size "5vw"]
+                                       [button :label "Delete"
+                                        :class "btn-danger"
+                                        :on-click (fn[i]
+                                                    (do
+                                                      (dispatch [::events/delete-comp @delete-comp])
+                                                      (reset! delete-comp nil)))]]]]]]]
+            share-panel [modal-panel
+                         :backdrop-on-click #(reset! share-comp nil)
+                         :child [:div {:class "popup" :style {;;:overflow :scroll
+                                                              :max-width "85vh"}}
+                                 [v-box
+                                  :gap "2vh"
+                                  :class "body"
+                                  :children
+                                  [[box
+                                    :align :center
+                                    :child
+                                    [title :level :level3
+                                     :label "Copy this link to share the Bandish"]]
+                                   [gap :size "3vh"]
+                                   [:p {:style {:display "inline-block"
+                                                :word-wrap "break-word"}}
+                                    (db/get-long-url @share-comp)]
+                                   [box :align :center
+                                    :child
+                                    [button
+                                     :label "  OK  "
+                                     :style {:width "100px"}
+                                     :class "btn-hc-lg btn-primary "
+                                     :on-click #(do (reset! share-comp nil))]]]]]]]
+
+        [:div
+         {:class "edit-composition"
+          :style {:min-height "100vh"}}
+         [v-box :children
+          (cond @delete-comp
+                (conj bbox confirm-panel)
+                @share-comp
+                (conj bbox share-panel)
+                :else bbox)]]))))
 
 (defn show-editor
   []

@@ -364,6 +364,19 @@
       :db ndb})))
 
 (reg-event-fx
+ ::delete-comp
+ [log-event]
+ (fn [{:keys [db]} [_ ipath]]
+   (println " ipath " ipath)
+   (let [stor (.storage firebase)
+         storageRef (.ref stor ipath)]
+     (-> (.delete storageRef)
+         (.then (fn[i] (println ipath " delete " i " success" )))
+         (.catch (fn[i] (println ipath " delete " i " failed " ))))
+     {:db db
+      :dispatch [::list-files]})))
+
+(reg-event-fx
  ::upsert-comp
  [log-event]
  (fn [{:keys [db]} [_ _]]

@@ -107,11 +107,6 @@
    (:bandish-url db)))
 
 (reg-sub
- ::share-url
- (fn [db [_ _]]
-   (db/get-long-url (:bandish-url db))))
-
-(reg-sub
  ::audio-context
  (fn [db [_ _]]
    (:audio-context db)))
