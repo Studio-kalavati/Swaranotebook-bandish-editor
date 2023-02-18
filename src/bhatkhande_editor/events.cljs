@@ -367,14 +367,14 @@
  ::delete-comp
  [log-event]
  (fn [{:keys [db]} [_ ipath]]
-   (println " ipath " ipath)
    (let [stor (.storage firebase)
          storageRef (.ref stor ipath)]
      (-> (.delete storageRef)
-         (.then (fn[i] (println ipath " delete " i " success" )))
+         (.then (fn[i] (println ipath " delete " i " success" )
+                  (dispatch [::list-files])))
          (.catch (fn[i] (println ipath " delete " i " failed " ))))
      {:db db
-      :dispatch [::list-files]})))
+      :dispatch [::set-active-panel :wait-for-loading-comps]})))
 
 (reg-event-fx
  ::upsert-comp
@@ -408,15 +408,14 @@
             (let [fullpaths
                   (->> (map #(.-fullPath %) (.-items i)))]
               (dispatch [::my-bandishes fullpaths])))))
-     {})))
+     {:dispatch [::set-active-panel :wait-for-loading-comps]})))
 
 (reg-event-fx
  ::my-bandishes
  [log-event]
  (fn [{:keys [db]} [_ bandish-list]]
-   {:db (assoc db :my-bandishes bandish-list)}))
-
-
+   {:db (assoc db :my-bandishes bandish-list)
+    :dispatch [::set-active-panel :list-comps-panel]}))
 
 (reg-event-fx
  ::sign-in
@@ -451,7 +450,8 @@
        {:db (-> db
                 (assoc :user user)
                 (dissoc :user-nil-times))
-        :dispatch [::list-files]})
+        ;;:dispatch [::list-files]
+        })
      ;;the first event is user nil and the second one has the user mapv
      ;;therefor if it is set nil twice, then show login popup
      {:db (update-in db [:user-nil-times] (fnil inc 1))})))

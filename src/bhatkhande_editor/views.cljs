@@ -884,35 +884,8 @@
                 (->> b1
                      (reduce into [:div {:class "box-row"}])
                      (conj [:div {:class "wrapper"}])))]
-           fin)]]]))
-  )
+           fin)]]])))
 
-(defn hidden-keyboard-footer
-  []
-  (fn []
-    [v-box
-     :gap      "0.5vh"
-     :children [
-                [h-box
-                 :gap      "0.5vw"
-                 :style {:flex-flow "row wrap"}
-                 :class "last-bar"
-                 :children [(zmdi-butn2 "zmdi zmdi-comment-edit zmdi-hc-lg"
-                                        #(do (dispatch [::events/set-mode :edit])))
-                            (zmdi-butn2 "zmdi zmdi-file-plus zmdi-hc-lg"
-                                        #(do
-                                           (dispatch [::events/refresh-comp
-                                                      db/init-comp
-                                                      #_(db/comp-decorator db/init-comp)])
-                                           (.pushState (.-history js/window)
-                                                       #js {} ""
-                                                       (.-origin (.-location js/window)))))
-                            (zmdi-butn2 "zmdi zmdi-view-list-alt zmdi-hc-lg"
-                                        #(do
-                                           (.pushState
-                                            (.-history js/window) #js {} ""
-                                            (str (.-origin (.-location js/window)) "/list"))
-                                           (dispatch [::events/set-active-panel :list-comps-panel])))]]]]))
 
 (defn play-keyboard-footer
   []
@@ -1010,23 +983,58 @@
              :justify :center
              :children
              [
-              (let [ifn #(do
-                           (.pushState
-                            (.-history js/window) #js {} ""
-                            (str (.-origin (.-location js/window)) "/list"))
-                           (dispatch [::events/set-active-panel :list-comps-panel]))]
+              (when logged-in? 
+                (let [ifn #(do
+                             #_(.pushState
+                              (.-history js/window) #js {} ""
+                              (str (.-origin (.-location js/window)) "/list"))
+                             (dispatch [::events/list-files]))]
+                  [h-box :justify :between :align :center :children
+                   [[box
+                     :style icon-style
+                     :size "1"
+                     :child
+                     [md-icon-button :md-icon-name "zmdi zmdi-view-list-alt zmdi-hc-lg"
+                      :on-click ifn]]
+                    [gap :size "20px"]
+                    [box
+                     :style text-style
+                     :size "10" :child
+                     [hyperlink :label "My Notations"
+                      :style {:font-size "x-large" :color "black"}
+                      :on-click ifn]]]]))
+              [box :align :center :child [line :size "1px" :color "floralwhite" :style {:width "80vw"}]]
+              (let [ifn #(constantly nil)]
                 [h-box :justify :between :align :center :children
-                 [[box
+                 [[box :size "1"
                    :style icon-style
-                   :size "1"
                    :child
-                   [md-icon-button :md-icon-name "zmdi zmdi-view-list-alt zmdi-hc-lg"
+                   [md-icon-button :md-icon-name "zmdi zmdi-help zmdi-hc-lg"
                     :on-click ifn]]
                   [gap :size "20px"]
                   [box
                    :style text-style
                    :size "10" :child
-                   [hyperlink :label "My Notations"
+                   [hyperlink :label "Help Center"
+                    :style {:font-size "x-large" :color "black"}
+                    :on-click ifn]]]])
+              [box :align :center :child [line :size "1px" :color "floralwhite" :style {:width "80vw"}]]
+              (let [ifn #(do
+                           (if logged-in? 
+                             (dispatch [::events/sign-out])
+                             (dispatch [::events/sign-in]))
+                           (dispatch [::events/set-active-panel :home-panel]))]
+                [h-box :justify :between :align :center :children
+                 [[box :size "1"
+                   :style icon-style
+                   :child
+                   [md-icon-button :md-icon-name "zmdi zmdi-key zmdi-hc-lg"
+                    :on-click ifn]]
+                  [gap :size "20px"]
+                  [box
+                   :style text-style
+                   :size "10" :child
+                   [hyperlink :label (if logged-in? "Log out" "Log in")
                     :style {:font-size "x-large" :color "black"}
                     :on-click ifn]]]])
               [box :align :center :child [line :size "1px" :color "floralwhite" :style {:width "80vw"}]]
@@ -1048,25 +1056,6 @@
                    [hyperlink :label "New Notation"
                     :style {:font-size "x-large" :color "black"}
                     :on-click ifn]]]])
-              [box :align :center :child [line :size "1px" :color "floralwhite" :style {:width "80vw"}]]
-              (when logged-in?
-                (let [ifn #(do
-                             (dispatch [::events/sign-out])
-                             (dispatch [::events/set-active-panel :home-panel]))]
-                  [h-box :justify :between :align :center :children
-                   [[box :size "1"
-                     :style icon-style
-                     :child
-                     [md-icon-button :md-icon-name "zmdi zmdi-assignment-return zmdi-hc-lg"
-                      :on-click ifn]]
-                    [gap :size "20px"]
-                    [box
-                     :style text-style
-                     :size "10" :child
-                     [hyperlink :label "Log out"
-                      :style {:font-size "x-large" :color "black"}
-                      :on-click ifn]]]]))
-
               [box :align :center :child [line :size "1px" :color "floralwhite" :style {:width "80vw"}]]
               (let [ifn #(do (dispatch [::events/set-active-panel :home-panel]))]
                 [h-box :justify :between :align :center :children
@@ -1146,6 +1135,24 @@
                                :style {:width "80vw"}]]
                              ]]))
                        bands)
+            bbox (conj bbox
+                       (let [ifn #(do (dispatch [::events/set-active-panel :home-panel]))
+                             icon-style {:padding "10px 0px 10px 10vw" :color "black" :font-size "x-large"}
+                             text-style {:padding "10px 5vw 10px 1px"}
+                             ]
+                         [h-box :justify :between :align :center :children
+                          [[box :size "1"
+                            :style icon-style
+                            :child
+                            [md-icon-button :md-icon-name "zmdi zmdi-chevron-left zmdi-hc-lg"
+                             :on-click ifn]]
+                           [gap :size "20px"]
+                           [box
+                            :style text-style
+                            :size "10" :child
+                            [hyperlink :label "Back"
+                             :style {:font-size "x-large" :color "black"}
+                             :on-click ifn]]]]))
             confirm-panel [modal-panel
                            :child [:div {:class "popup"
                                          :style {:overflow-y :scroll
@@ -1214,39 +1221,11 @@
                   (let [ch (.-offsetHeight %)]
                     (reset! editor-height ch)))}
     (let [istate @(subscribe [::subs/mode])]
-      (cond (= :edit-hidden-keyboard istate)
-            [hidden-keyboard-footer]
-            (= :play istate)
-            [play-keyboard-footer]
-            :else [swara-buttons]))]])
-
-(defn load-bandish
-  []
-  [:div
-   [modal-panel
-    :child [:div {:class "popup"
-                  :style {:overflow-y :scroll
-                          :max-height "80vh"}}
-            [v-box
-             :gap "2vh"
-             :class "body"
-             :align :center
-             :children
-             [[box :align :center
-               :child
-               [title :level :level3 :label "Loading Bandish"]]]]]]])
-
-(defmethod routes/panels :load-panel [] [load-bandish])
-
-(defmethod routes/panels :home-panel [] [show-editor])
-
-(defmethod routes/panels :list-comps-panel [] [list-comps])
-
-(defmethod routes/panels :menu-panel [] [menu])
-
-
-
-(defmethod routes/panels :wait-for-save-completion []
+      (if (= :play istate)
+        [play-keyboard-footer]
+        [swara-buttons]))]])
+(defn wait-for
+  [msg]
   [:div
    [modal-panel
     :backdrop-color "#f83600"
@@ -1260,8 +1239,23 @@
              :children
              [[box :align :center
                :child
-               [title :level :level3 :label "Saving Bandish"]]
+               [title :level :level3 :label msg]]
               [throbber :size :large]]]]]])
+
+(defmethod routes/panels :load-panel []
+  (wait-for "Loading notations"))
+
+(defmethod routes/panels :home-panel [] [show-editor])
+
+(defmethod routes/panels :list-comps-panel [] [list-comps])
+
+(defmethod routes/panels :menu-panel [] [menu])
+
+(defmethod routes/panels :wait-for-save-completion []
+  (wait-for "Saving notation"))
+
+(defmethod routes/panels :wait-for-loading-comps []
+  (wait-for "Loading notations"))
 
 (defn main-panel []
   (let [active-panel (subscribe [::subs/active-panel])
