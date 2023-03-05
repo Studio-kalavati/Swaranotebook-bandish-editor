@@ -18,6 +18,7 @@
    :id      :log-event
    :after  (fn [context]
              (let [[k v] (-> context :coeffects :event)]
+               (println " event fired " [k v])
                 (.capture (-> context :coeffects :db :posthog) (str k) v "")
                 context))))
 
@@ -418,18 +419,28 @@
     :dispatch [::set-active-panel :list-comps-panel]}))
 
 (reg-event-fx
- ::sign-in
+ ::google-sign-in
  [log-event]
- (fn [{:keys [db]} _]
+ (fn [{:keys [db]} [_ newsletter-subscribe?]]
    (let [storage (.-sessionStorage js/window)]
      ;;set a local storage because
      ;;when the auth redirect is sent back to the page,
      ;;the local DB atom will not remember and will load its
      ;;original clean slate.
      (.setItem storage "sign-in" "inprogress")
+     (when newsletter-subscribe?
+       (.setItem storage "newsletter-subscribe?" "true"))
      {:db (-> db
               (dissoc :firebase-error))
       :firebase/google-sign-in {:sign-in-method :redirect}})))
+
+(reg-event-fx
+ ::add-contact-to-newsletter
+ [log-event]
+ (fn [{:keys [db]} _]
+   (println " add-contact -fn")
+   (let []
+     {:db db})))
 
 (reg-event-fx
  ::sign-out
@@ -442,19 +453,36 @@
  ::set-user
  [log-event]
  (fn [{:keys [db]}[_ user]]
-   (if (and user (:email user))
-     (let [storage (.-sessionStorage js/window)]
-       (when storage
-         (do 
-           (.removeItem storage "sign-in")))
-       {:db (-> db
-                (assoc :user user)
-                (dissoc :user-nil-times))
-        ;;:dispatch [::list-files]
-        })
-     ;;the first event is user nil and the second one has the user mapv
-     ;;therefor if it is set nil twice, then show login popup
-     {:db (update-in db [:user-nil-times] (fnil inc 1))})))
+   (try 
+     (println " set-user " (vector user (:email user)))
+     (if (and user (:email user))
+       (let [storage (.-sessionStorage js/window)
+             _ (println " subs " storage " - "(.getItem storage "newsletter-subscribe?"))
+             newsletter-signup?
+             (if (and storage
+                      (= "true"
+                         (.getItem storage "newsletter-subscribe?")))
+               (do
+                 (.removeItem storage "newsletter-subscribe?")
+                 true)
+               false)
+             ndb {:db (-> db
+                          (assoc :user user)
+                          (dissoc :user-nil-times))}]
+         (when storage
+           (do
+             (.removeItem storage "sign-in")))
+         (if newsletter-signup?
+           (do
+             (println " subcribe to newsletter ")
+             (assoc ndb :dispatch [::add-contact-to-newsletter]))
+           ndb))
+       ;;the first event is user nil and the second one has the user mapv
+       ;;therefor if it is set nil twice, then show login popup
+       {:db (update-in db [:user-nil-times] (fnil inc 1))})
+     (catch js/Error e
+       (println " got error in set-user " e)
+       {}))))
 
 (reg-event-fx
  ::firebase-error

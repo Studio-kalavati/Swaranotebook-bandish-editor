@@ -427,18 +427,30 @@
                                        :children
                                        [[box
                                          :align :center
-                                         :child [title :level :level3
-                                                 :label "Login to save & share Bandish"]]
+                                         :child
+                                         [title :level :level2
+                                          :label "Login to save Bandish"]]
                                         [gap :size "3vh"]
                                         [button
+                                         :style {:min-height "min(10vh,100px)"
+                                                 :min-width "max(20vw,200px)"}
                                          :label "Google + "
                                          :class "btn-hc-lg btn-primary btn-danger"
-                                         :on-click #(do (reset! show-login-popup? false)
-                                                        (dispatch [::events/sign-in]))]
-                                        #_[checkbox
-                                         :model newsletter-signup?
-                                         :label "Sign up for an occasional email"
-                                         :on-change #(reset! newsletter-signup? (not @newsletter-signup?))]]]]]))
+                                         :on-click
+                                         #(do (reset! show-login-popup? false)
+                                              (dispatch [::events/google-sign-in
+                                                         @newsletter-signup?]))]
+
+                                        [gap :size "2vh"]
+                                        [box
+                                         :child
+                                         [checkbox
+                                          :style {:width "50px"}
+                                          :model newsletter-signup?
+                                          :label "Subscribe to newsletter"
+                                          :on-change
+                                          #(reset! newsletter-signup?
+                                                   (not @newsletter-signup?))]]]]]]))
                          (when @show-taal-popup
                            (let [ta (:tala-labels (lang-labels @(subscribe [::subs/lang])))
                                  taal-labels (mapv (fn[[a b]] {:id a  :label b}) ta)
@@ -982,10 +994,9 @@
             [v-box
              :justify :center
              :children
-             [
-              (when logged-in? 
+             [(when logged-in?
                 (let [ifn #(do
-                             #_(.pushState
+                             (.pushState
                               (.-history js/window) #js {} ""
                               (str (.-origin (.-location js/window)) "/list"))
                              (dispatch [::events/list-files]))]
@@ -1018,9 +1029,10 @@
                    [hyperlink :label "Help Center"
                     :style {:font-size "x-large" :color "black"}
                     :on-click ifn]]]])
-              [box :align :center :child [line :size "1px" :color "floralwhite" :style {:width "80vw"}]]
+              [box :align :center :child [line :size "1px" :color "floralwhite"
+                                          :style {:width "80vw"}]]
               (let [ifn #(do
-                           (if logged-in? 
+                           (if logged-in?
                              (dispatch [::events/sign-out])
                              (dispatch [::events/sign-in]))
                            (dispatch [::events/set-active-panel :home-panel]))]
