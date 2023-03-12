@@ -14,7 +14,9 @@
   storageBucket :required
   messagingSenderId :required
   appId :required
-  posthogKey :required)
+  posthogKey :required
+  mailerliteApiToken :required
+  mailerliteGroupId :required)
 
 (defn get-bandish-url
   [path]

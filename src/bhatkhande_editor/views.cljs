@@ -438,8 +438,11 @@
                                          :class "btn-hc-lg btn-primary btn-danger"
                                          :on-click
                                          #(do (reset! show-login-popup? false)
-                                              (dispatch [::events/google-sign-in
-                                                         @newsletter-signup?]))]
+                                              (when @newsletter-signup?
+                                                (.setItem (.-sessionStorage js/window)
+                                                          "newsletter-subscribe?"
+                                                          (str @newsletter-signup?)))
+                                              (dispatch [::events/google-sign-in-fx]))]
 
                                         [gap :size "2vh"]
                                         [box

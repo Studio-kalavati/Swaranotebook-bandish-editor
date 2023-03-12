@@ -419,27 +419,59 @@
     :dispatch [::set-active-panel :list-comps-panel]}))
 
 (reg-event-fx
- ::google-sign-in
+ ::google-sign-in-fx
  [log-event]
- (fn [{:keys [db]} [_ newsletter-subscribe?]]
+ (fn [{:keys [db]} [_ _]]
    (let [storage (.-sessionStorage js/window)]
      ;;set a local storage because
      ;;when the auth redirect is sent back to the page,
      ;;the local DB atom will not remember and will load its
      ;;original clean slate.
-     (.setItem storage "sign-in" "inprogress")
-     (when newsletter-subscribe?
-       (.setItem storage "newsletter-subscribe?" "true"))
+     ;;(.setItem storage "sign-in" "inprogress")
      {:db (-> db
               (dissoc :firebase-error))
       :firebase/google-sign-in {:sign-in-method :redirect}})))
 
 (reg-event-fx
+ ::get-group-info
+ [log-event]
+ (fn [{:keys [db]} [_ {:keys [email display-name]}]]
+   (println " add-contact -fn " email)
+   (let []
+     (-> (js/fetch (str "https://connect.mailerlite.com/api/groups" )
+                   #js {"method" "get"
+                        "headers"
+                        #js {"Authorization" (str "Bearer " db/mailerliteApiToken)
+                             "Content-Type" "application/json"
+                             "Accept" "application/json"}})
+         (.then (fn[i] (.text i)))
+         (.then (fn[i]
+                  (let []
+                    (println " i "i))))
+         (.catch (fn[i] (println " error " i ))))
+     {:db db})))
+
+(reg-event-fx
  ::add-contact-to-newsletter
  [log-event]
- (fn [{:keys [db]} _]
-   (println " add-contact -fn")
-   (let []
+ (fn [{:keys [db]} [_ {:keys [email display-name]}]]
+   (println " add-contact -fn " email)
+   (let [body {"email" email
+               "fields" {"display-name" display-name}
+               ;;signups group id
+               "groups" [db/mailerliteGroupId]}]
+     (-> (js/fetch (str "https://connect.mailerlite.com/api/subscribers" )
+                   #js {"method" "post"
+                        "headers"
+                        #js {"Authorization" (str "Bearer " db/mailerliteApiToken)
+                             "Content-Type" "application/json"
+                             "Accept" "application/json"}
+                        "body" (.stringify js/JSON (clj->js body))})
+         (.then (fn[i] (.text i)))
+         (.then (fn[i]
+                  (let []
+                    (println " i "i))))
+         (.catch (fn[i] (println " error " i ))))
      {:db db})))
 
 (reg-event-fx
@@ -468,14 +500,18 @@
                false)
              ndb {:db (-> db
                           (assoc :user user)
-                          (dissoc :user-nil-times))}]
+                          (dissoc :user-nil-times))
+                  ;;:dispatch [::get-group-info]
+                  }]
+         ;;(println " pers "(.Persistence (.auth firebase)))
+         ;;(.setPersistence (.auth firebase) (.-LOCAL (.-Persistence (.auth firebase))))
          (when storage
            (do
              (.removeItem storage "sign-in")))
          (if newsletter-signup?
            (do
-             (println " subcribe to newsletter ")
-             (assoc ndb :dispatch [::add-contact-to-newsletter]))
+             (assoc ndb :dispatch [::add-contact-to-newsletter
+                                   (select-keys user [:email :display-name])]))
            ndb))
        ;;the first event is user nil and the second one has the user mapv
        ;;therefor if it is set nil twice, then show login popup
@@ -487,8 +523,8 @@
 (reg-event-fx
  ::firebase-error
  [log-event]
- (fn [{:keys [db]} _]
-   (println " fb auth error ")
+ (fn [{:keys [db]} [_ k]]
+   (println " fb auth error " k)
    {:db db}))
 
 (reg-event-fx
