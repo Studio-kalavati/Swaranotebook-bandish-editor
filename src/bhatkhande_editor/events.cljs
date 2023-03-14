@@ -18,7 +18,7 @@
    :id      :log-event
    :after  (fn [context]
              (let [[k v] (-> context :coeffects :event)]
-               (println " event fired " [k v])
+               #_(println " event fired " [k v])
                 (.capture (-> context :coeffects :db :posthog) (str k) v "")
                 context))))
 
@@ -436,7 +436,6 @@
  ::get-group-info
  [log-event]
  (fn [{:keys [db]} [_ {:keys [email display-name]}]]
-   (println " add-contact -fn " email)
    (let []
      (-> (js/fetch (str "https://connect.mailerlite.com/api/groups" )
                    #js {"method" "get"
@@ -455,7 +454,6 @@
  ::add-contact-to-newsletter
  [log-event]
  (fn [{:keys [db]} [_ {:keys [email display-name]}]]
-   (println " add-contact -fn " email)
    (let [body {"email" email
                "fields" {"display-name" display-name}
                ;;signups group id
@@ -470,7 +468,7 @@
          (.then (fn[i] (.text i)))
          (.then (fn[i]
                   (let []
-                    (println " i "i))))
+                    (println " added to email "))))
          (.catch (fn[i] (println " error " i ))))
      {:db db})))
 
@@ -486,10 +484,8 @@
  [log-event]
  (fn [{:keys [db]}[_ user]]
    (try 
-     (println " set-user " (vector user (:email user)))
      (if (and user (:email user))
        (let [storage (.-sessionStorage js/window)
-             _ (println " subs " storage " - "(.getItem storage "newsletter-subscribe?"))
              newsletter-signup?
              (if (and storage
                       (= "true"
