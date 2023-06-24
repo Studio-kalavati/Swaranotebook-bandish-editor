@@ -104,6 +104,7 @@
 
 (reg-event-fx
  ::conj-svara
+ [log-event]
  (fn [{:keys [db]} [_ {:keys [svara notes-per-beat]}]]
    (let [cpos (get-in db [:props :cursor-pos ] )
          next-index(get-in db [:composition :index-forward-seq (vals cpos)])
@@ -175,6 +176,7 @@
 
 (reg-event-fx
  ::conj-sahitya
+ [log-event]
  (fn [{:keys [db]} [_ {:keys [text-val bhaag-index row-index]}]]
    (let [indx (db/get-noteseq-index {:row-index row-index
                                      :bhaag-index bhaag-index
@@ -233,6 +235,7 @@
 
 (reg-event-fx
  ::delete-single-swara
+ [log-event]
  (fn [{:keys [db]} [_ _]]
    (let [[note-index note-sub-index] (get-ns-index db)
          cpos (get-in db [:props :cursor-pos ] )
@@ -305,6 +308,7 @@
 
 (reg-event-fx
  ::set-click-index
+ [log-event]
  (fn [{:keys [db]} [_ click-index]]
    {:db (update-in db [:props :cursor-pos] (constantly click-index))}))
 
@@ -600,6 +604,7 @@
 
 (reg-event-fx
  ::set-bpm
+ [log-event]
  (fn [{:keys [db]} [_ ival]]
    {:db (update-in db [:props :bpm] (constantly ival))}))
 
