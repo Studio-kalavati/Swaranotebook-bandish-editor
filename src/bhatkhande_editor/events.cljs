@@ -19,7 +19,7 @@
    :after  (fn [context]
              (let [[k v] (-> context :coeffects :event)]
                #_(println " event fired " [k v])
-                (.capture (-> context :coeffects :db :posthog) (str k) v "")
+               (.capture (-> context :coeffects :db :posthog) (str k) (clj->js v) "")
                 context))))
 
 (defn get-ns-index
