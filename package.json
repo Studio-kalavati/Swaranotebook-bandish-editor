@@ -3,7 +3,7 @@
 	"scripts": {
 		"ancient": "clojure -Sdeps '{:deps {com.github.liquidz/antq {:mvn/version \"RELEASE\"}}}' -m antq.core",
 		"watch": "npx workbox injectManifest workbox-config.js && npx shadow-cljs watch app browser-test karma-test",
-		"release": "npx workbox injectManifest workbox-config.js && npx shadow-cljs release app",
+		  "release": "npx workbox injectManifest workbox-config.js && npx shadow-cljs release app && px shadow-cljs clj-run bhatkhande-editor.sitemap/spit-sitemap",
 		"build-report": "npx shadow-cljs run shadow.cljs.build-report app target/build-report.html"
 	},
 	"dependencies": {
