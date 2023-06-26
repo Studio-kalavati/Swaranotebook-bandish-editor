@@ -18,7 +18,12 @@
   [breaking-point "0.1.2"]
   [adzerk/env "0.4.0"]
   [binaryage/devtools "1.0.6"]
-  [cider/cider-nrepl "0.28.4"]]
+  [cider/cider-nrepl "0.28.4"]
+
+  ;;for the sitemap
+  [com.google.cloud/google-cloud-firestore "2.1.0"]
+  [com.google.guava/guava "30.0-jre"]
+  [com.google.firebase/firebase-admin "7.0.1"]]
 
  :dev-http
  {8280 "resources/public"
