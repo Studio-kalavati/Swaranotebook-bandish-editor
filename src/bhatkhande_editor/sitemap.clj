@@ -18,7 +18,7 @@
 
 (defn isite
   [timestr song-path]
-  (let [href (str siteUrl song-path)]
+  (let [href (str siteUrl "/" song-path)]
     (into [:url]
           (into
            [[:loc href]
