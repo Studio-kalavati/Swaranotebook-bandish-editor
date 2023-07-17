@@ -1037,7 +1037,7 @@
               (let [ifn #(do
                            (if logged-in?
                              (dispatch [::events/sign-out])
-                             (dispatch [::events/sign-in]))
+                             (dispatch [::events/google-sign-in-fx]))
                            (dispatch [::events/set-active-panel :home-panel]))]
                 [h-box :justify :between :align :center :children
                  [[box :size "1"
