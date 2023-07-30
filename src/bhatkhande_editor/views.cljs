@@ -1253,7 +1253,6 @@
 (defn show-editor
   []
   [:div
-   ;;editor height is 0 by default, so the canvas is first drawn too large in height
    [swara-display-area]
    [:div {:class "keyboard wow fadeInUp"
           :ref #(if (identity %)
@@ -1263,6 +1262,7 @@
       (if (= :play istate)
         [play-keyboard-footer]
         [swara-buttons]))]])
+
 (defn wait-for
   [msg]
   [:div
@@ -1283,6 +1283,9 @@
 
 (defmethod routes/panels :load-panel []
   (wait-for "Loading notations"))
+
+(defmethod routes/panels :load-sounds-panel []
+  (wait-for "Loading Santoor and Tabla sounds"))
 
 (defmethod routes/panels :home-panel [] [show-editor])
 

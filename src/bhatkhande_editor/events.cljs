@@ -98,16 +98,18 @@
 (reg-event-fx
  ::play-svara
  (fn [{:keys [db]} [_ shruti]]
-   (let [audctx (:audio-context db)
-         buf (@(:sample-buffers db) shruti)
-         absn (new js/AudioBufferSourceNode audctx
-                   #js {"buffer" buf})]
-     (if audctx
-       (do (play-url audctx absn)
-           {})
-       (let [audctx (js/AudioContext.)]
-         (play-url audctx absn)
-         {:db (assoc db :audio-context audctx)})))))
+   (if (:audio-context db)
+     (let [audctx (:audio-context db)
+           buf (@(:sample-buffers db) shruti)
+           absn (new js/AudioBufferSourceNode audctx
+                     #js {"buffer" buf})]
+       (if audctx
+         (do (play-url audctx absn)
+             {})
+         (let [audctx (js/AudioContext.)]
+           (play-url audctx absn)
+           {:db (assoc db :audio-context audctx)})))
+     {:dispatch [::init-audio-buffers]})))
 
 (reg-event-fx
  ::conj-svara
@@ -577,6 +579,9 @@
    (.then (fn [r] (.decodeAudioData ctx r)))
    (.then
     (fn [resp]
+      ;;141 is currently the number of audio files
+      (when (> (count (keys @imap)) 140)
+        (dispatch [::set-active-panel :home-panel]))
       (swap! imap assoc ikey resp)))))
 
 (defn get-metronome-sample-loc
@@ -633,17 +638,18 @@
               (get-tabla-sample-loc ctx))]
      {:db (assoc db :sample-buffers bufatom
                  :clock clock
-                 :audio-context ctx)})))
+                 :audio-context ctx)
+      :dispatch [::set-active-panel :load-sounds-panel]})))
 
 (reg-event-fx
  ::set-mode
  [log-event]
  (fn [{:keys [db]} [_ ival]]
-   (let [ndb {:db (update-in db [:props :mode]
-                             (constantly ival))}]
+   (let [ndb (update-in db [:props :mode]
+                        (constantly ival))]
      (if (and (= :play ival) (nil? (:audio-context ndb)))
-       (assoc ndb :dispatch [::init-audio-buffers])
-       ndb))))
+       (assoc {:db ndb} :dispatch [::init-audio-buffers])
+       {:db ndb}))))
 
 (reg-event-fx
  ::refresh-comp
