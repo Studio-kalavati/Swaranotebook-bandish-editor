@@ -45,7 +45,6 @@
 (defn dispatch-route
   [route]
   (let [panel (keyword (str (name (:handler route)) "-panel"))]
-    (println "url for " (url-for :load :path :abc :id "def"))
     (when-let [id  (-> route :route-params :id)]
       (dispatch [::events/set-mode :edit])
       (dispatch [::events/get-bandish-json

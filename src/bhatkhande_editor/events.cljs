@@ -579,7 +579,6 @@
  [log-event]
  (fn [{:keys [db]} [_ {:keys [composition] :as inp}]]
    (let [comp (db/add-indexes inp)
-         _ (println " keys comp " (keys comp))
          ndb (-> db
                  (update-in [:composition] (constantly comp))
                  (update-in [:props :cursor-pos]

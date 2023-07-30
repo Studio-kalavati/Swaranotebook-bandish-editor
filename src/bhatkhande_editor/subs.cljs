@@ -75,8 +75,6 @@
 (reg-sub
  ::save-possible?
  (fn [db [_ _]]
-   (println " save pos "(vector (-> db :props :path) (-> db :user :uid)
-                             (not (nil? (-> db :props :id)))))
    (and (= (-> db :props :path) (-> db :user :uid))
         (not (nil? (-> db :props :id))))))
 
