@@ -1,5 +1,7 @@
 (ns bhatkhande-editor.events
   (:require
+   [sargam.spec :as us]
+   [reagent.core :as reagent]
    [re-frame.core :as re-frame
     :refer [debug reg-event-db reg-event-fx
             subscribe dispatch dispatch-sync]]
@@ -567,12 +569,81 @@
          (.catch (fn[i] (println " error " i ))))
      {:db db})))
 
+(defn fetch-url
+  [imap ctx ikey iurl]
+  (->
+   (js/fetch iurl)
+   (.then (fn [r] (.arrayBuffer r)))
+   (.then (fn [r] (.decodeAudioData ctx r)))
+   (.then
+    (fn [resp]
+      (swap! imap assoc ikey resp)))))
+
+(defn get-metronome-sample-loc
+  [imap ctx]
+  (mapv (partial fetch-url imap ctx)
+        [:tick1 :tick2]
+        (map #(str "/sounds/metronome/metro" % ".mp3") [1 2]))
+  imap)
+
+(defn get-tabla-sample-loc
+  [imap ctx]
+  (let [ifn (fn[taal]
+              (let [paths (map #(str "/sounds/tabla/" taal "/" taal % "bpm.mp3")
+                               (range 60 310 15))
+                    kws (map #(keyword (str taal % "bpm"))
+                             (range 60 310 15))]
+                (mapv (partial fetch-url imap ctx) kws paths)))]
+    (count (mapv ifn ["ektaal" "dadra" "rupak" "teentaal" "jhaptaal" "kehrwa"])))
+  imap)
+
+(defn get-tanpura-sample-loc
+  [imap ctx]
+  (fetch-url imap ctx :tanpura
+             "/sounds/tanpura/c4.mp3")
+  imap)
+
+(defn get-santoor-url-map
+  [imap ctx]
+  (let [ivals (mapv
+               #(str "/sounds/santoor/" %)
+               (-> (for [i ["4" "5" "6"]
+                         j ["c" "cs" "d" "ds" "e" "f" "fs" "g" "gs" "a" "as" "b"]]
+                     (str  j i ".mp3"))
+                   vec
+                   (conj "c7.mp3")))
+        ibuffers (mapv (partial fetch-url imap ctx)
+                       (conj (vec (for [i [:mandra :madhyam :taar] j (take 12 us/i-note-seq)]
+                                    [i j])) [:ati-taar :s])
+                       ivals)]
+    imap))
+
+(reg-event-fx
+ ::init-audio-buffers
+ (fn [{:keys [db]} [_ _]]
+   (let  [clock (c/clock)
+          _ (c/start! clock)
+          ctx (:context @clock)
+          bufatom (reagent/atom {})
+          bufatom
+          (-> bufatom
+              (get-santoor-url-map ctx)
+              (get-metronome-sample-loc ctx)
+              (get-tanpura-sample-loc ctx)
+              (get-tabla-sample-loc ctx))]
+     {:db (assoc db :sample-buffers bufatom
+                 :clock clock
+                 :audio-context ctx)})))
+
 (reg-event-fx
  ::set-mode
  [log-event]
  (fn [{:keys [db]} [_ ival]]
-   {:db (update-in db [:props :mode]
-                   (constantly ival))}))
+   (let [ndb {:db (update-in db [:props :mode]
+                             (constantly ival))}]
+     (if (and (= :play ival) (nil? (:audio-context ndb)))
+       (assoc ndb :dispatch [::init-audio-buffers])
+       ndb))))
 
 (reg-event-fx
  ::refresh-comp

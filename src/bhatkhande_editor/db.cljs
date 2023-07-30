@@ -190,56 +190,6 @@
             (range 1 38)))
    (assoc [:madhyam :a] (str "/images/swaras/common/png/avagraha.png"))))
 
-(defn fetch-url
-  [imap ctx ikey iurl]
-  (->
-   (js/fetch iurl)
-   (.then (fn [r] (.arrayBuffer r)))
-   (.then (fn [r] (.decodeAudioData ctx r)))
-   (.then
-    (fn [resp]
-      (swap! imap assoc ikey resp)))))
-
-(defn get-santoor-url-map
-  [ctx]
-  (let [ivals (mapv
-               #(str "/sounds/santoor/" %)
-               (-> (for [i ["4" "5" "6"]
-                         j ["c" "cs" "d" "ds" "e" "f" "fs" "g" "gs" "a" "as" "b"]]
-                     (str  j i ".mp3"))
-                   vec
-                   (conj "c7.mp3")))
-        imap (reagent/atom {})
-        ibuffers (mapv (partial fetch-url imap ctx)
-                       (conj (vec (for [i [:mandra :madhyam :taar] j (take 12 us/i-note-seq)]
-                                    [i j])) [:ati-taar :s])
-                       ivals)]
-    imap))
-
-(defn get-metronome-sample-loc
-  [imap ctx]
-  (mapv (partial fetch-url imap ctx)
-        [:tick1 :tick2]
-        (map #(str "/sounds/metronome/metro" % ".mp3") [1 2]))
-  imap)
-
-(defn get-tabla-sample-loc
-  [imap ctx]
-  (let [ifn (fn[taal]
-              (let [paths (map #(str "/sounds/tabla/" taal "/" taal % "bpm.mp3")
-                               (range 60 310 15))
-                    kws (map #(keyword (str taal % "bpm"))
-                             (range 60 310 15))]
-                (mapv (partial fetch-url imap ctx) kws paths)))]
-    (count (mapv ifn ["ektaal" "dadra" "rupak" "teentaal" "jhaptaal" "kehrwa"])))
-  imap)
-
-(defn get-tanpura-sample-loc
-  [imap ctx]
-  (fetch-url imap ctx :tanpura
-             "/sounds/tanpura/c4.mp3")
-  imap)
-
 (defn percentage-95
   [i]
   (let [ iw (js/parseInt i)]
@@ -288,24 +238,12 @@
               (let [in (-> comp :index last)]
                 (zipmap [:row-index :bhaag-index :note-index :nsi] in))))}))
 
-(defn init-buffers
-  []
-  (let  [clock (c/clock)
-         _ (c/start! clock)
-         ctx (:context @clock)
-         bufatom (get-santoor-url-map ctx)
-         bufatom (get-metronome-sample-loc bufatom ctx)
-         bufatom (get-tanpura-sample-loc bufatom ctx)
-         bufatom (get-tabla-sample-loc bufatom ctx)]
-    {:sample-buffers bufatom
-     :clock clock
-     :audio-context ctx}))
+
 
 
 (def default-db
   (let []
     (merge (comp-decorator init-comp)
-           (init-buffers)
            {:init-state {:cursor-color 0}
             :dispinfo (merge dispinfo m-dispinfo)
             :m-dispinfo m-dispinfo
