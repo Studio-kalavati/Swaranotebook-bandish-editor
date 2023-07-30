@@ -1325,16 +1325,12 @@ input[type="search"]
 .edit-composition
 {
     padding: 30px 0;
-    background: linear-gradient(92deg, rgb(255, 127, 56) 0.00%, rgb(255, 196, 108) 54.60%); 
+    background-color: floralwhite;
     overflow: auto;
 }
 .edit-composition .com-edit
 {
-    /* background-color: #FCFCFC;
-
-    border: 3px solid #EEECED;
-   */
-    padding: 15px;
+     padding: 15px;
 }
 
 /*--------- Footer ---------*/
@@ -1414,9 +1410,14 @@ input[type="search"]
     margin-bottom: 30px;
 }
 
+.menu-line-separator {
+    width: 80vw;
+    size: 1px;
+    color: darkgrey;
+}
 .keyboard {
 
-    background: coral;
+    background: peachpuff;
     padding: 2px;
 }
 /* Media query */

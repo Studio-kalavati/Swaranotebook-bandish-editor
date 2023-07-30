@@ -306,7 +306,8 @@
                                         :style {:flex "1 1 0px" }
                                         :child [:button
                                                 {:style {:width "100%"
-                                                         :background-color "coral"}
+                                                        ;; :background-color "coral"
+                                                         }
                                                  :class "btn btn-lg"
                                                  :on-click
                                                  #(do
@@ -999,9 +1000,6 @@
              :children
              [(when logged-in?
                 (let [ifn #(do
-                             (.pushState
-                              (.-history js/window) #js {} ""
-                              (str (.-origin (.-location js/window)) "/list"))
                              (dispatch [::events/list-files]))]
                   [h-box :justify :between :align :center :children
                    [[box
@@ -1017,7 +1015,8 @@
                      [hyperlink :label "My Notations"
                       :style {:font-size "x-large" :color "black"}
                       :on-click ifn]]]]))
-              [box :align :center :child [line :size "1px" :color "floralwhite" :style {:width "80vw"}]]
+              [box :align :center
+               :child [line :class "menu-line-separator"]]
               (let [ifn #(dispatch [::events/set-active-panel :help-panel])]
                 [h-box :justify :between :align :center :children
                  [[box :size "1"
@@ -1032,8 +1031,9 @@
                    [hyperlink :label "Help Center"
                     :style {:font-size "x-large" :color "black"}
                     :on-click ifn]]]])
-              [box :align :center :child [line :size "1px" :color "floralwhite"
-                                          :style {:width "80vw"}]]
+              [box :align :center
+               :child [line :class "menu-line-separator"]
+               ]
               (let [ifn #(do
                            (if logged-in?
                              (dispatch [::events/sign-out])
@@ -1052,7 +1052,10 @@
                    [hyperlink :label (if logged-in? "Log out" "Log in")
                     :style {:font-size "x-large" :color "black"}
                     :on-click ifn]]]])
-              [box :align :center :child [line :size "1px" :color "floralwhite" :style {:width "80vw"}]]
+              [box :align :center
+               :child
+               [line :class "menu-line-separator"]
+               ]
               (let [ifn #(do
                            (dispatch [::events/clear-url-path])
                            (dispatch [::events/refresh-comp db/init-comp])
@@ -1069,10 +1072,13 @@
                   [box
                    :style text-style
                    :size "10" :child
-                   [hyperlink :label "New Notation"
+                   [hyperlink :label "New Bandish"
                     :style {:font-size "x-large" :color "black"}
                     :on-click ifn]]]])
-              [box :align :center :child [line :size "1px" :color "floralwhite" :style {:width "80vw"}]]
+              [box :align :center
+               :child
+               [line :class "menu-line-separator"]
+               ]
               (let [ifn #(do (dispatch [::events/set-active-panel :home-panel]))]
                 [h-box :justify :between :align :center :children
                  [[box :size "1"
@@ -1164,8 +1170,8 @@
                              [box
                               :align :center
                               :child
-                              [line :size "1px" :color "floralwhite"
-                               :style {:width "80vw"}]]
+                              [line :class "menu-line-separator"]
+                              ]
                              ]]))
                        bands)
             bbox (conj bbox
@@ -1261,7 +1267,7 @@
   [msg]
   [:div
    [modal-panel
-    :backdrop-color "#f83600"
+    :backdrop-color "floralwhite"
     :child [:div {:class "popup"
                   :style {:overflow-y :scroll
                           :max-height "80vh"}}
@@ -1273,7 +1279,7 @@
              [[box :align :center
                :child
                [title :level :level3 :label msg]]
-              [throbber :size :large]]]]]])
+              [throbber :color "coral" :size :large]]]]]])
 
 (defmethod routes/panels :load-panel []
   (wait-for "Loading notations"))
