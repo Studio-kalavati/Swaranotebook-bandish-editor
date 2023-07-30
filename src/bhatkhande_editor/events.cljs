@@ -70,9 +70,14 @@
          (assoc :posthog ph)))))
 
 (reg-event-fx
+ ::navigate-to
+ (fn [_ [_ path title]]
+   {:navigate-to-comp [path title]}))
+
+(reg-event-fx
   ::navigate
-  (fn [_ [_ handler]]
-   {:navigate handler}))
+  (fn [_ [_ handler ]]
+    {:navigate handler}))
 
 (reg-event-fx
  ::set-active-panel
@@ -325,7 +330,7 @@
     (t/write w x)))
 
 ;; media and cloud
-(reg-event-fx
+#_(reg-event-fx
  ::update-bandish-url
  (fn [{:keys [db]} [_ bandish-url]]
    {:db
@@ -334,15 +339,16 @@
                    (constantly bandish-url)))}))
 
 (defn upload-comp
-  [path bandish]
+  [uid title bandish]
   (let [stor (.storage firebase)
         storageRef (.ref stor)
+        path (str uid "/" title)
         file-ref  (.child storageRef path)]
     (-> (.putString file-ref bandish)
         (.then
          (fn[i]
-           (dispatch [::update-bandish-url path])
-           (.pushState (.-history js/window) #js {} ""
+           (dispatch [::navigate-to uid title])
+           #_(.pushState (.-history js/window) #js {} ""
                        (db/get-long-url path))
            (dispatch [::set-active-panel :home-panel]))))))
 
@@ -356,15 +362,9 @@
          comp (->
                (select-keys (-> ndb :composition) [:noteseq :taal :title])
                to-trans)
-         path (str (-> ndb :user :uid) "/"
-                   (last (.split (.toString (random-uuid)) #"-"))
-                   "-" comp-title)
-         #_(if-let [p2 (-> ndb :props :id)]
-                ;;if the current path is another users pre-saved comp,
-                ;;use that and overwrite
-                (str (-> ndb :user :uid) "/" p2)
-                )]
-     (upload-comp path comp)
+         path (str (last (.split (.toString (random-uuid)) #"-"))
+                   "-" comp-title)]
+     (upload-comp (-> ndb :user :uid) path comp)
      {:dispatch [::set-active-panel :wait-for-save-completion]
       :db ndb})))
 
@@ -392,11 +392,9 @@
          path
          (if-let [p2 (-> db :props :id)]
              ;;if the current path is a pre-saved comp, use that and overwrite
-             (str (-> db :user :uid) "/" p2)
-             (str (-> db :user :uid) "/"
-                  (last (.split (.toString (random-uuid)) #"-"))
-                  "-" comp-title))]
-     (upload-comp path comp)
+           p2
+           (str (last (.split (.toString (random-uuid)) #"-")) "-" comp-title))]
+     (upload-comp (-> db :user :uid) path comp)
      {:dispatch [::set-active-panel :wait-for-save-completion]
       :db db})))
 
@@ -549,6 +547,11 @@
    {:db (update-in db [:props] assoc :path path :id id)}))
 
 (reg-event-fx
+ ::clear-url-path
+ (fn [{:keys [db]} [_ _]]
+   {:db (update-in db [:props] dissoc :path :id)}))
+
+(reg-event-fx
  ::get-bandish-json
  [log-event]
  (fn [{:keys [db]} [_ {:keys [path id] :as urlparams}]]
@@ -576,6 +579,7 @@
  [log-event]
  (fn [{:keys [db]} [_ {:keys [composition] :as inp}]]
    (let [comp (db/add-indexes inp)
+         _ (println " keys comp " (keys comp))
          ndb (-> db
                  (update-in [:composition] (constantly comp))
                  (update-in [:props :cursor-pos]

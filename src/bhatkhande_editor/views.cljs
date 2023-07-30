@@ -323,15 +323,15 @@
                                                      #(do (dispatch [::events/sign-out])))
                                          (zmdi-butn2 "zmdi zmdi-google-plus zmdi-hc-lg"
                                                      #(do (reset! show-login-popup? true))))
-                                       (zmdi-butn2
-                                        "zmdi zmdi-cloud-upload zmdi-hc-lg"
-                                        #(if logged-in?
-                                           (reset! show-title-popup? true)
-                                           (reset! show-login-popup? true)))
-                                       (when (and logged-in? @(subscribe [::subs/comp-title]))
+                                       (if @(subscribe [::subs/save-possible?])
                                          (zmdi-butn2
                                           "zmdi zmdi-floppy zmdi-hc-lg"
-                                          #(dispatch [::events/upsert-comp])))
+                                          #(dispatch [::events/upsert-comp]))
+                                         (zmdi-butn2
+                                          "zmdi zmdi-cloud-upload zmdi-hc-lg"
+                                          #(if logged-in?
+                                             (reset! show-title-popup? true)
+                                             (reset! show-login-popup? true))))
                                        (mk-button notes-per-beat {:shruti [:madhyam :-]})
                                        (mk-button notes-per-beat {:shruti [:madhyam :a]})
                                        (butn2 "⌫" #(dispatch [::events/delete-single-swara]))]])
@@ -1018,7 +1018,7 @@
                       :style {:font-size "x-large" :color "black"}
                       :on-click ifn]]]]))
               [box :align :center :child [line :size "1px" :color "floralwhite" :style {:width "80vw"}]]
-              (let [ifn #(constantly nil)]
+              (let [ifn #(dispatch [::events/set-active-panel :help-panel])]
                 [h-box :justify :between :align :center :children
                  [[box :size "1"
                    :style icon-style
@@ -1054,6 +1054,7 @@
                     :on-click ifn]]]])
               [box :align :center :child [line :size "1px" :color "floralwhite" :style {:width "80vw"}]]
               (let [ifn #(do
+                           (dispatch [::events/clear-url-path])
                            (dispatch [::events/refresh-comp db/init-comp])
                            (.pushState (.-history js/window)
                                        #js {} ""
@@ -1090,6 +1091,23 @@
          {:class "edit-composition"
           :style {:min-height "100vh"}}
          bbox]))))
+
+(defn help-panel
+  []
+  (let []
+    [v-box :children
+     [
+      [v-box :children
+       [[title :label "abcd" :level :level2]
+        [:img
+         {:src
+          "https://user-images.githubusercontent.com/89076/225162591-fef23263-0fa0-4262-9809-47fba749be38.gif"}]]]
+      [box
+       :style {:padding "10px 5vw 10px 1px"}
+       :size "10" :child
+       [hyperlink :label "Back"
+        :style {:font-size "x-large" :color "black"}
+        :on-click #(dispatch [::events/set-active-panel :home-panel])]]]]))
 
 (defn list-comps
   []
@@ -1263,6 +1281,8 @@
 (defmethod routes/panels :home-panel [] [show-editor])
 
 (defmethod routes/panels :list-comps-panel [] [list-comps])
+
+(defmethod routes/panels :help-panel [] [help-panel])
 
 (defmethod routes/panels :menu-panel [] [menu])
 

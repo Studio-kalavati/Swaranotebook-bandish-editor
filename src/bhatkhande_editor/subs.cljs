@@ -73,6 +73,14 @@
    (-> comp :title)))
 
 (reg-sub
+ ::save-possible?
+ (fn [db [_ _]]
+   (println " save pos "(vector (-> db :props :path) (-> db :user :uid)
+                             (not (nil? (-> db :props :id)))))
+   (and (= (-> db :props :path) (-> db :user :uid))
+        (not (nil? (-> db :props :id))))))
+
+(reg-sub
  ::get-click-index
  (fn [db [_ _]]
    (get-in db [:props :cursor-pos])))
@@ -101,7 +109,7 @@
  (fn [db [_ _]]
    (:user db)))
 
-(reg-sub
+#_(reg-sub
  ::bandish-url
  (fn [db [_ _]]
    (:bandish-url db)))
