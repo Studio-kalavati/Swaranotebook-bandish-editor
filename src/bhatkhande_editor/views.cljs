@@ -176,12 +176,19 @@
         newline-on-avartan? (reagent/atom @(subscribe [::subs/newline-on-avartan?]))
         title-val (reagent/atom "")
         notes-per-beat (reagent/atom 1)
+        svaras-on @(subscribe [::subs/custom-svaras])
+        ;;if unset, all shuddha svaras
+        default-custom-svaras
+        (if svaras-on
+          (mapv #(let [ss (into (sorted-set) svaras-on)]
+                   (if (ss %) true false))
+                (take 12 us/i-note-seq))
+          [true false true false true true false true
+           false true false true])
         octave-notes-list (mapv (fn[_ istate] (reagent/atom istate))
                                 (range 12)
                                 ;;all shuddha svaras true
-                                [true false true false true true false true
-                                 false true false true])
-        ]
+                                default-custom-svaras)]
     (fn []
       (let [sbp (vec (repeat 21 (reagent/atom false)))
             speed-switch-fn (fn[i] {:disp-fn #(reset! notes-per-beat i)
@@ -538,13 +545,12 @@
                                            :style (assoc but-style
                                                          :background-color "#f83600")
                                            :on-click
-                                           #(do
-                                              (dispatch [::events/set-custom-svaras
-                                                         (->> 
-                                                          (map vector (take 12 us/i-note-seq)
-                                                               (map deref octave-notes-list))
-                                                          (filter (fn[[a b]] (when b a)))
-                                                          (map first))])
+                                           #(let [iargs (->>
+                                                         (map vector (take 12 us/i-note-seq)
+                                                              (map deref octave-notes-list))
+                                                         (filter (fn[[a b]] (when b a)))
+                                                         (map first))]
+                                              (dispatch [::events/set-custom-svaras iargs])
                                               (reset! show-select-svaras-popup
                                                       (not @show-select-svaras-popup)))
                                            :class "btn btn-default"]

@@ -284,9 +284,7 @@
  (fn [{:keys [db]} [_ svaras]]
    {:db
     (-> (update-in db [:props :raga] (constantly :custom))
-        (update-in [:props :custom-svaras] (constantly svaras)))
-   ;; :dispatch [::save-to-localstorage]
-    }))
+        (update-in [:props :custom-svaras] (constantly svaras)))}))
 
 (reg-event-fx
  ::set-raga
