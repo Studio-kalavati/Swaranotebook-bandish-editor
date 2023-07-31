@@ -405,14 +405,15 @@
                                        :children
                                        [[box
                                          :align :center
-                                         :child [title :level :level3 :label "Bandish title"]]
-                                        [gap :size "3vh"]
+                                         :child [title :level :level2 :label "Title of the Bandish"]]
+                                        [gap :size "2vh"]
                                         [box :align :center
                                          :child
                                          [input-text
                                           :src (at)
                                           :model            title-val
-                                          :style {:font-size "large" :width "200px"
+                                          :style {:font-size "large" :width "100%"
+                                                  :justify-content "center"
                                                   :text-align "center"}
                                           :on-change        #(reset! title-val %)]]
                                         [button
