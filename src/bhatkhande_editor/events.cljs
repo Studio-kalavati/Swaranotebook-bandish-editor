@@ -597,7 +597,7 @@
                     kws (map #(keyword (str taal % "bpm"))
                              (range 60 310 15))]
                 (mapv (partial fetch-url imap ctx) kws paths)))]
-    (count (mapv ifn ["ektaal" "dadra" "rupak" "teentaal" "jhaptaal" "kehrwa"])))
+    (count (mapv ifn ["ektaal" "dadra" "rupak" "teentaal" "jhaptaal" "kehrwa" "adachautaal"])))
   imap)
 
 (defn get-tanpura-sample-loc

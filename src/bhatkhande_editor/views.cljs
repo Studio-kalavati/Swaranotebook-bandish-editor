@@ -925,16 +925,18 @@
         (when @show-settings?
           [modal-panel
            :backdrop-on-click #(reset! show-settings? false)
-           :child [:div {:class "popup" :style {;;:overflow-y :scroll
-                                                :width "90vw"
-                                                }}
+           :child [:div {:class "popup" :style {:width "90vw"
+                                                :display "flex"
+                                                :justify-content "center"}}
                    [v-box
                     :gap "2vh"
                     :class "body"
-                    :align :center
+                    :justify :center
                     :children
                     [
-                     [v-box :children
+                     [v-box
+                      :align :center
+                      :children
                       [[slider :model bpm
                         :min 60
                         :max 300
@@ -950,27 +952,31 @@
                           :label "BPM"]
                          [title :level :level3
                           :label @bpm]]]]]
+                     [gap :size "2vh"]
                      [v-box
                       :align :center
                       :justify :center
+                      :style {:min-width "200px"}
                       :children
                       [(doall (for [c ["metronome" "tabla"]]
                                 ^{:key c}
                                 [radio-button :src (at)
                                  :label       c
                                  :value       (let [k (keyword c)] k)
+                                 :label-style {:width "200px"}
                                  :model       beat-mode
-                                 ;;:style {:min-width "200px"}
-                                 :on-change   #(do 
+                                 :on-change   #(do
                                                    (reset! beat-mode %)
                                                    (dispatch [::events/beat-mode
                                                               (keyword @beat-mode)]))]))]]
+                     [gap :size "2vh"]
                      [v-box
                       :align :center
                       :justify :center
                       :children [
                                  [checkbox
                                   :model tanpura?
+                                  :label-style {:width "200px"}
                                   :label "Play Tanpura?"
                                   :on-change
                                   #(let [nval (not @tanpura?)]
