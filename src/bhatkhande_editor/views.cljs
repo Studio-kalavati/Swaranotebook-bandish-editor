@@ -347,14 +347,14 @@
                            [modal-panel
                             :backdrop-on-click #(reset! show-settings-popup? false)
                             :child
-                            [:div {:class "popup" :style {:width "85vw"}}
+                            [:div {:style {:min-width "min(80vw,400px)"}}
                              [v-box
                               :gap      "0.5vh"
                               :class "body"
                               :children
                               [[gap :size "2vh"]
                                [h-box
-                                :align :center
+                                :align :start
                                 :justify :center
                                 :children
                                 [[checkbox
@@ -368,7 +368,7 @@
                                  [title :label "Show Lyrics?"
                                   :level :level3]]]
                                [h-box
-                                :align :center
+                                :align :start
                                 :justify :center
                                 :children
                                 [[checkbox
@@ -925,7 +925,7 @@
         (when @show-settings?
           [modal-panel
            :backdrop-on-click #(reset! show-settings? false)
-           :child [:div {:class "popup" :style {:width "90vw"
+           :child [:div {:style {:min-width "min(80vw,400px)"
                                                 :display "flex"
                                                 :justify-content "center"}}
                    [v-box
@@ -948,9 +948,9 @@
                        [h-box
                         :gap "1vh"
                         :children
-                        [[title :level :level3
+                        [[title :level :level2
                           :label "BPM"]
-                         [title :level :level3
+                         [title :level :level2
                           :label @bpm]]]]]
                      [gap :size "2vh"]
                      [v-box
