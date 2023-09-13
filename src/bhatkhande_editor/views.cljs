@@ -1030,7 +1030,8 @@
                       :on-click ifn]]]]))
               [box :align :center
                :child [line :class "menu-line-separator"]]
-              (let [ifn #(dispatch [::events/set-active-panel :help-panel])]
+              (let [ifn #(set! (.-href (.-location js/window)) "./docs/help.html")
+                    ]
                 [h-box :justify :between :align :center :children
                  [[box :size "1"
                    :style icon-style
