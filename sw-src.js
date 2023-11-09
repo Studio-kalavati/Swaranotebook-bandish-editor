@@ -4,14 +4,14 @@ importScripts(
 
 workbox.precaching.precacheAndRoute(self.__WB_MANIFEST);
 
-workbox.routing.registerRoute(/\.(?:png|gif|jpg|jpeg|woff|woff2|eot|ttf|svg)$/, workbox.strategies.cacheFirst());
+workbox.routing.registerRoute(/\.(?:png|gif|jpg|jpeg|woff|woff2|eot|ttf|svg)$/, new workbox.strategies.CacheFirst());
 
 workbox.routing.registerRoute(
   ({url}) => url.pathname.startsWith('/view/'),
-  workbox.strategies.networkFirst()
+  new workbox.strategies.NetworkFirst()
 );
 
 workbox.routing.registerRoute(
   /\.(?:js|html|css)$/,
-  workbox.strategies.staleWhileRevalidate()
+  new workbox.strategies.StaleWhileRevalidate()
 );
