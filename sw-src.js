@@ -4,7 +4,7 @@ importScripts(
 
 workbox.precaching.precacheAndRoute(self.__WB_MANIFEST);
 
-workbox.routing.registerRoute(/\.(?:png|gif|jpg|jpeg|woff|woff2|eot|ttf|svg)$/, new CacheFirst());
+workbox.routing.registerRoute(/\.(?:png|gif|jpg|jpeg|woff|woff2|eot|ttf|svg)$/, workbox.strategies.cacheFirst());
 
 workbox.routing.registerRoute(
   ({url}) => url.pathname.startsWith('/view/'),
