@@ -535,10 +535,9 @@
 (reg-event-fx
  ::set-query-params
  (fn [{:keys [db]} [_ qp]]
-   (let [qp1 (cond->
-                 qp
-               :beat-mode
-               (update-in [:beat-mode] keyword))
+   (let [qp1 (if (:beat-mode qp)
+               (update-in qp [:beat-mode] keyword)
+               qp)
          nep (-> (update-in db [:props] merge qp1)
                  (update-in [:props :mode] keyword))]
      {:db nep})))
