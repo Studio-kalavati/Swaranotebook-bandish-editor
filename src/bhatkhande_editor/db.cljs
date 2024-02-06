@@ -216,7 +216,7 @@
    :sam-khaali 35
    :font-size 20 :spacing 10 :text-align :left})
 
-(def default-props {:raga :yaman
+(def default-props {:raga :bilawal
                     :note-pos {}
                     :mode :edit
                     :lang :english
