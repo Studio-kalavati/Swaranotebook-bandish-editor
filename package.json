@@ -8,7 +8,7 @@
 	},
 	"dependencies": {
 		"netlify-cli": "^12.4.0",
-		"posthog-js": "^1.39.2",
+		"posthog-js": "^1.104.4",
 		"react": "^17.0.2",
 		"react-dom": "^17.0.2",
 		"workbox-cli": "^6.5.4"

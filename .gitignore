@@ -26,4 +26,5 @@
 
 # local config
 cors-config
-fbconf
+fbconf.sh
+*_token.txt
