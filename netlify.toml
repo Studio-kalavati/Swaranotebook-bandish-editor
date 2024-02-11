@@ -4,6 +4,12 @@
   status = 200
   force = true 
 
+[[redirects]]
+  from = "/__/auth/*"
+  to = "https://bandish-editor.firebaseapp.com/__/auth/"
+  status = 200
+  force = true 
+
 [context.production]
   command = "npm install && npm run release"
   publish = "resources/public"
