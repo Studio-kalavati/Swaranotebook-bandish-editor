@@ -23,4 +23,5 @@ jobs:
           mailerliteApiToken: '${{ secrets.MAILERLITEAPITOKEN }}'
           mailerliteGroupId: '${{ secrets.MAILERLITEAPIGROUPID }}'
           siteURL: '${{ secrets.SITEURL }}'
+
           projectId: bandish-editor
