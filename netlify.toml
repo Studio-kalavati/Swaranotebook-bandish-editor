@@ -1,12 +1,12 @@
 [[redirects]]
-  from = "/view/*"
-  to = "/index.html"
+  from = "/__/auth/handler"
+  to = "https://bandish-editor.firebaseapp.com/__/auth/handler"
   status = 200
   force = true 
 
 [[redirects]]
-  from = "/__/auth/*"
-  to = "https://bandish-editor.firebaseapp.com/__/auth/"
+  from = "/view/*"
+  to = "/index.html"
   status = 200
   force = true 
 
