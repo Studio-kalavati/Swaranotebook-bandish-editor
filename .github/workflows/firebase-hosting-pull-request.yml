@@ -27,9 +27,9 @@ jobs:
           posthogKey: '${{ secrets.POSTHOGKEY }}'
           mailerliteApiToken: '${{ secrets.MAILERLITEAPITOKEN }}'
           mailerliteGroupId: '${{ secrets.MAILERLITEAPIGROUPID }}'
+          projectId: bandish-editor
 
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: '${{ secrets.GITHUB_TOKEN }}'
 
-          projectId: bandish-editor
