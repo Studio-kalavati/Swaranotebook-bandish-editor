@@ -15,7 +15,6 @@ jobs:
     environment: build
     env:
       siteUrl: '${{ secrets.SITEURL }}'
-      firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_BANDISH_EDITOR }}'
       apiKey: '${{ secrets.APIKEY }}'
       authDomain: '${{ secrets.AUTHDOMAIN }}'
       storageBucket:  '${{ secrets.STORAGEBUCKET }}'
@@ -34,4 +33,5 @@ jobs:
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: '${{ secrets.GITHUB_TOKEN }}'
+          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_BANDISH_EDITOR }}'
 
