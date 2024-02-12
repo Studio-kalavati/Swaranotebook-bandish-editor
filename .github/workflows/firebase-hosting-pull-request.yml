@@ -14,8 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: build
     env:
-      SITEURL: '${{ secrets.SITEURL }}'
-      TESTA: 'test value'
+      siteUrl: '${{ secrets.SITEURL }}'
       firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_BANDISH_EDITOR }}'
       apiKey: '${{ secrets.APIKEY }}'
       authDomain: '${{ secrets.AUTHDOMAIN }}'
@@ -29,11 +28,10 @@ jobs:
 
     steps:
       - name: print
-        run: echo "siteurl $SITEURL testa $TESTA "
+        run: echo "siteurl $siteUrl projectId $projectId"
       - uses: actions/checkout@v3
       - run:  npm install && npm run release
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: '${{ secrets.GITHUB_TOKEN }}'
-          SITEURL: '${{ secrets.SITEURL }}'
 
