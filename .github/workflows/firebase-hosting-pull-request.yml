@@ -15,9 +15,10 @@ jobs:
     environment: build
     steps:
       - uses: actions/checkout@v3
-      - run: echo '$siteURL' && npm install && npm run release
+      - run: echo "siteurl $SITEURL testa $TESTA " && npm install && npm run release
         env:
-          siteURL: '${{ secrets.SITEURL }}'
+          SITEURL: '${{ secrets.SITEURL }}'
+          TESTA: 'test value'
           firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_BANDISH_EDITOR }}'
           apiKey: '${{ secrets.APIKEY }}'
           authDomain: '${{ secrets.AUTHDOMAIN }}'
