@@ -16,9 +16,8 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - run: echo '${{ secrets.SITEURL }}' && npm install && npm run release
-      - uses: FirebaseExtended/action-hosting-deploy@v0
-        with:
-          repoToken: '${{ secrets.GITHUB_TOKEN }}'
+        env:
+          siteURL: '${{ secrets.SITEURL }}'
           firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_BANDISH_EDITOR }}'
           apiKey: '${{ secrets.APIKEY }}'
           authDomain: '${{ secrets.AUTHDOMAIN }}'
@@ -28,6 +27,9 @@ jobs:
           posthogKey: '${{ secrets.POSTHOGKEY }}'
           mailerliteApiToken: '${{ secrets.MAILERLITEAPITOKEN }}'
           mailerliteGroupId: '${{ secrets.MAILERLITEAPIGROUPID }}'
-          siteURL: '${{ secrets.SITEURL }}'
+
+      - uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: '${{ secrets.GITHUB_TOKEN }}'
 
           projectId: bandish-editor
