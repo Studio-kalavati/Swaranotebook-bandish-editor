@@ -13,24 +13,27 @@ jobs:
     #    if: '${{ github.event.pull_request.head.repo.full_name == github.repository }}'
     runs-on: ubuntu-latest
     environment: build
-    steps:
-      - uses: actions/checkout@v3
-      - run: echo "siteurl $SITEURL testa $TESTA " && npm install && npm run release
-        env:
-          SITEURL: '${{ secrets.SITEURL }}'
-          TESTA: 'test value'
-          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_BANDISH_EDITOR }}'
-          apiKey: '${{ secrets.APIKEY }}'
-          authDomain: '${{ secrets.AUTHDOMAIN }}'
-          storageBucket:  '${{ secrets.STORAGEBUCKET }}'
-          messagingSenderId: '${{ secrets.MESSAGINGSENDERID }}'
-          appId: '${{ secrets.APPID }}'
-          posthogKey: '${{ secrets.POSTHOGKEY }}'
-          mailerliteApiToken: '${{ secrets.MAILERLITEAPITOKEN }}'
-          mailerliteGroupId: '${{ secrets.MAILERLITEAPIGROUPID }}'
-          projectId: bandish-editor
+    env:
+      SITEURL: '${{ secrets.SITEURL }}'
+      TESTA: 'test value'
+      firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_BANDISH_EDITOR }}'
+      apiKey: '${{ secrets.APIKEY }}'
+      authDomain: '${{ secrets.AUTHDOMAIN }}'
+      storageBucket:  '${{ secrets.STORAGEBUCKET }}'
+      messagingSenderId: '${{ secrets.MESSAGINGSENDERID }}'
+      appId: '${{ secrets.APPID }}'
+      posthogKey: '${{ secrets.POSTHOGKEY }}'
+      mailerliteApiToken: '${{ secrets.MAILERLITEAPITOKEN }}'
+      mailerliteGroupId: '${{ secrets.MAILERLITEAPIGROUPID }}'
+      projectId: bandish-editor
 
+    steps:
+      - name: print
+        run: echo "siteurl $SITEURL testa $TESTA "
+      - uses: actions/checkout@v3
+      - run:  npm install && npm run release
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: '${{ secrets.GITHUB_TOKEN }}'
+          SITEURL: '${{ secrets.SITEURL }}'
 
