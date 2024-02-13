@@ -2,15 +2,11 @@
 # https://github.com/firebase/firebase-tools
 
 name: Deploy to Firebase Hosting on PR
-  #'on': pull_request
-  #
-on:
-  push:
-    branches: 
-     - 'firebase_hosting'
+'on': pull_request
+
 jobs:
   deployment:
-    #    if: '${{ github.event.pull_request.head.repo.full_name == github.repository }}'
+    if: '${{ github.event.pull_request.head.repo.full_name == github.repository }}'
     runs-on: ubuntu-latest
     environment: build
     env:
