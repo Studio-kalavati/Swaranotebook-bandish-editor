@@ -3,15 +3,32 @@
 
 name: Deploy to Firebase Hosting on PR
 'on': pull_request
+
 jobs:
-  build_and_preview:
+  deployment:
     if: '${{ github.event.pull_request.head.repo.full_name == github.repository }}'
     runs-on: ubuntu-latest
+    environment: build
+    env:
+      siteUrl: '${{ secrets.SITEURL }}'
+      apiKey: '${{ secrets.APIKEY }}'
+      authDomain: '${{ secrets.AUTHDOMAIN }}'
+      storageBucket:  '${{ secrets.STORAGEBUCKET }}'
+      messagingSenderId: '${{ secrets.MESSAGINGSENDERID }}'
+      appId: '${{ secrets.APPID }}'
+      posthogKey: '${{ secrets.POSTHOGKEY }}'
+      mailerliteApiToken: '${{ secrets.MAILERLITEAPITOKEN }}'
+      mailerliteGroupId: '${{ secrets.MAILERLITEAPIGROUPID }}'
+      projectId: bandish-editor
+
     steps:
+      - name: print
+        run: echo "siteurl $siteUrl projectId $projectId"
       - uses: actions/checkout@v3
-      - run: npm install && npm run release
+      - run:  npm install && npm run release
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: '${{ secrets.GITHUB_TOKEN }}'
           firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_BANDISH_EDITOR }}'
+          channelId: 'preview'
           projectId: bandish-editor

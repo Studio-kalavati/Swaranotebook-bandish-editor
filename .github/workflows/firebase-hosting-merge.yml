@@ -9,6 +9,19 @@ name: Deploy to Firebase Hosting on merge
 jobs:
   build_and_deploy:
     runs-on: ubuntu-latest
+    environment: build
+    env:
+      siteUrl: '${{ secrets.SITEURL }}'
+      apiKey: '${{ secrets.APIKEY }}'
+      authDomain: '${{ secrets.AUTHDOMAIN }}'
+      storageBucket:  '${{ secrets.STORAGEBUCKET }}'
+      messagingSenderId: '${{ secrets.MESSAGINGSENDERID }}'
+      appId: '${{ secrets.APPID }}'
+      posthogKey: '${{ secrets.POSTHOGKEY }}'
+      mailerliteApiToken: '${{ secrets.MAILERLITEAPITOKEN }}'
+      mailerliteGroupId: '${{ secrets.MAILERLITEAPIGROUPID }}'
+      projectId: bandish-editor
+
     steps:
       - uses: actions/checkout@v3
       - run: npm install && npm run release
