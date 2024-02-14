@@ -15,7 +15,19 @@
           {
           "source": "/sounds/metronome/:metro*",
           "destination": "https://storage.cloud.google.com/swaranotebook_media/sounds/metronome/:metro",
-          "type": 301
-      }]
+          "type": 301},
+           {
+          "source": "/sounds/santoor/(*.mp3)",
+          "destination": "https://storage.cloud.google.com/swaranotebook_media/sounds/santoor/:1",
+          "type": 301},
+     	{
+          "source": "/sounds/tanpura/(*.mp3)",
+          "destination": "https://storage.cloud.google.com/swaranotebook_media/sounds/tanpura/:1",
+          "type": 301},
+	{
+          "source": "/sounds/:tabla**",
+          "destination": "https://storage.cloud.google.com/swaranotebook_media/sounds/:tabla",
+          "type": 301}
+      ]
    }
 }
