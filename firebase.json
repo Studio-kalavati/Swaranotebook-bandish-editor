@@ -8,7 +8,7 @@
     ],
     "rewrites": [
       {
-        "source": "**",
+        "source": "/view/*",
         "destination": "/index.html"
     }],
       "redirects": [
