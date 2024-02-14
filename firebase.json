@@ -17,16 +17,16 @@
           "destination": "https://storage.cloud.google.com/swaranotebook_media/sounds/metronome/:metro",
           "type": 200},
            {
-          "regex": "/sounds/santoor/(\w+.mp3)",
-          "destination": "https://storage.cloud.google.com/swaranotebook_media/sounds/santoor/:1",
+          "source": "/sounds/santoor/:f",
+          "destination": "https://storage.cloud.google.com/swaranotebook_media/sounds/santoor/:f",
           "type": 200},
      	{
-          "regex": "/sounds/tanpura/(\w+)",
-          "destination": "https://storage.cloud.google.com/swaranotebook_media/sounds/tanpura/:1",
+          "source": "/sounds/tanpura/:f",
+          "destination": "https://storage.cloud.google.com/swaranotebook_media/sounds/tanpura/:f",
           "type": 301},
 	{
-          "regex": "/sounds/(.+)",
-          "destination": "https://storage.cloud.google.com/swaranotebook_media/sounds/:1",
+          "regex": "/sounds/:f**",
+          "destination": "https://storage.cloud.google.com/swaranotebook_media/sounds/:f",
           "type": 301}
       ]
    }
