@@ -25,7 +25,7 @@
           "destination": "https://storage.cloud.google.com/swaranotebook_media/sounds/tanpura/:f",
           "type": 301},
 	{
-          "regex": "/sounds/:f**",
+          "regex": "/sounds/:f*",
           "destination": "https://storage.cloud.google.com/swaranotebook_media/sounds/:f",
           "type": 301}
       ]
