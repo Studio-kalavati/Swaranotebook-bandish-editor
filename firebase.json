@@ -15,11 +15,11 @@
           {
           "source": "/sounds/metronome/:metro*",
           "destination": "https://storage.cloud.google.com/swaranotebook_media/sounds/metronome/:metro",
-          "type": 200},
+          "type": 301},
            {
           "source": "/sounds/santoor/:f",
           "destination": "https://storage.cloud.google.com/swaranotebook_media/sounds/santoor/:f",
-          "type": 200},
+          "type": 301},
      	{
           "source": "/sounds/tanpura/:f",
           "destination": "https://storage.cloud.google.com/swaranotebook_media/sounds/tanpura/:f",
