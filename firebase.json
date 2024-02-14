@@ -6,6 +6,14 @@
       "**/.*",
       "**/node_modules/**"
     ],
+  "headers": [ {
+    "source": "**/*.@(eot|otf|ttf|ttc|woff|font.css|mp3)",
+    "headers": [ {
+      "key": "Access-Control-Allow-Origin",
+      "value": "*"
+    } ]
+  } ],
+
     "rewrites": [
       {
         "source": "/view/*",
