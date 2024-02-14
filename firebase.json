@@ -13,8 +13,8 @@
     }],
       "redirects": [
           {
-          "source": "/sounds/metronome/*",
-          "destination": "https://storage.cloud.google.com/swaranotebook_media/sounds/metronome/",
+          "source": "/sounds/metronome/:mp3*",
+          "destination": "https://storage.cloud.google.com/swaranotebook_media/sounds/metronome/:mp3",
           "type": 301
       }]
    }
