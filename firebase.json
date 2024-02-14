@@ -15,13 +15,13 @@
           {
           "source": "/sounds/metronome/:metro*",
           "destination": "https://storage.cloud.google.com/swaranotebook_media/sounds/metronome/:metro",
-          "type": 301},
+          "type": 200},
            {
-          "source": "/sounds/santoor/(*.mp3)",
+          "source": "/sounds/santoor/(\w+.mp3)",
           "destination": "https://storage.cloud.google.com/swaranotebook_media/sounds/santoor/:1",
-          "type": 301},
+          "type": 200},
      	{
-          "source": "/sounds/tanpura/(*.mp3)",
+          "source": "/sounds/tanpura/(\w+)",
           "destination": "https://storage.cloud.google.com/swaranotebook_media/sounds/tanpura/:1",
           "type": 301},
 	{
