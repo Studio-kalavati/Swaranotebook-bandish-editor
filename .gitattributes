@@ -37,8 +37,6 @@ resources/public/sounds/santoor/cs5.mp3 filter=lfs diff=lfs merge=lfs -text
 resources/public/sounds/santoor/f5.mp3 filter=lfs diff=lfs merge=lfs -text
 resources/public/sounds/santoor/g6.mp3 filter=lfs diff=lfs merge=lfs -text
 resources/public/sounds/tanpura/c4.mp3 filter=lfs diff=lfs merge=lfs -text
-resources/public/sounds/metronome/metro1.mp3 filter=lfs diff=lfs merge=lfs -text
-resources/public/sounds/metronome/metro2.mp3 filter=lfs diff=lfs merge=lfs -text
 resources/public/sounds/tabla/dadra/dadra195bpm.mp3 filter=lfs diff=lfs merge=lfs -text
 resources/public/sounds/tabla/dadra/dadra285bpm.mp3 filter=lfs diff=lfs merge=lfs -text
 resources/public/sounds/tabla/dadra/dadra75bpm.mp3 filter=lfs diff=lfs merge=lfs -text
