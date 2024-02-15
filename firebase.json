@@ -33,8 +33,32 @@
           "destination": "https://storage.googleapis.com/swaranotebook_media/sounds/tanpura/:f",
           "type": 301},
 	{
-          "regex": "/sounds/:f*",
-          "destination": "https://storage.googleapis.com/swaranotebook_media/sounds/:f",
+          "regex": "/sounds/tabla/adachautaal/:f*",
+          "destination": "https://storage.googleapis.com/swaranotebook_media/sounds/tabla/adachautaal/:f",
+          "type": 301},
+{
+          "regex": "/sounds/tabla/dadra/:f*",
+          "destination": "https://storage.googleapis.com/swaranotebook_media/sounds/tabla/dadra/:f",
+          "type": 301},
+{
+          "regex": "/sounds/tabla/ektaal/:f*",
+          "destination": "https://storage.googleapis.com/swaranotebook_media/sounds/tabla/ektaal/:f",
+          "type": 301},
+{
+          "regex": "/sounds/tabla/jhaptaal/:f*",
+          "destination": "https://storage.googleapis.com/swaranotebook_media/sounds/tabla/jhaptaal/:f",
+          "type": 301},
+{
+          "regex": "/sounds/tabla/kehrwa/:f*",
+          "destination": "https://storage.googleapis.com/swaranotebook_media/sounds/tabla/kehrwa/:f",
+          "type": 301},
+{
+          "regex": "/sounds/tabla/rupak/:f*",
+          "destination": "https://storage.googleapis.com/swaranotebook_media/sounds/tabla/rupak/:f",
+          "type": 301},
+{
+          "regex": "/sounds/tabla/teentaal/:f*",
+          "destination": "https://storage.googleapis.com/swaranotebook_media/sounds/tabla/teentaal/:f",
           "type": 301}
       ]
    }
