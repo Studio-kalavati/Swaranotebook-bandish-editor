@@ -22,19 +22,19 @@
       "redirects": [
           {
           "source": "/sounds/metronome/:metro*",
-          "destination": "https://storage.cloud.google.com/swaranotebook_media/sounds/metronome/:metro",
+          "destination": "https://storage.googleapis.com/swaranotebook_media/sounds/metronome/:metro",
           "type": 301},
            {
           "source": "/sounds/santoor/:f",
-          "destination": "https://storage.cloud.google.com/swaranotebook_media/sounds/santoor/:f",
+          "destination": "https://storage.googleapis.com/swaranotebook_media/sounds/santoor/:f",
           "type": 301},
      	{
           "source": "/sounds/tanpura/:f",
-          "destination": "https://storage.cloud.google.com/swaranotebook_media/sounds/tanpura/:f",
+          "destination": "https://storage.googleapis.com/swaranotebook_media/sounds/tanpura/:f",
           "type": 301},
 	{
           "regex": "/sounds/:f*",
-          "destination": "https://storage.cloud.google.com/swaranotebook_media/sounds/:f",
+          "destination": "https://storage.googleapis.com/swaranotebook_media/sounds/:f",
           "type": 301}
       ]
    }
