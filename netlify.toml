@@ -9,6 +9,10 @@
   status = 200
   force = true 
 
+[[redirects]]
+  from = "/sounds/*"
+  to = "https://storage.googleapis.com/swaranotebook_media/sounds/:splat"
+ 
 [context.production]
   command = "npm install && npm run release"
   publish = "resources/public"
