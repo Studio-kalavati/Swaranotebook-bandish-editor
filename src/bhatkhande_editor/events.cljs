@@ -573,7 +573,8 @@
 (defn fetch-url
   [imap ctx ikey iurl]
   (->
-   (js/fetch iurl)
+   (js/fetch iurl
+             #js {"mode" "cors"})
    (.then (fn [r] (.arrayBuffer r)))
    (.then (fn [r] (.decodeAudioData ctx r)))
    (.then
