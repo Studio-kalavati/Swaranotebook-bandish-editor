@@ -14,12 +14,12 @@
     } ]
   } ],
 
-    "rewrites": [
-      {
-        "source": "/view/*",
-        "destination": "/index.html"
-    }],
       "redirects": [
+          {
+          "source": "/view/**",
+          "destination": "/index.html",
+          "type": 301
+      },
           {
           "source": "/sounds/metronome/:metro*",
           "destination": "https://storage.googleapis.com/swaranotebook_media/sounds/metronome/:metro",
