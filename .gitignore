@@ -25,6 +25,6 @@
 .lfsconfig
 
 # local config
-cors-config
+cors-config.json
 fbconf.sh
 *_token.txt
