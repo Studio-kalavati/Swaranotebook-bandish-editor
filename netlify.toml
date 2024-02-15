@@ -1,6 +1,6 @@
 [[redirects]]
   from = "/__/auth/*"
-  to = "https://bandish-editor.firebaseapp.com/__/auth/"
+  to = "https://bandish-editor.firebaseapp.com/__/auth/:splat"
   status = 200
 
 [[redirects]]
