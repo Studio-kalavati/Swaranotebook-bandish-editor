@@ -491,7 +491,6 @@
    (try 
      (if (and user (:email user))
        (let [storage (.-sessionStorage js/window)
-             _ (println " set user " (:email user) " storage " storage)
              newsletter-signup?
              (if (and storage
                       (= "true"
@@ -516,7 +515,7 @@
        ;;the first event is user nil and the second one has the user mapv
        ;;therefor if it is set nil twice, then show login popup
        (do 
-         (println " user not set ")
+         #_(println " user not set ")
        {:db (update-in db [:user-nil-times] (fnil inc 1))}))
      (catch js/Error e
        (println " got error in set-user " e)
