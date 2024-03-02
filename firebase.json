@@ -1,65 +1,73 @@
 {
-  "hosting": {
-    "public": "resources/public",
-    "ignore": [
-      "firebase.json",
-      "**/.*",
-      "**/node_modules/**"
-    ],
-  "headers": [ {
-    "source": "**/*.@(eot|otf|ttf|ttc|woff|font.css|mp3)",
-    "headers": [ {
-      "key": "Access-Control-Allow-Origin",
-      "value": "*"
-    } ]
-  } ],
+    "hosting": {
+        "public": "resources/public",
+        "ignore": [
+            "firebase.json",
+            "**/.*",
+            "**/node_modules/**"
+        ],
+        "headers": [ {
+            "source": "**/*.@(eot|otf|ttf|ttc|woff|font.css|mp3)",
+            "headers": [ {
+                "key": "Access-Control-Allow-Origin",
+                "value": "*"
+            } ]
+        } ],
 
-      "redirects": [
-          {
-          "source": "/view/**",
-          "destination": "/index.html",
-          "type": 301
-      },
-          {
-          "source": "/sounds/metronome/:metro*",
-          "destination": "https://storage.googleapis.com/swaranotebook_media/sounds/metronome/:metro",
-          "type": 301},
-           {
-          "source": "/sounds/santoor/:f",
-          "destination": "https://storage.googleapis.com/swaranotebook_media/sounds/santoor/:f",
-          "type": 301},
-     	{
-          "source": "/sounds/tanpura/:f",
-          "destination": "https://storage.googleapis.com/swaranotebook_media/sounds/tanpura/:f",
-          "type": 301},
-	{
-          "source": "/sounds/tabla/adachautaal/:f*",
-          "destination": "https://storage.googleapis.com/swaranotebook_media/sounds/tabla/adachautaal/:f",
-          "type": 301},
-{
-          "source": "/sounds/tabla/dadra/:f*",
-          "destination": "https://storage.googleapis.com/swaranotebook_media/sounds/tabla/dadra/:f",
-          "type": 301},
-{
-          "source": "/sounds/tabla/ektaal/:f*",
-          "destination": "https://storage.googleapis.com/swaranotebook_media/sounds/tabla/ektaal/:f",
-          "type": 301},
-{
-          "source": "/sounds/tabla/jhaptaal/:f*",
-          "destination": "https://storage.googleapis.com/swaranotebook_media/sounds/tabla/jhaptaal/:f",
-          "type": 301},
-{
-          "source": "/sounds/tabla/kehrwa/:f*",
-          "destination": "https://storage.googleapis.com/swaranotebook_media/sounds/tabla/kehrwa/:f",
-          "type": 301},
-{
-          "source": "/sounds/tabla/rupak/:f*",
-          "destination": "https://storage.googleapis.com/swaranotebook_media/sounds/tabla/rupak/:f",
-          "type": 301},
-{
-          "source": "/sounds/tabla/teentaal/:f*",
-          "destination": "https://storage.googleapis.com/swaranotebook_media/sounds/tabla/teentaal/:f",
-          "type": 301}
-      ]
-   }
+        "rewrites": [ {
+            "source": "/view/**",
+            "destination": "/index.html"
+        }],
+
+        "redirects": [
+            {
+            "source": "/sounds/metronome/:metro*",
+            "destination": "https://storage.googleapis.com/swaranotebook_media/sounds/metronome/:metro",
+            "type": 301
+        },
+            {
+            "source": "/sounds/santoor/:f",
+            "destination": "https://storage.googleapis.com/swaranotebook_media/sounds/santoor/:f",
+            "type": 301
+        },
+            {
+            "source": "/sounds/tanpura/:f",
+            "destination": "https://storage.googleapis.com/swaranotebook_media/sounds/tanpura/:f",
+            "type": 301
+        },
+            {
+            "source": "/sounds/tabla/adachautaal/:f*",
+            "destination": "https://storage.googleapis.com/swaranotebook_media/sounds/tabla/adachautaal/:f",
+            "type": 301
+        },
+            {
+            "source": "/sounds/tabla/dadra/:f*",
+            "destination": "https://storage.googleapis.com/swaranotebook_media/sounds/tabla/dadra/:f",
+            "type": 301
+        },
+            {
+            "source": "/sounds/tabla/ektaal/:f*",
+            "destination": "https://storage.googleapis.com/swaranotebook_media/sounds/tabla/ektaal/:f",
+            "type": 301
+        },
+            {
+            "source": "/sounds/tabla/jhaptaal/:f*",
+            "destination": "https://storage.googleapis.com/swaranotebook_media/sounds/tabla/jhaptaal/:f",
+            "type": 301
+        },
+            {
+            "source": "/sounds/tabla/kehrwa/:f*",
+            "destination": "https://storage.googleapis.com/swaranotebook_media/sounds/tabla/kehrwa/:f",
+            "type": 301
+        },
+            {
+            "source": "/sounds/tabla/rupak/:f*",
+            "destination": "https://storage.googleapis.com/swaranotebook_media/sounds/tabla/rupak/:f",
+            "type": 301
+        },
+            {
+            "source": "/sounds/tabla/teentaal/:f*",
+            "destination": "https://storage.googleapis.com/swaranotebook_media/sounds/tabla/teentaal/:f",
+            "type": 301}]
+    }
 }
