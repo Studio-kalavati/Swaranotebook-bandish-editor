@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "com.swaranotebook.twa",
+        "sha256_cert_fingerprints": ["F6:4A:99:96:3E:F7:63:8A:A7:2B:F1:88:01:A3:FF:C5:9E:6D:1C:79:C2:EA:BA:EE:F0:61:D9:4E:12:8D:93:24"]
+      }
+    }]
