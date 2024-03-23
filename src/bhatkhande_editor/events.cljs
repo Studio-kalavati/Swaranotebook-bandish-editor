@@ -59,7 +59,8 @@
  (fn [_ _]
    (let [storage (.-sessionStorage js/window)
          comp-str (.getItem storage "comp")
-         ph (.init posthog db/posthogKey #js {"api_host" "https://app.posthog.com" 
+         ph (.init posthog db/posthogKey #js {"api_host" "https://app.posthog.com"
+                                              "persistence" "memory"
                                               "enable_recording_console_log" true})]
      ;;dont read comp-str if not refresh.
      (-> (if comp-str
