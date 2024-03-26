@@ -3,6 +3,7 @@
       "target": {
         "namespace": "android_app",
         "package_name": "com.swaranotebook.twa",
-        "sha256_cert_fingerprints": ["F6:4A:99:96:3E:F7:63:8A:A7:2B:F1:88:01:A3:FF:C5:9E:6D:1C:79:C2:EA:BA:EE:F0:61:D9:4E:12:8D:93:24"]
+          "sha256_cert_fingerprints": ["F6:4A:99:96:3E:F7:63:8A:A7:2B:F1:88:01:A3:FF:C5:9E:6D:1C:79:C2:EA:BA:EE:F0:61:D9:4E:12:8D:93:24",
+                                       "A8:B3:D9:11:69:EA:97:D7:8A:F3:95:3E:54:43:25:67:5E:CB:F5:7D:4F:41:A4:99:EF:EA:CF:97:BF:1E:54:A5"]
       }
     }]
