@@ -656,8 +656,10 @@
  [log-event]
  (fn [{:keys [db]} [_ {:keys [composition] :as inp}]]
    (let [comp (db/add-indexes inp)
+         lyrics? (> (->> comp :noteseq (map :lyrics) (filter identity) count) 0)
          ndb (-> db
                  (update-in [:composition] (constantly comp))
+                 (update-in [:props :show-lyrics] (constantly lyrics?))
                  (update-in [:props :cursor-pos]
                             (constantly
                              (let [in (-> comp :index last)]
