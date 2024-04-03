@@ -3,6 +3,7 @@
 /resources/public/workbox-*.js
 /resources/public/workbox-*.js.map
 /resources/public/sw.js
+/resources/public/sitemap.xml
 /resources/public/sw.js.map
 /target/
 /*-init.clj
@@ -28,3 +29,4 @@
 cors-config.json
 fbconf.sh
 *_token.txt
+.cpcache/

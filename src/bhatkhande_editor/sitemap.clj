@@ -43,7 +43,7 @@
                     (h/html))))))
 
 (defn spit-sitemap
-  []
+  [opts]
   (let [svc (.getService (.build (.setProjectId (StorageOptions/newBuilder) projectId)))
         ilist (.list svc storageBucket
                (into-array Storage$BlobListOption []))]
