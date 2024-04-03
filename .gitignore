@@ -5,6 +5,7 @@
 /resources/public/sw.js
 /resources/public/sitemap.xml
 /resources/public/sw.js.map
+/resources/public/sounds/
 /target/
 /*-init.clj
 /*.log

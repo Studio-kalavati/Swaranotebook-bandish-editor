@@ -702,117 +702,119 @@
  ::play
  [log-event]
  (fn [{:keys [db]} [_ _]]
-   (let [bpm (-> db :props :bpm)
-         note-interval (/ 60 bpm)
-         {:keys [audio-context clock]} db
-         now (.-currentTime audio-context)
-         taal (-> db :composition :taal)
-         num-beats (:num-beats (taal-def taal))
-         metronome-on-at (set (->> taal-def taal
-                                        :bhaags
-                                        (reductions +) ;;[4 8 12 16]
-                                        (map inc) ;;get start of next bhaag
-                                        butlast ;;drop the last one and add the first note
-                                        (into [1])))
-         a1
-         (->> db :composition :noteseq
-              (map vector (range 0 (->> db :composition :noteseq count inc) note-interval)
-                   (range))
-              (map (fn[[at note-index {:keys [notes] :as ivec}]]
-                     ;;make 0 based to 1 based index
-                     (let [note-index (mod (inc note-index) (-> taal-def taal :num-beats))
-                           notseq
-                           (if (= 1 (count notes))
-                             [[(-> notes first :shruti) (+ now at) note-interval]]
-                             ;;if many notes in one beat, schedule them to play at equal intervals
-                             (let [sub-note-intervals (/ note-interval (-> notes count))]
-                               (mapv (fn[a b] [a (+ now b) sub-note-intervals])
-                                     (map :shruti notes)
-                                     (range at (+ at note-interval) sub-note-intervals))))]
-                       notseq)))
-              (reduce into []))
-         num-notes (count a1)
-         metro-tick-seq
-         (->> db :composition :noteseq
-              (map vector (range 0 (->> db :composition :noteseq count inc) note-interval)
-                   (range))
-              (map (fn[[at note-index {:keys [notes] :as ivec}]]
-                         (let [note-index (mod (inc note-index) (-> taal-def taal :num-beats))]
-                           (if (and (-> db :props :beat-mode (= :metronome))
-                                    (metronome-on-at note-index))
-                             [[:tick2 (+ now at) note-interval]]
-                             []))))
-                  (reduce into []))
-         taal-len-in-secs (* num-beats note-interval)
-         num-cycles (inc (int (/ (->> db :composition :noteseq count dec) num-beats)))
-         tabla-beat-seq
-         (mapv #(vector
-                 (-> (str (name taal) bpm "bpm") keyword)
-                 (+ now (* taal-len-in-secs %)) taal-len-in-secs)
-               (range num-cycles))
-         ;;find note indexes where duration should be long if followed by avagraha
-         ;;returns a list of 2-tuples, where first is index and second is duration of note
-         avagraha-note-indexes
-         (->> a1
-                 (map vector (range))
-                 reverse
-                 (reduce
-                  (fn [iacc [indx [inote iat idur :as in0]]]
-                    (if (= inote [:madhyam :a])
-                      (-> iacc
-                          (update-in [:indx] (constantly indx))
-                          (update-in [:duracc] + idur))
-                      (if (> (-> iacc :duracc) 0)
-                        (-> iacc
-                            (update-in [:acc]
-                                       (fn[j]
-                                         (into j [(mapv iacc [:indx :duracc])])))
-                            (assoc :indx nil :duracc 0))
-                        iacc)))
-                  {:indx nil :duracc 0 :acc []})
-                 :acc
-                 (map (fn[[a b]] [(dec a) b])))
-         ;;update the noteindex from the previous var to have longer durations
-         a1 (->> (reduce (fn[acc i]
-                           (update-in acc [(first i)] (fn[[a b c]] [a b (+ c (second i))])))
-                         a1 avagraha-note-indexes)
-                 (into (if (-> db :props :beat-mode (= :tabla))
-                         tabla-beat-seq metro-tick-seq))
-                 (sort-by second))
-         a1 (if (-> db :props :tanpura?)
-              (let [last-note-time (- (-> a1 last second) now )
-                    sample-len 3
-                    ;;length of sample is 4 secs
-                    play-n-times (int (/ last-note-time sample-len))
-                    conj-vec (mapv
-                              #(vector :tanpura (+ now (* % sample-len)) sample-len {:gain 0.5})
-                              (range (inc play-n-times)))]
-                (vec (sort-by second
-                              (into a1 conj-vec))))
-              a1)
-         ;;a1 contains notes, tanpura, beat sounds.
-         ;;we need another index that translates a note index to the visual index which
-         ;;contains just the notes
-         a2 (->> a1
-                 (map vector (range))
-                 ;;select only notes encoded as [:mandra :s]
-                 (filter (fn[[indx inote]] (vector? (first inote))))
-                 (map vector (range))
-                 (map (fn[[svara-index [nindex _]]] {nindex svara-index}))
-                 (apply merge))]
-     {:db (assoc db
-                 :clock clock
-                 :play-state :start
-                 :play-at-time a1
-                 :play-note-index 0
-                 :note-interval note-interval
-                 :num-notes num-notes
-                 ;;translates the play-note index to the view-note index
-                 :play-to-view-map a2
-                 :timer
-                 (-> (c/set-timeout! clock #(dispatch [::clock-tick-event]) 0)
-                     (c/repeat! 400)))
-      :dispatch [::clock-tick-event]})))
+   (if-not (:audio-context db)
+     {:dispatch [::init-audio-buffers]}
+     (let [bpm (-> db :props :bpm)
+           note-interval (/ 60 bpm)
+           {:keys [audio-context clock]} db
+           now (.-currentTime audio-context)
+           taal (-> db :composition :taal)
+           num-beats (:num-beats (taal-def taal))
+           metronome-on-at (set (->> taal-def taal
+                                     :bhaags
+                                     (reductions +) ;;[4 8 12 16]
+                                     (map inc) ;;get start of next bhaag
+                                     butlast ;;drop the last one and add the first note
+                                     (into [1])))
+           a1
+           (->> db :composition :noteseq
+                (map vector (range 0 (->> db :composition :noteseq count inc) note-interval)
+                     (range))
+                (map (fn[[at note-index {:keys [notes] :as ivec}]]
+                       ;;make 0 based to 1 based index
+                       (let [note-index (mod (inc note-index) (-> taal-def taal :num-beats))
+                             notseq
+                             (if (= 1 (count notes))
+                               [[(-> notes first :shruti) (+ now at) note-interval]]
+                               ;;if many notes in one beat, schedule them to play at equal intervals
+                               (let [sub-note-intervals (/ note-interval (-> notes count))]
+                                 (mapv (fn[a b] [a (+ now b) sub-note-intervals])
+                                       (map :shruti notes)
+                                       (range at (+ at note-interval) sub-note-intervals))))]
+                         notseq)))
+                (reduce into []))
+           num-notes (count a1)
+           metro-tick-seq
+           (->> db :composition :noteseq
+                (map vector (range 0 (->> db :composition :noteseq count inc) note-interval)
+                     (range))
+                (map (fn[[at note-index {:keys [notes] :as ivec}]]
+                       (let [note-index (mod (inc note-index) (-> taal-def taal :num-beats))]
+                         (if (and (-> db :props :beat-mode (= :metronome))
+                                  (metronome-on-at note-index))
+                           [[:tick2 (+ now at) note-interval]]
+                           []))))
+                (reduce into []))
+           taal-len-in-secs (* num-beats note-interval)
+           num-cycles (inc (int (/ (->> db :composition :noteseq count dec) num-beats)))
+           tabla-beat-seq
+           (mapv #(vector
+                   (-> (str (name taal) bpm "bpm") keyword)
+                   (+ now (* taal-len-in-secs %)) taal-len-in-secs)
+                 (range num-cycles))
+           ;;find note indexes where duration should be long if followed by avagraha
+           ;;returns a list of 2-tuples, where first is index and second is duration of note
+           avagraha-note-indexes
+           (->> a1
+                (map vector (range))
+                reverse
+                (reduce
+                 (fn [iacc [indx [inote iat idur :as in0]]]
+                   (if (= inote [:madhyam :a])
+                     (-> iacc
+                         (update-in [:indx] (constantly indx))
+                         (update-in [:duracc] + idur))
+                     (if (> (-> iacc :duracc) 0)
+                       (-> iacc
+                           (update-in [:acc]
+                                      (fn[j]
+                                        (into j [(mapv iacc [:indx :duracc])])))
+                           (assoc :indx nil :duracc 0))
+                       iacc)))
+                 {:indx nil :duracc 0 :acc []})
+                :acc
+                (map (fn[[a b]] [(dec a) b])))
+           ;;update the noteindex from the previous var to have longer durations
+           a1 (->> (reduce (fn[acc i]
+                             (update-in acc [(first i)] (fn[[a b c]] [a b (+ c (second i))])))
+                           a1 avagraha-note-indexes)
+                   (into (if (-> db :props :beat-mode (= :tabla))
+                           tabla-beat-seq metro-tick-seq))
+                   (sort-by second))
+           a1 (if (-> db :props :tanpura?)
+                (let [last-note-time (- (-> a1 last second) now )
+                      sample-len 3
+                      ;;length of sample is 4 secs
+                      play-n-times (int (/ last-note-time sample-len))
+                      conj-vec (mapv
+                                #(vector :tanpura (+ now (* % sample-len)) sample-len {:gain 0.5})
+                                (range (inc play-n-times)))]
+                  (vec (sort-by second
+                                (into a1 conj-vec))))
+                a1)
+           ;;a1 contains notes, tanpura, beat sounds.
+           ;;we need another index that translates a note index to the visual index which
+           ;;contains just the notes
+           a2 (->> a1
+                   (map vector (range))
+                   ;;select only notes encoded as [:mandra :s]
+                   (filter (fn[[indx inote]] (vector? (first inote))))
+                   (map vector (range))
+                   (map (fn[[svara-index [nindex _]]] {nindex svara-index}))
+                   (apply merge))]
+       {:db (assoc db
+                   :clock clock
+                   :play-state :start
+                   :play-at-time a1
+                   :play-note-index 0
+                   :note-interval note-interval
+                   :num-notes num-notes
+                   ;;translates the play-note index to the view-note index
+                   :play-to-view-map a2
+                   :timer
+                   (-> (c/set-timeout! clock #(dispatch [::clock-tick-event]) 0)
+                       (c/repeat! 400)))
+        :dispatch [::clock-tick-event]}))))
 
 (reg-event-fx
  ::pause
