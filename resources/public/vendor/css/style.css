@@ -78,12 +78,9 @@ h6,.h6
 }
 .red-carpet
 {
-    background-image: url(../images/red-carpet.jpg);
+    background-image: url(../images/carpet.jpg);
 }
-.golden-carpet
-{
-    background-image: url(../images/golden-carpet.jpg);
-}
+
 .gray-back
 {
     background-color: #ebebeb;
@@ -1692,7 +1689,6 @@ input[type="search"]
 }
 
 .bhaag-item {
-    background-color: antiquewhite;
     color: #fff;
     border: outset  lightgray 1px;
     border-radius: 5px;

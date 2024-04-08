@@ -1,40 +1,158 @@
 <!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset='utf-8'>
-    <meta name="viewport" content="width=device-width,initial-scale=1">
-    <link rel="stylesheet" href="/vendor/css/bootstrap.min.css">
-    <link rel="stylesheet" href="/vendor/css/material-design-iconic-font.min.css">
-    <link rel="stylesheet" href="/vendor/css/re-com.css">
-    <link rel="stylesheet" href="/vendor/css/style.css">
-    <link rel="manifest" href="manifest.webmanifest">
-    <link rel="apple-touch-icon" href="/images/icon.png">
-    <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700,400italic" rel="stylesheet" type="text/css">
-    <link href="https://fonts.googleapis.com/css?family=Roboto+Condensed:400,300" rel="stylesheet" type="text/css">
-    <meta name="theme-color" content="#4285f4"/>
-    <title>Swara Notebook Bandish Editor</title>
-    <meta name="description" content="Write Sargam notations for Ragas, Bandish or songs easily with Swara Notebook ">
-  </head>
-  <body>
-    <noscript>
-      Bandish editor is a JavaScript app. Please enable JavaScript to continue.
-    </noscript>
-    <div id="app"></div>
-    <script src="/js/compiled/app.js"></script>
-    <script>
-  // Don't register the service worker
-  // until the page has fully loaded
-  window.addEventListener('load', () => {
-    // Is service worker available?
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').then(() => {
-        console.log('Service worker registered!');
-      }).catch((error) => {
-        console.warn('Error registering service worker:');
-        console.warn(error);
-      });
-    }
-  });
-</script>
-  </body>
+<html lang="zxx">
+    <head>
+        <meta charset="UTF-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Swara Notebook: Write, share and learn with Hindustani music notations </title>
+        <!-- Bootstrap -->
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.5/css/bootstrap.min.css">
+        <!-- Icons -->
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+        <!-- Animate -->
+        <link rel="stylesheet" href="/vendor/css/animate.min.css">
+        <!-- Swiper -->
+        <link rel="stylesheet" href="/vendor/css/swiper.min.css">
+        <!-- Page Style -->
+        <link rel="stylesheet" href="/vendor/css/style.css">
+        <!-- Montserrat Font -->
+        <link href="https://fonts.googleapis.com/css?family=Montserrat:400,500,600" rel="stylesheet">
+        <!-- Merriweather Font -->
+        <link href="https://fonts.googleapis.com/css?family=Merriweather:400,900" rel="stylesheet">
+    </head>
+    <body>
+        
+        <!-- Header -->
+        
+        <div class="header triangle red-carpet">
+            <div class="container">
+        
+                <!-- Navbar -->
+                <nav class="navbar navbar-inverse">
+                    <div class="navbar-header">
+                        <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1" aria-expanded="false">
+                            <span class="sr-only">Toggle navigation</span>
+                            <span id="nav-icon1">
+                              <span></span>
+                              <span></span>
+                              <span></span>
+                            </span>
+                        </button>
+                        <a class="navbar-brand" href="#">Swara Notebook</a>
+                    </div>
+
+                    <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">      
+                        <ul class="nav navbar-nav navbar-right">
+                            <li><a href="/howto.html">User Guide</a></li>
+                        </ul>
+                    </div>
+                </nav>
+                
+                <!-- Interface -->
+                <div class="interface">
+                    <div class="row">
+                        <div class="col-md-6 col-sm-5">
+                            <h1>Swara notebook</h1>
+                            <h3>Write and share Sargam notations for Hindustani music</h3>
+                            <a href="./app/index.html" class="btn btn-danger" style="font-size:x-large; background-color:transparent">Get started for free</a>
+                        </div>
+                        <div class="col-md-6 col-sm-7 hidden-xs">
+                            <img src="vendor/images/header.png" class="img-responsive" alt>
+                        </div>
+                    </div>
+                </div>
+        
+            </div>
+        </div>
+
+        <div class="introduction">
+
+            <div class="container">
+            <div class="row">
+                <div class="col-sm-6 wow fadeIn help-text" data-wow-delay=".5s" >
+                    <br/>
+                    <h3>Interactive-listen to the Santoor notes as you type</h3>
+                    <p>The notes of the Santoor play as you type. Swara Notebook's online notation editor supports Bhatkhande format too.</p>
+                </div>
+                <div class="col-sm-6 wow fadeInUp help-video">
+                    <img src="/vendor/howto_videos/simple.gif" title="basic typing of swaras" />
+                </div>
+            </div>
+            <hr/>
+            <div class="row">
+                <div class="col-sm-6 wow fadeIn help-text" data-wow-delay=".5s" >
+                    <br/>
+                    <h3>Write in your favourite language</h3>
+                    <p>Type Sargam notations in Bangla, English and Devanagari </p>
+                </div>
+                <div class="col-sm-6 wow fadeInUp help-video">
+                    <img src="/vendor/howto_videos/lang_help.gif" title="supports three languages" />
+                </div>
+            </div>
+
+            <hr/>
+            <div class="row">
+                <div class="col-sm-6 wow fadeIn help-text" data-wow-delay=".5s" >
+                    <br/>
+                    <h3>Trusted by users</h3>
+                    <p>Our users have writted 175 Bandishes / 33605 notes in 4 Taals and 3 languages.  </p>
+                </div>
+                <div class="col-sm-6 wow fadeInUp help-video">
+                    <img src="/vendor/howto_videos/userfeedback.png" title="User feedback" />
+                </div>
+            </div>
+
+
+            <hr/>
+            </div>
+        </div>
+      
+        <!-- Footer -->
+        <div class="footer red-carpet">
+            <div class="container">
+                <div class="row">
+                    <div class="col-md-3 col-xs-12">
+                        <div class="logo">Swara Notebook</div>
+                    </div>
+                    <div class="col-md-2 col-sm-3 col-xs-6">
+                        <!--  div class="title">Help</div-->
+                        <ul>
+                            <li><a href="#">Home</a></li>
+                        </ul>
+                        <ul>
+                            <li><a href="/howto.html">User Guide</a></li>
+                        </ul>
+                    </div>
+                    <div class="col-md-1 col-sm-2 col-xs-6">
+                        <div class="title">Contact</div>
+                        <ul class="sm">
+                            <li><a href="mailto://swaranotebook@gmail.com"><i class="fa fa-envelope-open fa-2x"></i></a></li>
+                            <li><a href="https://github.com/Studio-kalavati/Swaranotebook-bandish-editor"><i class="fa fa-github fa-2x"></i></a></li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="copyright text-center">
+                    <img src="vendor/images/line.png" class="line" alt>
+                    &copy; Copyright
+                    <script type = "text/javascript">
+                     var dt = new Date();
+                     document.write(1900+ dt.getYear());
+                    </script>
+                     Studio Kalavati. All rights reserved.
+                </div>
+            </div>
+        </div>
+        <!-- Scripts -->
+        <!-- jQuery -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+        <!-- Bootstrap -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js"></script>
+        <!-- Wow -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/wow/1.1.2/wow.min.js"></script>
+        <!-- Swiper -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/Swiper/4.4.6/js/swiper.min.js"></script>
+        <!-- Script -->
+        <script src="vendor/js/script.js"></script>
+    </body>
 </html>

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset='utf-8'>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <link rel="stylesheet" href="/vendor/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/vendor/css/material-design-iconic-font.min.css">
+    <link rel="stylesheet" href="/vendor/css/re-com.css">
+    <link rel="stylesheet" href="/vendor/css/style.css">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="apple-touch-icon" href="/images/icon.png">
+    <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700,400italic" rel="stylesheet" type="text/css">
+    <link href="https://fonts.googleapis.com/css?family=Roboto+Condensed:400,300" rel="stylesheet" type="text/css">
+    <meta name="theme-color" content="#4285f4"/>
+    <title>Swara Notebook Bandish Editor</title>
+    <meta name="description" content="Write Sargam notations for Ragas, Bandish or songs easily with Swara Notebook ">
+  </head>
+  <body>
+    <noscript>
+      Bandish editor is a JavaScript app. Please enable JavaScript to continue.
+    </noscript>
+    <div id="app"></div>
+    <script src="/js/compiled/app.js"></script>
+    <script>
+  // Don't register the service worker
+  // until the page has fully loaded
+  window.addEventListener('load', () => {
+    // Is service worker available?
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').then(() => {
+        console.log('Service worker registered!');
+      }).catch((error) => {
+        console.warn('Error registering service worker:');
+        console.warn(error);
+      });
+    }
+  });
+</script>
+  </body>
+</html>

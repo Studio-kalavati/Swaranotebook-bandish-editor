@@ -22,12 +22,13 @@
 
 (def routes
   (atom
-   ["/" {"" :home
+   ["/app/" {"" :home
          "list" :list-comps
          "view/" {[:path "/" :id]:load}}]))
 
 (defn match-route-with-query-params
   [route path & {:as options}]
+  (println " match route " [route path])
   (let [query-params (->> (:query (curl/url path))
                           (map (fn [[k v]] [(keyword k) v]))
                           (into {}))]
@@ -36,15 +37,19 @@
 
 (defn parse
   [url]
+  (println " parse " url)
   (match-route-with-query-params @routes url))
 
 (defn url-for
   [& args]
+  (println " url-for " args )
   (apply bidi/path-for (into [@routes] args)))
 
 (defn dispatch-route
   [route]
-  (let [panel (keyword (str (name (:handler route)) "-panel"))]
+  (let [hand (:handler route)
+        _ (println " hand " hand " route " route)
+        panel (keyword (str (name hand) "-panel"))]
     (when-let [id  (-> route :route-params :id)]
       (dispatch [::events/set-mode :edit])
       (dispatch [::events/get-bandish-json
