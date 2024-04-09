@@ -16,7 +16,11 @@
 
         "rewrites": [ {
             "source": "/view/**",
-            "destination": "/index.html"
+            "destination": "/app/index.html"
+        },
+                      {
+            "source": "/app/view/**",
+            "destination": "/app/index.html"
         }],
 
         "redirects": [
