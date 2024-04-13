@@ -22,9 +22,11 @@
 
 (def routes
   (atom
-   ["/" {"" :home
-         "list" :list-comps
-         "view/" {[:path "/" :id]:load}}]))
+   ["/app/"
+    {"" :home
+     "index.html" :home
+     "list" :list-comps
+     "view/" {[:path "/" :id]:load}}]))
 
 (defn match-route-with-query-params
   [route path & {:as options}]
@@ -44,7 +46,8 @@
 
 (defn dispatch-route
   [route]
-  (let [panel (keyword (str (name (:handler route)) "-panel"))]
+  (let [hand (:handler route)
+        panel (keyword (str (name hand) "-panel"))]
     (when-let [id  (-> route :route-params :id)]
       (dispatch [::events/set-mode :edit])
       (dispatch [::events/get-bandish-json
