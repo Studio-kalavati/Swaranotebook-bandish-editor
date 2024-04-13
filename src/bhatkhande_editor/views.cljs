@@ -1075,7 +1075,7 @@
                            (dispatch [::events/refresh-comp db/init-comp])
                            (.pushState (.-history js/window)
                                        #js {} ""
-                                       (.-origin (.-location js/window))))]
+                                       (str (.-origin (.-location js/window)) "/app")))]
                 [h-box :justify :between :align :center :children
                  [[box :size "1"
                    :style icon-style
