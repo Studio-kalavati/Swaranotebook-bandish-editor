@@ -177,6 +177,7 @@
         title-val (reagent/atom "")
         notes-per-beat (reagent/atom 1)
         svaras-on @(subscribe [::subs/custom-svaras])
+        font-size (reagent/atom @(subscribe [::subs/font-size]))
         ;;if unset, all shuddha svaras
         default-custom-svaras
         (if svaras-on
@@ -382,6 +383,20 @@
                                  [title :label "Newline on each Avartan?"
                                   :level :level3]]]
                                [gap :size "50px"]
+                               [v-box
+                                :children
+                                [[slider :model font-size
+                                  :min 24
+                                  :max 40
+                                  :step 4
+                                  :style {:align-self :center}
+                                  :width "max(25vw,100px)"
+                                  :on-change #(do (reset! font-size %)
+                                                  (dispatch [::events/set-font-size %]))]
+                                 [title :label "Zoom"
+                                  :level :level3]]]
+
+                                 [gap :size "50px"]
                                [box
                                 :align :center
                                 :child
@@ -728,6 +743,7 @@
                                                        :bhaag-index bhaag-index
                                                        :note-index note-index
                                                        :nsi nsi}
+                                          font-size @(subscribe [::subs/font-size])
                                           cursor-rect
                                           (if play-mode?
                                             ;;show rect that animates on playing
@@ -748,7 +764,7 @@
                                           ith-note
                                           (if-let [ival (image-map shruti)]
                                             [:image
-                                             {:height 32 :width 32
+                                             {:height font-size :width font-size
                                               :href ival
                                               :on-click
                                               (fn[i]

@@ -214,7 +214,7 @@
    :debug {:disp-swara false}
    :cursor-padding 5
    :sam-khaali 35
-   :font-size 20 :spacing 10 :text-align :left})
+   :font-size 32 :spacing 10 :text-align :left})
 
 (def default-props {:raga :bilawal
                     :note-pos {}

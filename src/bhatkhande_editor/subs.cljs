@@ -10,6 +10,11 @@
    (-> db :props :lang)))
 
 (reg-sub
+ ::font-size
+ (fn [db]
+   (-> db :dispinfo :font-size)))
+
+(reg-sub
  ::lang-data
  :<- [::lang]
  (fn [lang _]

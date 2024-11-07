@@ -939,6 +939,11 @@
  (fn [{:keys [db]} [_ elem]]
    {:db (assoc db :music-notes-element elem)}))
 
+(reg-event-fx
+ ::set-font-size
+ (fn [{:keys [db]} [_ font-size]]
+   {:db (update-in db [:dispinfo :font-size] (constantly font-size))}))
+
 #_(reg-event-fx
  ::post-log
  (fn [{:keys [db]} [_ {:keys [payload ]}]]
