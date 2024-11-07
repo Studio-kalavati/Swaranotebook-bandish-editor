@@ -34,6 +34,7 @@
    [cognitect.transit :as t]
    [bhatkhande-editor.events :as events]
    [bhatkhande-editor.routes :as routes]
+   [cljs.math :as math]
    [bhatkhande-editor.db :as db :refer [note-seq mswaras]]
    [bhatkhande-editor.subs :as subs]))
 
@@ -666,6 +667,7 @@
           myhgt (- winhgt
                    @editor-height)
           show-lyrics? @(subscribe [::subs/show-lyrics?])
+          font-size (reagent/atom @(subscribe [::subs/font-size]))
           newline-on-avartan? @(subscribe [::subs/newline-on-avartan?])
           play-mode? (= :play @(subscribe [::subs/mode]))]
       [:div
@@ -699,7 +701,7 @@
          (let
              [div-id "editor"
               comp @(subscribe [::subs/composition])
-              rect-style {:width 2 :height 30 :y 10}
+              rect-style {:width 2 :height @font-size :y (int (* 0.3 @font-size))}
               image-map (db/image-map
                          (let [ilang @(subscribe [::subs/lang])]
                            (if (or (= :bangla ilang) (= :hindi ilang))
@@ -743,7 +745,6 @@
                                                        :bhaag-index bhaag-index
                                                        :note-index note-index
                                                        :nsi nsi}
-                                          font-size @(subscribe [::subs/font-size])
                                           cursor-rect
                                           (if play-mode?
                                             ;;show rect that animates on playing
@@ -758,13 +759,13 @@
                                             ;;show cursor
                                             [:rect (assoc rect-style
                                                           :x (+ x1 5) :y 5
-                                                          :height 50
+                                                          :height (int (* 1.3 @font-size))
                                                           :class "blinking-cursor")]
                                             )
                                           ith-note
                                           (if-let [ival (image-map shruti)]
                                             [:image
-                                             {:height font-size :width font-size
+                                             {:height @font-size :width @font-size
                                               :href ival
                                               :on-click
                                               (fn[i]
@@ -777,7 +778,11 @@
                                               :x x1 :y 5}]
                                             ;;- and S
                                             (do
-                                              [:text {:x (+ 10 x1) :y 30
+                                              [:text {:x (+ (int (* 0.3 @font-size)) x1)
+                                                      :y (cond 
+                                                           (> @font-size 32) 32
+                                                           (< @font-size 24) 24
+                                                           :else @font-size)
                                                       :on-click
                                                       (fn[i]
                                                         (dispatch [::events/set-click-index
@@ -785,7 +790,7 @@
                                                (name (second shruti))]))
                                           r3 (-> acc1
                                                  (update-in [:images1] conj ith-note)
-                                                 (update-in [:x1] + 20))
+                                                 (update-in [:x1] + (int (* 0.7 @font-size))))
 
                                           ;;if edit mode, a single cursor
                                           ;;if play mode, add all rects
@@ -822,8 +827,8 @@
                                                 conj
                                                 [:polyline
                                                  {:points
-                                                  (let [y0 40
-                                                        sl 5]
+                                                  (let [y0 (int (* 1 @font-size))
+                                                        sl (int (* 0.2 @font-size))]
                                                     ;;line with ends curved up
                                                     (str (+ sl x) "," y0 " "
                                                          (+ x ( * 2 sl)) "," (+ y0 sl) " "
@@ -836,9 +841,10 @@
                                 r7 (if (and (= 0 note-index))
                                      (update-in r6
                                                 [:images] conj
-                                                [:text {:x 14
-                                                        :y  (if show-lyrics? 88 60)
-                                                        :style {:font-size "15px"}}
+                                                [:text {:x (int (* 0.5 @font-size))
+                                                        :y  (if show-lyrics? (int (* 2.2 @font-size))
+                                                                (int (* 1.6 @font-size)))
+                                                        :style {:font-size (* 0.5 @font-size)}}
                                                  (let [t @(subscribe [::subs/taal])
                                                        sk-index
                                                        (->> taal-def t :bhaags
@@ -865,8 +871,8 @@
                                        [:stop {:offset "0%" :stop-color "gray"}]
                                        [:stop {:offset "100%" :stop-color "lightgray"}]]]
                                      [:rect
-                                      {:x 5 :y 48
-                                       :width (:x r3) :height 25
+                                      {:x (int (* 0.2 @font-size)) :y (int (* 1.3 @font-size))
+                                       :width (:x r3) :height (int (* 0.6 @font-size))
                                        :rx "5"
                                        :style
                                        (let [m {:font-size "15px"}]
@@ -900,13 +906,13 @@
                                  (let [{:keys [images x]} (draw-bhaag row-index indx i )]
                                    [:div {:class "bhaag-item" :style
                                           (merge
-                                           {:max-width (+ x 20)}
+                                           {:max-width (+ x (int (* @font-size 0.7))) }
                                            (if @(subscribe [::subs/show-lyrics?])
                                              {}
-                                             {:max-height "70px"}))}
+                                             {:max-height (int (* 2 @font-size))}))}
                                     (reduce conj
                                             [:svg {:xmlns "http://www.w3.org/2000/svg"
-                                                   }]
+                                                   :width (+ x (int (* @font-size 0.6)))}]
                                             images)])))
                          #_(reduce conj [:div {:class "box-row"}])))
               b1
