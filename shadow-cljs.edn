@@ -22,7 +22,7 @@
   [cider/cider-nrepl "0.28.4"]
 
 
-  [com.google.guava/guava "30.0-jre"]
+  ;;[com.google.guava/guava "30.0-jre"]
 ]
 
  :dev-http

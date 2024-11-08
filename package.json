@@ -7,13 +7,14 @@
 		"build-report": "npx shadow-cljs run shadow.cljs.build-report app target/build-report.html"
 	},
 	"dependencies": {
+		"create-react-class": "^15.7.0",
 		"posthog-js": "^1.104.4",
 		"react": "^17.0.2",
 		"react-dom": "^17.0.2",
 		"workbox-cli": "^6.5.4"
 	},
 	"devDependencies": {
-		"shadow-cljs": "2.19.6",
-		"firebase": "^8.6.4"
+		"firebase": "^8.6.4",
+		"shadow-cljs": "2.19.6"
 	}
 }
