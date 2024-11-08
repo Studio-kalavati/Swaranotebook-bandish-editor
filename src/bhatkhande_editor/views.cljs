@@ -385,17 +385,17 @@
                                   :level :level3]]]
                                [gap :size "50px"]
                                [v-box
+                                :align :center
                                 :children
                                 [[slider :model font-size
                                   :min 24
                                   :max 40
                                   :step 4
                                   :style {:align-self :center}
-                                  :width "max(25vw,100px)"
+                                  :width "max(25vw,150px)"
                                   :on-change #(do (reset! font-size %)
                                                   (dispatch [::events/set-font-size %]))]
-                                 [title :label "Zoom"
-                                  :level :level3]]]
+                                 [title :label (str "Zoom: " (* 100 (/ (/ (- @font-size 24) 4) 4)) "%") :level :level3]]]
 
                                  [gap :size "50px"]
                                [box
@@ -749,13 +749,13 @@
                                           (if play-mode?
                                             ;;show rect that animates on playing
                                             [:rect
-                                             {:width 20 :height 30
+                                             {:width (int (* 0.6 @font-size)) :height @font-size
                                               :fill "#f83600"
                                               :fill-opacity 0
                                               :ref #(when (identity %)
                                                       (dispatch [::events/register-elem
                                                                  nseq-index nsi %]))
-                                              :x (+ x1 5) :y 5}]
+                                              :x (+ x1 (int (* 0.2 @font-size))) :y (int (* 0.2 @font-size))}]
                                             ;;show cursor
                                             [:rect (assoc rect-style
                                                           :x (+ x1 5) :y 5
@@ -809,9 +809,11 @@
                                                      (update-in
                                                       [:images1]
                                                       conj
-                                                      [:text {:x (+ 10 x1)
-                                                              :style {:font-size "15px"}
-                                                              :y 60} sah]))
+                                                      [:text
+                                                       {;;:x (+ 10 x1) :y 60
+                                                        :x (+ x1 (int (* 0.3 @font-size)))
+                                                        :y (int (* 1.7 @font-size))
+                                                        :style {:font-size (* 0.5 @font-size)}} sah]))
                                                  r3)
                                                r3)]
                                       r3))
@@ -842,8 +844,9 @@
                                      (update-in r6
                                                 [:images] conj
                                                 [:text {:x (int (* 0.5 @font-size))
-                                                        :y  (if show-lyrics? (int (* 2.2 @font-size))
-                                                                (int (* 1.6 @font-size)))
+                                                        :y  (if (or show-lyrics? sahitya)
+                                                              (int (* 2.3 @font-size))
+                                                              (int (* 1.6 @font-size)))
                                                         :style {:font-size (* 0.5 @font-size)}}
                                                  (let [t @(subscribe [::subs/taal])
                                                        sk-index
@@ -907,9 +910,10 @@
                                    [:div {:class "bhaag-item" :style
                                           (merge
                                            {:max-width (+ x (int (* @font-size 0.7))) }
-                                           (if @(subscribe [::subs/show-lyrics?])
-                                             {}
-                                             {:max-height (int (* 2 @font-size))}))}
+                                           {:max-height (int (*
+                                                              (if @(subscribe [::subs/show-lyrics?]) 2.5 2)
+                                                              @font-size))}
+                                           )}
                                     (reduce conj
                                             [:svg {:xmlns "http://www.w3.org/2000/svg"
                                                    :width (+ x (int (* @font-size 0.6)))}]
