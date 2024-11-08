@@ -81,7 +81,7 @@
     :size "auto"
     :align-self :stretch
     :style {:flex "1 1 0px"}
-    :child [:button {:style (merge style {:width "100%"}) :class class
+    :child [:button {:style (merge style {:width "100%" :font-weight "bold"}) :class class
                      :on-click on-click-fn}
             [:span text]]]))
 
