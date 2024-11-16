@@ -224,6 +224,7 @@
                     :show-lyrics false
                     :bpm 120
                     :beat-mode :metronome
+                    :pitch :c#
                     :tanpura? true
                     :note-index []})
 

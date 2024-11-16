@@ -179,6 +179,7 @@
         notes-per-beat (reagent/atom 1)
         svaras-on @(subscribe [::subs/custom-svaras])
         font-size (reagent/atom @(subscribe [::subs/font-size]))
+        pitch (reagent/atom @(subscribe [::subs/pitch]))
         ;;if unset, all shuddha svaras
         default-custom-svaras
         (if svaras-on
@@ -396,8 +397,20 @@
                                   :on-change #(do (reset! font-size %)
                                                   (dispatch [::events/set-font-size %]))]
                                  [title :label (str "Zoom: " (* 100 (/ (/ (- @font-size 24) 4) 4)) "%") :level :level3]]]
-
+                               [v-box
+                                :align :center
+                                :children
+                                [[slider :model font-size
+                                  :min 24
+                                  :max 40
+                                  :step 4
+                                  :style {:align-self :center}
+                                  :width "max(25vw,150px)"
+                                  :on-change #(do (reset! font-size %)
+                                                  (dispatch [::events/set-font-size %]))]
+                                 [title :label (str "Change pitch: " (* 100 (/ (/ (- @font-size 24) 4) 4)) "%") :level :level3]]]
                                  [gap :size "50px"]
+
                                [box
                                 :align :center
                                 :child
