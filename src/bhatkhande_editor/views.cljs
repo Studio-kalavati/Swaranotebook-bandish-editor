@@ -36,7 +36,7 @@
    [bhatkhande-editor.events :as events]
    [bhatkhande-editor.routes :as routes]
    [cljs.math :as math]
-   [bhatkhande-editor.db :as db :refer [note-seq mswaras]]
+   [bhatkhande-editor.db :as db :refer [note-seq mswaras pitch-options-list]]
    [bhatkhande-editor.subs :as subs]))
 
 (defn box-size-padding
@@ -180,7 +180,7 @@
         notes-per-beat (reagent/atom 1)
         svaras-on @(subscribe [::subs/custom-svaras])
         font-size (reagent/atom @(subscribe [::subs/font-size]))
-        pitch (reagent/atom @(subscribe [::subs/pitch]))
+        selected-pitch (reagent/atom @(subscribe [::subs/pitch]))
         ;;if unset, all shuddha svaras
         default-custom-svaras
         (if svaras-on
@@ -398,20 +398,24 @@
                                   :on-change #(do (reset! font-size %)
                                                   (dispatch [::events/set-font-size %]))]
                                  [title :label (str "Zoom: " (* 100 (/ (/ (- @font-size 24) 4) 4)) "%") :level :level3]]]
+
+                               [gap :size "50px"]
                                [v-box
                                 :align :center
                                 :children
-                                [[slider :model font-size
-                                  :min 24
-                                  :max 40
-                                  :step 4
-                                  :style {:align-self :center}
-                                  :width "max(25vw,150px)"
-                                  :on-change #(do (reset! font-size %)
-                                                  (dispatch [::events/set-font-size %]))]
-                                 [title :label (str "Change pitch: " (* 100 (/ (/ (- @font-size 24) 4) 4)) "%") :level :level3]]]
+                                [[h-box :children
+                                  [[title :level :level2 :label "Change pitch to: "]
+                                   [single-dropdown :choices pitch-options-list
+                                    :model selected-pitch
+                                    :width "150px"
+                                    :on-change
+                                    (fn[x]
+                                      (do
+                                        (reset! selected-pitch x)
+                                        (dispatch
+                                         [::events/init-note-buffers
+                                          (:id (item-for-id @selected-pitch pitch-options-list))])))]]]]]
                                  [gap :size "50px"]
-
                                [box
                                 :align :center
                                 :child
@@ -949,16 +953,13 @@
                      (conj [:div {:class "wrapper"}])))]
            fin)]]])))
 
-(def pitch-options-list
-  (mapv #(assoc {} :id %1 :label %2) (range 0 12)
-        ["C" "C#" "D" "D#" "E" "F" "F#" "G" "G#" "A" "A#" "B"]))
+
 
 (defn play-keyboard-footer
   []
   (let [bpm (reagent/atom @(subscribe [::subs/bpm]))
         beat-mode (reagent/atom @(subscribe [::subs/beat-mode]))
         show-settings? (reagent/atom false)
-        selected-pitch (reagent/atom "C")
         tanpura? (reagent/atom true)]
     (fn []
       [v-box
@@ -1016,8 +1017,7 @@
                      [v-box
                       :align :center
                       :justify :center
-                      :children [
-                                 [checkbox
+                      :children [[checkbox
                                   :model tanpura?
                                   :label-style {:width "200px"}
                                   :label "Play Tanpura?"
@@ -1025,23 +1025,9 @@
                                   #(let [nval (not @tanpura?)]
                                      (reset! tanpura? nval)
                                      (dispatch [::events/tanpura? nval]))]]]
-                     [v-box
-                      :align :center
-                      :children
-                      [[h-box :children
-                        [[title :level :level2 :label "Change pitch to: "]
-                         [single-dropdown :choices pitch-options-list
-                          :model selected-pitch
-                          :width "150px"
-                          :on-change (fn[x] (do
-                                              (reset! selected-pitch x)))]]]]]
                      [h-box :children
                       [(zmdi-butn2 "zmdi zmdi-close zmdi-hc-2x"
-                                   #(do (reset! show-settings? false)
-                                        (when (not= (-> pitch-options-list first :label) @selected-pitch)
-                                          (dispatch
-                                           [::events/init-note-buffers
-                                            (:id (item-for-id @selected-pitch pitch-options-list))]))))]]]]]])
+                                   #(reset! show-settings? false))]]]]]])
         [h-box
          :gap      "0.5vh"
          :children

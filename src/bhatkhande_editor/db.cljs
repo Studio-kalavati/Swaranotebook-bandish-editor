@@ -224,9 +224,13 @@
                     :show-lyrics false
                     :bpm 120
                     :beat-mode :metronome
-                    :pitch :c#
+                    :pitch "C"
                     :tanpura? true
                     :note-index []})
+
+(def pitch-options-list
+  (mapv #(assoc {} :id %1 :label %2) (range 0 12)
+        ["C" "C#" "D" "D#" "E" "F" "F#" "G" "G#" "A" "A#" "B"]))
 
 (defn comp-decorator
   [comp0]
