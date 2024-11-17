@@ -581,8 +581,6 @@
     (.then (fn [r] (.arrayBuffer r)))
     (.then (fn [r] (.decodeAudioData ctx r)))
     (.then (fn [resp]
-             ;;141 is currently the number of audio files
-             (println " --  "(vector (count (keys @imap)) max-elements))
              (when (>= (count (keys @imap)) max-elements)
                (dispatch [::set-active-panel :home-panel]))
              (swap! imap assoc ikey resp))))))
@@ -624,17 +622,19 @@
                [i j])) [:ati-taar :s]))
 
 (defn get-santoor-url-map
-  [imap ctx]
-  (let [ivals (mapv
-               #(str "/sounds/santoor/" %)
-               (-> (for [i ["4" "5" "6"]
-                         j ["c" "cs" "d" "ds" "e" "f" "fs" "g" "gs" "a" "as" "b"]]
-                     (str  j i ".mp3"))
-                   vec
-                   (conj "c7.mp3")))
-        ibuffers (mapv (partial fetch-url (dec (count ivals)) imap ctx) svara-keys ivals)]
-    (println " keys " svara-keys)
-    imap))
+  ([imap ctx ] (get-santoor-url-map 0 imap ctx))
+  ([pitches-above-c imap ctx ]
+   (let [ivals (mapv
+                #(str "/sounds/santoor/" %)
+                (-> (for [i ["4" "5" "6"]
+                          j ["c" "cs" "d" "ds" "e" "f" "fs" "g" "gs" "a" "as" "b"]]
+                      (str  j i ".mp3"))
+                    vec
+                    (conj "c7.mp3")))
+         samples (if (or (nil? pitches-above-c) (= 0 pitches-above-c)) ivals
+                     (drop pitches-above-c ivals))
+         ibuffers (mapv (partial fetch-url (dec (count samples)) imap ctx) svara-keys samples)]
+     imap)))
 
 (defn get-clock
   []
@@ -646,23 +646,18 @@
 (reg-event-fx
  ::init-audio-buffers
  (fn [{:keys [db]} [_ _]]
-   (println " iab ")
    (let  [{:keys [clock audio-context] :as clk-ctx} (get-clock)
           bufatom (get-tabla-sample-loc (reagent/atom {}) audio-context)]
-     {:db (let [k (merge (assoc db :sample-buffers bufatom) clk-ctx)]
-            (println " i a b " (keys k))
-            k)
+     {:db (merge (assoc db :sample-buffers bufatom) clk-ctx)
       :dispatch [::set-active-panel :load-sounds-panel]})))
 
 (reg-event-fx
  ::init-note-buffers
- (fn [{:keys [db]} [_ _]]
+ (fn [{:keys [db]} [_ pitches-above-c]]
    (let [{:keys [clock audio-context] :as clk-ctx} (get-clock)
           bufatom (reagent/atom {})
-          bufatom (get-santoor-url-map bufatom audio-context)]
-     {:db (let [k (merge (assoc db :note-buffers bufatom) clk-ctx)]
-            (println " clok keys " (keys k))
-            k)
+         bufatom (get-santoor-url-map pitches-above-c bufatom audio-context )]
+     {:db (merge (assoc db :note-buffers bufatom) clk-ctx)
       :dispatch [::set-active-panel :load-sounds-panel]})))
 
 (reg-event-fx
@@ -671,18 +666,11 @@
  (fn [{:keys [db]} [_ ival]]
    (let [ndb (update-in db [:props :mode]
                         (constantly ival))]
-     (println " set mode " ival " - "(nil? (:audio-context ndb))
-              " = "
-              (nil? (:sample-buffers ndb))
-              " = "
-              (:audio-context ndb)
-              )
      (if (= :play ival)
          (cond (nil? (:audio-context ndb))
            (assoc {:db ndb} :dispatch-n [[::init-audio-buffers] [::init-note-buffers]])
            (nil? (:sample-buffers ndb))
-           (do (println " load smaples ")
-               {:db ndb :dispatch [::init-audio-buffers]})
+           {:db ndb :dispatch [::init-audio-buffers]}
            :else
            {:db ndb})
        {:db ndb}))))
@@ -980,7 +968,7 @@
  (fn [{:keys [db]} [_ font-size]]
    {:db (update-in db [:dispinfo :font-size] (constantly font-size))}))
 
-(reg-event-fx
+#_(reg-event-fx
  ::pitch-shift
  (fn [{:keys [db]} [_ shift-by]]
    @(:sample-buffers db)

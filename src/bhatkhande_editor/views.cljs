@@ -25,6 +25,7 @@
                                    gap
                                    throbber
                                    modal-panel]]
+   [re-com.util     :refer [item-for-id]]
    [breaking-point.core :as bp]
    [sargam.ragas :refer [varjit-svaras]]
    [sargam.talas :refer [taal-def]]
@@ -948,13 +949,16 @@
                      (conj [:div {:class "wrapper"}])))]
            fin)]]])))
 
+(def pitch-options-list
+  (mapv #(assoc {} :id %1 :label %2) (range 0 12)
+        ["C" "C#" "D" "D#" "E" "F" "F#" "G" "G#" "A" "A#" "B"]))
 
 (defn play-keyboard-footer
   []
-  (let [
-        bpm (reagent/atom @(subscribe [::subs/bpm]))
+  (let [bpm (reagent/atom @(subscribe [::subs/bpm]))
         beat-mode (reagent/atom @(subscribe [::subs/beat-mode]))
         show-settings? (reagent/atom false)
+        selected-pitch (reagent/atom "C")
         tanpura? (reagent/atom true)]
     (fn []
       [v-box
@@ -1021,9 +1025,23 @@
                                   #(let [nval (not @tanpura?)]
                                      (reset! tanpura? nval)
                                      (dispatch [::events/tanpura? nval]))]]]
+                     [v-box
+                      :align :center
+                      :children
+                      [[h-box :children
+                        [[title :level :level2 :label "Change pitch to: "]
+                         [single-dropdown :choices pitch-options-list
+                          :model selected-pitch
+                          :width "150px"
+                          :on-change (fn[x] (do
+                                              (reset! selected-pitch x)))]]]]]
                      [h-box :children
                       [(zmdi-butn2 "zmdi zmdi-close zmdi-hc-2x"
-                                   #(reset! show-settings? false))]]]]]])
+                                   #(do (reset! show-settings? false)
+                                        (when (not= (-> pitch-options-list first :label) @selected-pitch)
+                                          (dispatch
+                                           [::events/init-note-buffers
+                                            (:id (item-for-id @selected-pitch pitch-options-list))]))))]]]]]])
         [h-box
          :gap      "0.5vh"
          :children
