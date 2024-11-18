@@ -631,9 +631,19 @@
                       (str  j i ".mp3"))
                     vec
                     (conj "c7.mp3")))
-         samples (if (or (nil? pitches-above-c) (= 0 pitches-above-c)) ivals
-                     (drop pitches-above-c ivals))
-         ibuffers (mapv (partial fetch-url (dec (count samples)) imap ctx) svara-keys samples)]
+         [skeys samples]
+         (if (nil? pitches-above-c)
+           [svara-keys ivals]
+           (let [{:keys [id]} pitches-above-c]
+             (if (= id 0)
+               [svara-keys ivals]
+               (if (< id 7)
+                 [svara-keys (drop id ivals)]
+                 [(drop id svara-keys) ivals]))))
+         ;;return the lower of the two
+         count-samples (dec (let [[s1 s2] (mapv count [skeys samples])]
+                              (if (> s1 s2) s2 s1)))
+         ibuffers (mapv (partial fetch-url count-samples imap ctx) skeys samples)]
      imap)))
 
 (defn get-clock
@@ -656,8 +666,10 @@
  (fn [{:keys [db]} [_ pitches-above-c]]
    (let [{:keys [clock audio-context] :as clk-ctx} (get-clock)
           bufatom (reagent/atom {})
-         bufatom (get-santoor-url-map pitches-above-c bufatom audio-context )]
-     {:db (merge (assoc db :note-buffers bufatom) clk-ctx)
+         bufatom (get-santoor-url-map pitches-above-c bufatom audio-context )
+         new-pitch (:label pitches-above-c)]
+     {:db (-> (merge (assoc db :note-buffers bufatom) clk-ctx )
+              (update-in [:props :pitch] (constantly new-pitch)))
       :dispatch [::set-active-panel :load-sounds-panel]})))
 
 (reg-event-fx

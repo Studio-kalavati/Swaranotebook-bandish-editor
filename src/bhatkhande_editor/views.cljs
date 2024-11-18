@@ -180,7 +180,7 @@
         notes-per-beat (reagent/atom 1)
         svaras-on @(subscribe [::subs/custom-svaras])
         font-size (reagent/atom @(subscribe [::subs/font-size]))
-        selected-pitch (reagent/atom @(subscribe [::subs/pitch]))
+        selected-pitch (reagent/atom (:id (first (filter #(= (:label %) @(subscribe [::subs/pitch])) pitch-options-list))))
         ;;if unset, all shuddha svaras
         default-custom-svaras
         (if svaras-on
@@ -346,7 +346,7 @@
                                              (reset! show-login-popup? true))))
                                        (mk-button notes-per-beat {:shruti [:madhyam :-]})
                                        (mk-button notes-per-beat {:shruti [:madhyam :a]})
-                                       (butn2 "⌫" #(dispatch [::events/delete-single-swara]))]])
+                                       (zmdi-butn2 "zmdi zmdi-tag-close zmdi-hc-lg" #(dispatch [::events/delete-single-swara]))]])
                          (when @show-settings-popup?
                            [modal-panel
                             :backdrop-on-click #(reset! show-settings-popup? false)
@@ -397,15 +397,16 @@
                                   :width "max(25vw,150px)"
                                   :on-change #(do (reset! font-size %)
                                                   (dispatch [::events/set-font-size %]))]
-                                 [title :label (str "Zoom: " (* 100 (/ (/ (- @font-size 24) 4) 4)) "%") :level :level3]]]
-
+                                 [title :label
+                                  (str "Zoom: " (* 100 (/ (/ (- @font-size 24) 4) 4)) "%") :level :level3]]]
                                [gap :size "50px"]
                                [v-box
                                 :align :center
                                 :children
                                 [[h-box :children
                                   [[title :level :level2 :label "Change pitch to: "]
-                                   [single-dropdown :choices pitch-options-list
+                                   [single-dropdown
+                                    :choices pitch-options-list
                                     :model selected-pitch
                                     :width "150px"
                                     :on-change
@@ -413,8 +414,7 @@
                                       (do
                                         (reset! selected-pitch x)
                                         (dispatch
-                                         [::events/init-note-buffers
-                                          (:id (item-for-id @selected-pitch pitch-options-list))])))]]]]]
+                                         [::events/init-note-buffers (item-for-id @selected-pitch pitch-options-list)])))]]]]]
                                  [gap :size "50px"]
                                [box
                                 :align :center

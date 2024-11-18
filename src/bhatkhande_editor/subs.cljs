@@ -12,7 +12,8 @@
 (reg-sub
  ::pitch
  (fn [db]
-   (-> db :props :pitch)))
+   (let [ pitch (-> db :props :pitch)]
+     pitch)))
 
 (reg-sub
  ::font-size
