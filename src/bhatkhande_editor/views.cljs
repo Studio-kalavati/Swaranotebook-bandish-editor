@@ -404,11 +404,11 @@
                                 :align :center
                                 :children
                                 [[h-box :children
-                                  [[title :level :level2 :label "Change pitch to: "]
+                                  [[title :level :level3 :label "Change pitch to: "]
                                    [single-dropdown
                                     :choices pitch-options-list
                                     :model selected-pitch
-                                    :width "150px"
+                                    :width "100px"
                                     :on-change
                                     (fn[x]
                                       (do

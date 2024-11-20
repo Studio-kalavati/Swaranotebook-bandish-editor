@@ -587,10 +587,10 @@
 
 #_(defn get-metronome-sample-loc
   [imap ctx]
-  (mapv (partial fetch-url 2 imap ctx)
-        [:tick1 :tick2]
-        (map #(str "/sounds/metronome/metro" % ".mp3") [1 2]))
-  imap)
+    (mapv (partial fetch-url 2 imap ctx)
+          [:tick1 :tick2]
+          (map #(str "/sounds/metronome/metro" % ".mp3") [1 2]))
+    imap)
 
 (defn get-tabla-sample-loc
   [imap ctx]
@@ -598,13 +598,16 @@
         taal-list ["ektaal" "dadra" "rupak" "teentaal" "jhaptaal" "kehrwa" "adachautaal"]
         beat-intervals (range 60 310 15)
         ;;3 added for ticks and tanpura
-        sample-count (dec (+ 3 (* (count taal-list) (count beat-intervals))))
-        _ (fetch-url sample-count imap ctx :tanpura "/sounds/tanpura/c4.mp3")
+        ag-note-seq [:c :c# :d :d# :e :f :f# :g :g# :a :a# :b]
+        sample-count (dec (+ 2 (count ag-note-seq) (* (count taal-list) (count beat-intervals))))
         _ (mapv (partial fetch-url sample-count imap ctx)
-              [:tick1 :tick2]
-              (map #(str "/sounds/metronome/metro" % ".mp3") [1 2]))
+                ag-note-seq
+                (map #(str "/sounds/tanpura/" (.replace (name %) "#" "%23") ".mp3") ag-note-seq ))
+        _ (mapv (partial fetch-url sample-count imap ctx)
+                [:tick1 :tick2]
+                (map #(str "/sounds/metronome/metro" % ".mp3") [1 2]))
         ;;tabla samples
-               ifn (fn[taal]
+        ifn (fn[taal]
               (let [paths (map #(str "/sounds/tabla/" taal "/" taal % "bpm.mp3") beat-intervals)
                     kws (map #(keyword (str taal % "bpm")) beat-intervals)]
                 (mapv (partial fetch-url sample-count imap ctx) kws paths)))]
@@ -822,10 +825,12 @@
            a1 (if (-> db :props :tanpura?)
                 (let [last-note-time (- (-> a1 last second) now )
                       sample-len 3
+                      tanpura-pitch (.toLowerCase (-> db :props :pitch))
                       ;;length of sample is 4 secs
                       play-n-times (int (/ last-note-time sample-len))
                       conj-vec (mapv
-                                #(vector :tanpura (+ now (* % sample-len)) sample-len {:gain 0.5})
+                                #(vector (keyword tanpura-pitch)
+                                         (+ now (* % sample-len)) sample-len {:gain 0.5})
                                 (range (inc play-n-times)))]
                   (vec (sort-by second
                                 (into a1 conj-vec))))
