@@ -224,13 +224,16 @@
                     :show-lyrics false
                     :bpm 120
                     :beat-mode :metronome
-                    :pitch "C"
+                    :pitch "c"
                     :tanpura? true
                     :note-index []})
 
+(def pitch-sharps-list ["C" "C#" "D" "D#" "E" "F" "F#" "G" "G#" "A" "A#" "B"])
+(def pitch-s-list ["c" "cs" "d" "ds" "e" "f" "fs" "g" "gs" "a" "as" "b"])
+
 (def pitch-options-list
-  (mapv #(assoc {} :id %1 :label %2) (range 0 12)
-        ["C" "C#" "D" "D#" "E" "F" "F#" "G" "G#" "A" "A#" "B"]))
+  (mapv #(assoc {} :id %1 :label %2 :sample %3) (range 0 12) pitch-sharps-list
+        pitch-s-list))
 
 (defn comp-decorator
   [comp0]

@@ -6,7 +6,7 @@
     :refer [debug reg-event-db reg-event-fx
             subscribe dispatch dispatch-sync]]
    [chronoid.core :as c]
-   [bhatkhande-editor.db :as db]
+   [bhatkhande-editor.db :as db :refer [pitch-s-list]]
    ["firebase/app" :default firebase]
    ["firebase/auth" :default fbauth]
    ["firebase/storage" :default storage]
@@ -97,6 +97,7 @@
         buffers (if (vector? sample-key) @(:note-buffers db)
                     @(:sample-buffers db))
         buf (buffers sample-key)
+        _ (if (nil? buf) (println " sample-key " sample-key))
         absn (new js/AudioBufferSourceNode audctx #js {"buffer" buf})]
     (sched-play-url audctx start-at dur absn options)
     absn))
@@ -594,15 +595,14 @@
 
 (defn get-tabla-sample-loc
   [imap ctx]
-  (let [
-        taal-list ["ektaal" "dadra" "rupak" "teentaal" "jhaptaal" "kehrwa" "adachautaal"]
+  (let [taal-list ["ektaal" "dadra" "rupak" "teentaal" "jhaptaal" "kehrwa" "adachautaal"]
         beat-intervals (range 60 310 15)
         ;;3 added for ticks and tanpura
-        ag-note-seq [:c :c# :d :d# :e :f :f# :g :g# :a :a# :b]
+        ag-note-seq pitch-s-list
         sample-count (dec (+ 2 (count ag-note-seq) (* (count taal-list) (count beat-intervals))))
         _ (mapv (partial fetch-url sample-count imap ctx)
-                ag-note-seq
-                (map #(str "/sounds/tanpura/" (.replace (name %) "#" "%23") ".mp3") ag-note-seq ))
+                (map keyword ag-note-seq)
+                (map #(str "/sounds/tanpura/" % ".mp3") ag-note-seq ))
         _ (mapv (partial fetch-url sample-count imap ctx)
                 [:tick1 :tick2]
                 (map #(str "/sounds/metronome/metro" % ".mp3") [1 2]))
@@ -612,12 +612,6 @@
                     kws (map #(keyword (str taal % "bpm")) beat-intervals)]
                 (mapv (partial fetch-url sample-count imap ctx) kws paths)))]
     (count (mapv ifn taal-list)))
-  imap)
-
-#_(defn get-tanpura-sample-loc
-  [imap ctx]
-  (fetch-url 1 imap ctx :tanpura
-             "/sounds/tanpura/c4.mp3")
   imap)
 
 (def svara-keys
@@ -630,7 +624,7 @@
    (let [ivals (mapv
                 #(str "/sounds/santoor/" %)
                 (-> (for [i ["4" "5" "6"]
-                          j ["c" "cs" "d" "ds" "e" "f" "fs" "g" "gs" "a" "as" "b"]]
+                          j pitch-s-list]
                       (str  j i ".mp3"))
                     vec
                     (conj "c7.mp3")))
@@ -668,9 +662,9 @@
  ::init-note-buffers
  (fn [{:keys [db]} [_ pitches-above-c]]
    (let [{:keys [clock audio-context] :as clk-ctx} (get-clock)
-          bufatom (reagent/atom {})
+         bufatom (reagent/atom {})
          bufatom (get-santoor-url-map pitches-above-c bufatom audio-context )
-         new-pitch (:label pitches-above-c)]
+         new-pitch (or (:sample pitches-above-c) "c")]
      {:db (-> (merge (assoc db :note-buffers bufatom) clk-ctx )
               (update-in [:props :pitch] (constantly new-pitch)))
       :dispatch [::set-active-panel :load-sounds-panel]})))
@@ -825,7 +819,7 @@
            a1 (if (-> db :props :tanpura?)
                 (let [last-note-time (- (-> a1 last second) now )
                       sample-len 3
-                      tanpura-pitch (.toLowerCase (-> db :props :pitch))
+                      tanpura-pitch (-> db :props :pitch)
                       ;;length of sample is 4 secs
                       play-n-times (int (/ last-note-time sample-len))
                       conj-vec (mapv

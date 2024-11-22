@@ -180,7 +180,7 @@
         notes-per-beat (reagent/atom 1)
         svaras-on @(subscribe [::subs/custom-svaras])
         font-size (reagent/atom @(subscribe [::subs/font-size]))
-        selected-pitch (reagent/atom (:id (first (filter #(= (:label %) @(subscribe [::subs/pitch])) pitch-options-list))))
+        selected-pitch (reagent/atom (:id (first (filter #(= (:sample %) @(subscribe [::subs/pitch])) pitch-options-list))))
         ;;if unset, all shuddha svaras
         default-custom-svaras
         (if svaras-on
