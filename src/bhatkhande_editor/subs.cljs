@@ -10,6 +10,17 @@
    (-> db :props :lang)))
 
 (reg-sub
+ ::pitch
+ (fn [db]
+   (let [ pitch (-> db :props :pitch)]
+     pitch)))
+
+(reg-sub
+ ::font-size
+ (fn [db]
+   (-> db :dispinfo :font-size)))
+
+(reg-sub
  ::lang-data
  :<- [::lang]
  (fn [lang _]

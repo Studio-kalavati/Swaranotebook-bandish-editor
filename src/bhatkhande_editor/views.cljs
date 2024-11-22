@@ -25,6 +25,7 @@
                                    gap
                                    throbber
                                    modal-panel]]
+   [re-com.util     :refer [item-for-id]]
    [breaking-point.core :as bp]
    [sargam.ragas :refer [varjit-svaras]]
    [sargam.talas :refer [taal-def]]
@@ -34,7 +35,8 @@
    [cognitect.transit :as t]
    [bhatkhande-editor.events :as events]
    [bhatkhande-editor.routes :as routes]
-   [bhatkhande-editor.db :as db :refer [note-seq mswaras]]
+   [cljs.math :as math]
+   [bhatkhande-editor.db :as db :refer [note-seq mswaras pitch-options-list]]
    [bhatkhande-editor.subs :as subs]))
 
 (defn box-size-padding
@@ -80,7 +82,7 @@
     :size "auto"
     :align-self :stretch
     :style {:flex "1 1 0px"}
-    :child [:button {:style (merge style {:width "100%"}) :class class
+    :child [:button {:style (merge style {:width "100%" :font-weight "bold"}) :class class
                      :on-click on-click-fn}
             [:span text]]]))
 
@@ -177,6 +179,8 @@
         title-val (reagent/atom "")
         notes-per-beat (reagent/atom 1)
         svaras-on @(subscribe [::subs/custom-svaras])
+        font-size (reagent/atom @(subscribe [::subs/font-size]))
+        selected-pitch (reagent/atom (:id (first (filter #(= (:label %) @(subscribe [::subs/pitch])) pitch-options-list))))
         ;;if unset, all shuddha svaras
         default-custom-svaras
         (if svaras-on
@@ -342,7 +346,7 @@
                                              (reset! show-login-popup? true))))
                                        (mk-button notes-per-beat {:shruti [:madhyam :-]})
                                        (mk-button notes-per-beat {:shruti [:madhyam :a]})
-                                       (butn2 "⌫" #(dispatch [::events/delete-single-swara]))]])
+                                       (zmdi-butn2 "zmdi zmdi-tag-close zmdi-hc-lg" #(dispatch [::events/delete-single-swara]))]])
                          (when @show-settings-popup?
                            [modal-panel
                             :backdrop-on-click #(reset! show-settings-popup? false)
@@ -382,6 +386,36 @@
                                  [title :label "Newline on each Avartan?"
                                   :level :level3]]]
                                [gap :size "50px"]
+                               [v-box
+                                :align :center
+                                :children
+                                [[slider :model font-size
+                                  :min 24
+                                  :max 40
+                                  :step 4
+                                  :style {:align-self :center}
+                                  :width "max(25vw,150px)"
+                                  :on-change #(do (reset! font-size %)
+                                                  (dispatch [::events/set-font-size %]))]
+                                 [title :label
+                                  (str "Zoom: " (* 100 (/ (/ (- @font-size 24) 4) 4)) "%") :level :level3]]]
+                               [gap :size "50px"]
+                               [v-box
+                                :align :center
+                                :children
+                                [[h-box :children
+                                  [[title :level :level3 :label "Change pitch to: "]
+                                   [single-dropdown
+                                    :choices pitch-options-list
+                                    :model selected-pitch
+                                    :width "100px"
+                                    :on-change
+                                    (fn[x]
+                                      (do
+                                        (reset! selected-pitch x)
+                                        (dispatch
+                                         [::events/init-note-buffers (item-for-id @selected-pitch pitch-options-list)])))]]]]]
+                                 [gap :size "50px"]
                                [box
                                 :align :center
                                 :child
@@ -651,6 +685,7 @@
           myhgt (- winhgt
                    @editor-height)
           show-lyrics? @(subscribe [::subs/show-lyrics?])
+          font-size (reagent/atom @(subscribe [::subs/font-size]))
           newline-on-avartan? @(subscribe [::subs/newline-on-avartan?])
           play-mode? (= :play @(subscribe [::subs/mode]))]
       [:div
@@ -684,7 +719,7 @@
          (let
              [div-id "editor"
               comp @(subscribe [::subs/composition])
-              rect-style {:width 2 :height 30 :y 10}
+              rect-style {:width 2 :height @font-size :y (int (* 0.3 @font-size))}
               image-map (db/image-map
                          (let [ilang @(subscribe [::subs/lang])]
                            (if (or (= :bangla ilang) (= :hindi ilang))
@@ -732,23 +767,23 @@
                                           (if play-mode?
                                             ;;show rect that animates on playing
                                             [:rect
-                                             {:width 20 :height 30
+                                             {:width (int (* 0.6 @font-size)) :height @font-size
                                               :fill "#f83600"
                                               :fill-opacity 0
                                               :ref #(when (identity %)
                                                       (dispatch [::events/register-elem
                                                                  nseq-index nsi %]))
-                                              :x (+ x1 5) :y 5}]
+                                              :x (+ x1 (int (* 0.2 @font-size))) :y (int (* 0.2 @font-size))}]
                                             ;;show cursor
                                             [:rect (assoc rect-style
                                                           :x (+ x1 5) :y 5
-                                                          :height 50
+                                                          :height (int (* 1.3 @font-size))
                                                           :class "blinking-cursor")]
                                             )
                                           ith-note
                                           (if-let [ival (image-map shruti)]
                                             [:image
-                                             {:height 32 :width 32
+                                             {:height @font-size :width @font-size
                                               :href ival
                                               :on-click
                                               (fn[i]
@@ -761,7 +796,11 @@
                                               :x x1 :y 5}]
                                             ;;- and S
                                             (do
-                                              [:text {:x (+ 10 x1) :y 30
+                                              [:text {:x (+ (int (* 0.3 @font-size)) x1)
+                                                      :y (cond 
+                                                           (> @font-size 32) 32
+                                                           (< @font-size 24) 24
+                                                           :else @font-size)
                                                       :on-click
                                                       (fn[i]
                                                         (dispatch [::events/set-click-index
@@ -769,7 +808,7 @@
                                                (name (second shruti))]))
                                           r3 (-> acc1
                                                  (update-in [:images1] conj ith-note)
-                                                 (update-in [:x1] + 20))
+                                                 (update-in [:x1] + (int (* 0.7 @font-size))))
 
                                           ;;if edit mode, a single cursor
                                           ;;if play mode, add all rects
@@ -788,9 +827,11 @@
                                                      (update-in
                                                       [:images1]
                                                       conj
-                                                      [:text {:x (+ 10 x1)
-                                                              :style {:font-size "15px"}
-                                                              :y 60} sah]))
+                                                      [:text
+                                                       {;;:x (+ 10 x1) :y 60
+                                                        :x (+ x1 (int (* 0.3 @font-size)))
+                                                        :y (int (* 1.7 @font-size))
+                                                        :style {:font-size (* 0.5 @font-size)}} sah]))
                                                  r3)
                                                r3)]
                                       r3))
@@ -806,8 +847,8 @@
                                                 conj
                                                 [:polyline
                                                  {:points
-                                                  (let [y0 40
-                                                        sl 5]
+                                                  (let [y0 (int (* 1 @font-size))
+                                                        sl (int (* 0.2 @font-size))]
                                                     ;;line with ends curved up
                                                     (str (+ sl x) "," y0 " "
                                                          (+ x ( * 2 sl)) "," (+ y0 sl) " "
@@ -820,9 +861,11 @@
                                 r7 (if (and (= 0 note-index))
                                      (update-in r6
                                                 [:images] conj
-                                                [:text {:x 14
-                                                        :y  (if show-lyrics? 88 60)
-                                                        :style {:font-size "15px"}}
+                                                [:text {:x (int (* 0.5 @font-size))
+                                                        :y  (if (or show-lyrics? sahitya)
+                                                              (int (* 2.3 @font-size))
+                                                              (int (* 1.6 @font-size)))
+                                                        :style {:font-size (* 0.5 @font-size)}}
                                                  (let [t @(subscribe [::subs/taal])
                                                        sk-index
                                                        (->> taal-def t :bhaags
@@ -849,8 +892,8 @@
                                        [:stop {:offset "0%" :stop-color "gray"}]
                                        [:stop {:offset "100%" :stop-color "lightgray"}]]]
                                      [:rect
-                                      {:x 5 :y 48
-                                       :width (:x r3) :height 25
+                                      {:x (int (* 0.2 @font-size)) :y (int (* 1.3 @font-size))
+                                       :width (:x r3) :height (int (* 0.6 @font-size))
                                        :rx "5"
                                        :style
                                        (let [m {:font-size "15px"}]
@@ -884,13 +927,14 @@
                                  (let [{:keys [images x]} (draw-bhaag row-index indx i )]
                                    [:div {:class "bhaag-item" :style
                                           (merge
-                                           {:max-width (+ x 20)}
-                                           (if @(subscribe [::subs/show-lyrics?])
-                                             {}
-                                             {:max-height "70px"}))}
+                                           {:max-width (+ x (int (* @font-size 0.7))) }
+                                           {:max-height (int (*
+                                                              (if @(subscribe [::subs/show-lyrics?]) 2.5 2)
+                                                              @font-size))}
+                                           )}
                                     (reduce conj
                                             [:svg {:xmlns "http://www.w3.org/2000/svg"
-                                                   }]
+                                                   :width (+ x (int (* @font-size 0.6)))}]
                                             images)])))
                          #_(reduce conj [:div {:class "box-row"}])))
               b1
@@ -910,10 +954,10 @@
            fin)]]])))
 
 
+
 (defn play-keyboard-footer
   []
-  (let [
-        bpm (reagent/atom @(subscribe [::subs/bpm]))
+  (let [bpm (reagent/atom @(subscribe [::subs/bpm]))
         beat-mode (reagent/atom @(subscribe [::subs/beat-mode]))
         show-settings? (reagent/atom false)
         tanpura? (reagent/atom true)]
@@ -973,8 +1017,7 @@
                      [v-box
                       :align :center
                       :justify :center
-                      :children [
-                                 [checkbox
+                      :children [[checkbox
                                   :model tanpura?
                                   :label-style {:width "200px"}
                                   :label "Play Tanpura?"

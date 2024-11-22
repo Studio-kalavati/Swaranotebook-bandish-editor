@@ -214,7 +214,7 @@
    :debug {:disp-swara false}
    :cursor-padding 5
    :sam-khaali 35
-   :font-size 20 :spacing 10 :text-align :left})
+   :font-size 32 :spacing 10 :text-align :left})
 
 (def default-props {:raga :bilawal
                     :note-pos {}
@@ -224,8 +224,13 @@
                     :show-lyrics false
                     :bpm 120
                     :beat-mode :metronome
+                    :pitch "C"
                     :tanpura? true
                     :note-index []})
+
+(def pitch-options-list
+  (mapv #(assoc {} :id %1 :label %2) (range 0 12)
+        ["C" "C#" "D" "D#" "E" "F" "F#" "G" "G#" "A" "A#" "B"]))
 
 (defn comp-decorator
   [comp0]
