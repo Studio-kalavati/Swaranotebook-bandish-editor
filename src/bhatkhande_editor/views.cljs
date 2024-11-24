@@ -1028,20 +1028,30 @@
                      [h-box :children
                       [(zmdi-butn2 "zmdi zmdi-close zmdi-hc-2x"
                                    #(reset! show-settings? false))]]]]]])
-        [h-box
-         :gap      "0.5vh"
-         :children
-         (if @(subscribe [::subs/playing?])
-           [(zmdi-butn2
-             "zmdi zmdi-pause-circle zmdi-hc-4x"
-             #(do (dispatch [::events/pause])))]
-           [(zmdi-butn2 "zmdi zmdi-arrow-left zmdi-hc-2x"
-                        #(do (dispatch [::events/set-mode :edit])))
-            (zmdi-butn2
-             "zmdi zmdi-play-circle zmdi-hc-4x"
-             #(do (dispatch [::events/play])))
-            (zmdi-butn2 "zmdi zmdi-settings zmdi-hc-2x"
-                        #(do (reset! show-settings? true)))])]]])))
+        (let [back-play-settings-butns (if @(subscribe [::subs/playing?])
+                                         [(zmdi-butn2
+                                           "zmdi zmdi-pause-circle zmdi-hc-4x"
+                                           #(do (dispatch [::events/pause])))]
+                                         [(zmdi-butn2 "zmdi zmdi-arrow-left zmdi-hc-2x"
+                                                      #(do (dispatch [::events/set-mode :edit])))
+                                          (zmdi-butn2
+                                           "zmdi zmdi-play-circle zmdi-hc-4x"
+                                           #(do (dispatch [::events/play])))
+                                          (zmdi-butn2 "zmdi zmdi-settings zmdi-hc-2x"
+                                                      #(do (reset! show-settings? true)))])
+              mobile? @(subscribe[::bp/mobile?])
+              slider-play-head [slider :model (or @(subscribe [::subs/bhaag-index]) 0)
+                                :max @(subscribe [::subs/max-num-bhaags])
+                                :style {:align-self :center :height (if mobile? "3vh" "")}
+                                :width (if mobile? "80vw" "max(25vw,150px)")
+                                :on-change #(do
+                                              (println " bi " %)
+                                              (dispatch [::events/set-bhaag-index (or % 0)]))]]
+          [v-box :children
+           [slider-play-head
+            [h-box
+             :gap      "0.5vh"
+             :children back-play-settings-butns]]])]])))
 
 (defn menu
   []

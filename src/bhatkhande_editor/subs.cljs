@@ -178,3 +178,14 @@
  ::my-bandishes
  (fn [db [_ _]]
    (:my-bandishes db)))
+
+(reg-sub
+ ::bhaag-index
+ (fn [db [_ _]]
+   (:bhaag-index db)))
+
+;;number of bhaags to play in play mode
+(reg-sub
+ ::max-num-bhaags
+ (fn [db [_ _]]
+   (count (:bhaag2note-index db))))
