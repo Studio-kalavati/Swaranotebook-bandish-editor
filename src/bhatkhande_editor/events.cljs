@@ -97,7 +97,6 @@
         buffers (if (vector? sample-key) @(:note-buffers db)
                     @(:sample-buffers db))
         buf (buffers sample-key)
-        _ (if (nil? buf) (println " sample-key " sample-key))
         absn (new js/AudioBufferSourceNode audctx #js {"buffer" buf})]
     (sched-play-url audctx start-at dur absn options)
     absn))
