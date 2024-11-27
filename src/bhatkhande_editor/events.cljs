@@ -750,11 +750,11 @@
                                      (map inc) ;;get start of next bhaag
                                      butlast ;;drop the last one and add the first note
                                      (into [1])))
-           play-head-index (:play-head-index db)
+           play-head-position (:play-head-position db)
            a0 (->>
                db :composition :noteseq
                (map vector (range))
-               (drop-while (fn[[note-index _]] (> play-head-index note-index)))
+               (drop-while (fn[[note-index _]] (> play-head-position note-index)))
                (map (fn[at x] (into [at] x))(range 0 (->> db :composition :noteseq count inc) note-interval)))
            metro-tick-seq-0-offset
            (->> a0
@@ -858,8 +858,8 @@
                    :note-interval note-interval
                    :num-notes num-notes
                    :bhaag-index 0
-                   :elem-index (if (> play-head-index 0)
-                                 (let [r (subvec (:elem-index db) play-head-index)]
+                   :elem-index (if (> play-head-position 0)
+                                 (let [r (subvec (:elem-index db) play-head-position)]
                                    r)
                                  (:elem-index db))
                    ;;translates the play-note index to the view-note index
@@ -908,7 +908,7 @@
      {:db
       (->
        (update-in db [:bhaag-index] (constantly play-position))
-       (update-in [:play-head-index] (constantly a1)))})))
+       (update-in [:play-head-position] (constantly a1)))})))
 
 (reg-event-fx
  ::clock-tick-event

@@ -766,7 +766,7 @@
                                           cursor-rect
                                           (if play-mode?
                                             ;;show rect that animates on playing
-                                            (let [phi @(subscribe [::subs/play-head-index])]
+                                            (let [phi @(subscribe [::subs/play-head-position])]
                                               [:rect
                                                {:width (int (* 0.6 @font-size)) :height @font-size
                                                 :fill "#f83600"

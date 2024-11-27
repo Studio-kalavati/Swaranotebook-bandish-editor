@@ -185,9 +185,9 @@
    (:bhaag-index db)))
 
 (reg-sub
- ::play-head-index
+ ::play-head-position
  (fn [db [_ _]]
-   (:play-head-index db)))
+   (:play-head-position db)))
 
 ;;number of bhaags to play in play mode
 (reg-sub
