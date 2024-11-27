@@ -1045,7 +1045,7 @@
                                           (zmdi-butn2 "zmdi zmdi-settings zmdi-hc-2x"
                                                       #(do (reset! show-settings? true)))])
               mobile? @(subscribe[::bp/mobile?])
-              slider-play-head [slider :model (or @(subscribe [::subs/bhaag-index]) 0)
+              slider-play-head [slider :model (or @(subscribe [::subs/bhaag-to-play-from]) 0)
                                 :max (dec @(subscribe [::subs/max-num-bhaags]))
                                 :style {:align-self :center :height (if mobile? "3vh" "")}
                                 :width (if mobile? "80vw" "max(25vw,150px)")

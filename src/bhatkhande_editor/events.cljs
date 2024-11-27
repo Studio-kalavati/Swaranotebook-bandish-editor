@@ -901,13 +901,14 @@
       ndb)}))
 
 ;;change the play head to move ahead or behind
+;;if there are 10 bhaags, the nth-bhaag-to-play from will have a value from 0-9
 (reg-event-fx
  ::set-play-position
- (fn [{:keys [db]} [_ play-position]]
-   (let [a1 ((:bhaag-first-note db) play-position)]
+ (fn [{:keys [db]} [_ nth-bhaag-to-play-from]]
+   (let [a1 ((:bhaag-first-note db) nth-bhaag-to-play-from)]
      {:db
       (->
-       (update-in db [:bhaag-index] (constantly play-position))
+       (update-in db [:nth-bhaag-to-play-from] (constantly nth-bhaag-to-play-from))
        (update-in [:play-head-position] (constantly a1)))})))
 
 (reg-event-fx

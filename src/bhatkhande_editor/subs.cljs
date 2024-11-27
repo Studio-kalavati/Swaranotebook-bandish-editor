@@ -180,9 +180,9 @@
    (:my-bandishes db)))
 
 (reg-sub
- ::bhaag-index
+ ::bhaag-to-play-from
  (fn [db [_ _]]
-   (:bhaag-index db)))
+   (:nth-bhaag-to-play-from db)))
 
 (reg-sub
  ::play-head-position
