@@ -184,8 +184,13 @@
  (fn [db [_ _]]
    (:bhaag-index db)))
 
+(reg-sub
+ ::play-head-index
+ (fn [db [_ _]]
+   (:play-head-index db)))
+
 ;;number of bhaags to play in play mode
 (reg-sub
  ::max-num-bhaags
  (fn [db [_ _]]
-   (count (:bhaag2note-index db))))
+   (count (:bhaag-first-note db))))

@@ -750,10 +750,14 @@
                                      (map inc) ;;get start of next bhaag
                                      butlast ;;drop the last one and add the first note
                                      (into [1])))
+           play-head-index (:play-head-index db)
+           a0 (->>
+               db :composition :noteseq
+               (map vector (range))
+               (drop-while (fn[[note-index _]] (> play-head-index note-index)))
+               (map (fn[at x] (into [at] x))(range 0 (->> db :composition :noteseq count inc) note-interval)))
            metro-tick-seq-0-offset
-           (->> db :composition :noteseq
-                (map vector (range 0 (->> db :composition :noteseq count inc) note-interval)
-                     (range))
+           (->> a0
                 (map (fn[[at note-index {:keys [notes] :as ivec}]]
                        (let [note-index (mod (inc note-index) (-> taal-def taal :num-beats))]
                          (if (and (-> db :props :beat-mode (= :metronome))
@@ -761,19 +765,8 @@
                            [[:tick at note-interval]]
                            []))))
                 (reduce into []))
-           ;;key is index of bhaag, value is the time offset in secs (e.g. 2,4,6 secs)
-           bhaagindex-start-delay-map
-           (->> metro-tick-seq-0-offset
-                (map vector (range))
-                (map (fn[[indx [_ iat _]]] {indx iat}))
-                (apply merge))
-           ;;if the play head is moved, change the start time so:
-           ;;first the bring the schedule forward by bhaagindex-start-delay
-           now (- now (bhaagindex-start-delay-map (:bhaag-index db)))
            a1
-           (->> db :composition :noteseq
-                (map vector (range 0 (->> db :composition :noteseq count inc) note-interval)
-                     (range))
+           (->> a0
                 (map (fn[[at note-index {:keys [notes] :as ivec}]]
                        ;;make 0 based to 1 based index
                        (let [note-index (mod (inc note-index) (-> taal-def taal :num-beats))
@@ -848,21 +841,15 @@
                 ;;select only notes encoded as [:mandra :s]
                 (filter (fn[[indx inote]] (vector? (first inote))))
                 (map vector (range))
-                (map (fn[[svara-index [note-index _]]] [svara-index note-index])))
+                (map (fn[[svara-index [note-index inote]]] [svara-index note-index inote])))
            ;;a1 contains notes, tanpura, beat sounds.
            ;;we need another index that translates a note index to the visual index which
            ;;contains just the notes
            noteindex-to-svaraindex-map (->> svara2note-indexes
-                                            (map (fn[[svara-index note-index]] {note-index svara-index}))
+                                            (map (fn[[svara-index note-index inote]]
+                                                   {note-index svara-index}))
                                             (apply merge))
-           bhaag2note-index
-           (->> a1
-                (map vector (range))
-                (filter (fn[[indx inote]] (= :tick (first inote))))
-                (map vector (range))
-                (map (fn[[bhaag-index [note-index _]]] {bhaag-index note-index  }))
-                (apply merge))
-           play-note-index (or (bhaag2note-index (:bhaag-index db) ) 0)]
+           play-note-index 0]
        {:db (assoc db
                    :clock clock
                    :play-state :start
@@ -871,10 +858,12 @@
                    :note-interval note-interval
                    :num-notes num-notes
                    :bhaag-index 0
+                   :elem-index (if (> play-head-index 0)
+                                 (let [r (subvec (:elem-index db) play-head-index)]
+                                   r)
+                                 (:elem-index db))
                    ;;translates the play-note index to the view-note index
                    :play-to-view-map noteindex-to-svaraindex-map
-                   :bhaag2note-index bhaag2note-index
-                   ;;:bhaagindex-start-delay-map bhaagindex-start-delay-map
                    :timer
                    (-> (c/set-timeout! clock #(dispatch [::clock-tick-event]) 0)
                        (c/repeat! 400)))
@@ -899,17 +888,27 @@
 
 (reg-event-fx
  ::register-elem
- (fn [{:keys [db]} [_ index nsi elem]]
+ (fn [{:keys [db]} [_ index {:keys [note-index] :as note-xy-map} elem]]
    {:db
-    (if (= 0 index)
-      (update-in db [:elem-index ] (constantly [elem]))
-      (update-in db [:elem-index ] conj elem))}))
+    (let [ndb (if (= 0 index)
+                (-> (update-in db [:elem-index ] (constantly [elem]))
+                    (update-in [:bhaag-first-note] (constantly [index])))
+                (let [idb (update-in db [:elem-index ] conj elem)]
+                  ;;first notes in a bhaag have note-index 0
+                  (if (= 0 note-index)
+                    (update-in idb [:bhaag-first-note] conj index)
+                    idb)))]
+      ndb)}))
 
 ;;change the play head to move ahead or behind
 (reg-event-fx
- ::set-bhaag-index
- (fn [{:keys [db]} [_ bhaag-index]]
-   {:db (update-in db [:bhaag-index] (constantly bhaag-index))}))
+ ::set-play-position
+ (fn [{:keys [db]} [_ play-position]]
+   (let [a1 ((:bhaag-first-note db) play-position)]
+     {:db
+      (->
+       (update-in db [:bhaag-index] (constantly play-position))
+       (update-in [:play-head-index] (constantly a1)))})))
 
 (reg-event-fx
  ::clock-tick-event

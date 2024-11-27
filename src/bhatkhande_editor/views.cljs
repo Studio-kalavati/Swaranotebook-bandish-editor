@@ -766,14 +766,19 @@
                                           cursor-rect
                                           (if play-mode?
                                             ;;show rect that animates on playing
-                                            [:rect
-                                             {:width (int (* 0.6 @font-size)) :height @font-size
-                                              :fill "#f83600"
-                                              :fill-opacity 0
-                                              :ref #(when (identity %)
-                                                      (dispatch [::events/register-elem
-                                                                 nseq-index nsi %]))
-                                              :x (+ x1 (int (* 0.2 @font-size))) :y (int (* 0.2 @font-size))}]
+                                            (let [phi @(subscribe [::subs/play-head-index])]
+                                              [:rect
+                                               {:width (int (* 0.6 @font-size)) :height @font-size
+                                                :fill "#f83600"
+                                                :fill-opacity 0
+                                                :ref #(when (identity %)
+                                                        (let [opa "fill-opacity:0"
+                                                              opac (str opa
+                                                                        (if (= phi nseq-index) ".5" ""))]
+                                                          (set! (.-style %) opac)
+                                                          (dispatch [::events/register-elem
+                                                                     nseq-index note-xy-map %])))
+                                                :x (+ x1 (int (* 0.2 @font-size))) :y (int (* 0.2 @font-size))}])
                                             ;;show cursor
                                             [:rect (assoc rect-style
                                                           :x (+ x1 5) :y 5
@@ -1041,12 +1046,12 @@
                                                       #(do (reset! show-settings? true)))])
               mobile? @(subscribe[::bp/mobile?])
               slider-play-head [slider :model (or @(subscribe [::subs/bhaag-index]) 0)
-                                :max @(subscribe [::subs/max-num-bhaags])
+                                :max (dec @(subscribe [::subs/max-num-bhaags]))
                                 :style {:align-self :center :height (if mobile? "3vh" "")}
                                 :width (if mobile? "80vw" "max(25vw,150px)")
                                 :on-change #(do
-                                              (println " bi " %)
-                                              (dispatch [::events/set-bhaag-index (or % 0)]))]]
+                                              ;;(println " bi " %)
+                                              (dispatch [::events/set-play-position (or % 0)]))]]
           [v-box :children
            [slider-play-head
             [h-box
