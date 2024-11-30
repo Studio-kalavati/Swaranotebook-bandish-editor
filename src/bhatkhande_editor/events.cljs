@@ -751,6 +751,12 @@
                                      butlast ;;drop the last one and add the first note
                                      (into [1])))
            play-head-position (:play-head-position db)
+           ;;play-head-position refers to whole notes (e.g 5 /16)
+           ;;but if the notes have dugun/tigun, we need the number of actual notes.
+           ;;for each if each note is dugun,
+           ;;if play-head-position is 4, then play-head-subnotes-position is 8
+           play-head-subnotes-position (->> db :composition :noteseq (take play-head-position)
+                                            (map (comp count :notes)) (apply + ))
            a0 (->>
                db :composition :noteseq
                (map vector (range))
@@ -835,6 +841,7 @@
            ;;a sequence of vectors of the form [svara-index note-index]
            ;;where svara-index is usually less than note-index because
            ;;note index also contains beat & tanpura notes
+           _ (println " a1 " (take 20 a1))
            svara2note-indexes
            (->> a1
                 (map vector (range))
@@ -847,9 +854,11 @@
            ;;contains just the notes
            noteindex-to-svaraindex-map (->> svara2note-indexes
                                             (map (fn[[svara-index note-index inote]]
+                                                   (println " adding k "note-index " v " svara-index " inote " inote)
                                                    {note-index svara-index}))
                                             (apply merge))
            play-note-index 0]
+       (println " play-head-psition "play-head-position)
        {:db (assoc db
                    :clock clock
                    :play-state :start
@@ -859,7 +868,7 @@
                    :num-notes num-notes
                    :bhaag-index 0
                    :elem-index (if (> play-head-position 0)
-                                 (let [r (subvec (:elem-index db) play-head-position)]
+                                 (let [r (subvec (:elem-index db) play-head-subnotes-position)]
                                    r)
                                  (:elem-index db))
                    ;;translates the play-note index to the view-note index
@@ -888,15 +897,18 @@
 
 (reg-event-fx
  ::register-elem
- (fn [{:keys [db]} [_ index {:keys [note-index] :as note-xy-map} elem]]
+ (fn [{:keys [db]} [_ index {:keys [note-index nsi] :as note-xy-map} elem]]
    {:db
-    (let [ndb (if (= 0 index)
+    (let [ndb
+          (if (and (= 0 index) (= 0 nsi))
                 (-> (update-in db [:elem-index ] (constantly [elem]))
                     (update-in [:bhaag-first-note] (constantly [index])))
                 (let [idb (update-in db [:elem-index ] conj elem)]
                   ;;first notes in a bhaag have note-index 0
-                  (if (= 0 note-index)
-                    (update-in idb [:bhaag-first-note] conj index)
+                  (if (and (= 0 note-index) (= 0 nsi))
+                    (do
+                      #_(println " register index " index " note-xy-map "note-xy-map)
+                      (update-in idb [:bhaag-first-note] conj index))
                     idb)))]
       ndb)}))
 
@@ -905,6 +917,7 @@
 (reg-event-fx
  ::set-play-position
  (fn [{:keys [db]} [_ nth-bhaag-to-play-from]]
+   (println "btfn " (:bhaag-first-note db))
    (let [a1 ((:bhaag-first-note db) nth-bhaag-to-play-from)]
      {:db
       (->
@@ -972,6 +985,7 @@
                                                           (last noteat) {})])
                                        (when view-note-index
                                          (let [notel (get-in (:elem-index db) [view-note-index])]
+                                           (println " lighting up note "view-note-index " indx " indx " notel " notel)
                                            (js/setTimeout
                                             (fn []
                                               (set! (.-style notel)
@@ -993,11 +1007,15 @@
                                             (* 1000 iat))))))))
                         (->> past-notes-to-play last scroll-fn)
                         (assoc db :play-note-index n-note-play-index)
-                        #_(let [bni ((:note2bhaag-index db) play-note-index )
+                        #_(let [svara-index (set (filter #((:play-to-view-map db) %) past-notes-to-play))
+                              bhaag-playing (->> (map vector (range) (:bhaag-first-note db))
+                                                 (filter (fn[[a b]] (svara-index b)))
+                                                 first)
                               i2db (assoc db :play-note-index n-note-play-index)]
-                          (if bni
-                            (do (println " bni " bni)
-                                (assoc i2db :bhaag-index bni))
+                          (println " bhaag-playing- " bhaag-playing)
+                          (if (-> bhaag-playing first )
+                            (do (println " setting bhaag-playing " bhaag-playing)
+                                (assoc i2db :nth-bhaag-to-play-from (-> bhaag-playing first)))
                             i2db)))
                       db)}
            ret

@@ -774,7 +774,12 @@
                                                 :ref #(when (identity %)
                                                         (let [opa "fill-opacity:0"
                                                               opac (str opa
-                                                                        (if (= phi nseq-index) ".5" ""))]
+                                                                        (if (and
+                                                                             (= phi nseq-index)
+                                                                             (= 0 nsi))
+                                                                          (do #_(println " highlight "
+                                                                                       [phi nseq-index nsi])
+                                                                              ".5") ""))]
                                                           (set! (.-style %) opac)
                                                           (dispatch [::events/register-elem
                                                                      nseq-index note-xy-map %])))
@@ -1050,10 +1055,11 @@
                                 :style {:align-self :center :height (if mobile? "3vh" "")}
                                 :width (if mobile? "80vw" "max(25vw,150px)")
                                 :on-change #(do
-                                              ;;(println " bi " %)
+                                              (println " bi " %)
                                               (dispatch [::events/set-play-position (or % 0)]))]]
           [v-box :children
-           [slider-play-head
+           [(when-not @(subscribe [::subs/playing?])
+              slider-play-head)
             [h-box
              :gap      "0.5vh"
              :children back-play-settings-butns]]])]])))
