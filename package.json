@@ -8,7 +8,7 @@
 	},
 	"dependencies": {
 		"create-react-class": "^15.7.0",
-		"posthog-js": "^1.104.4",
+		"posthog-js": "^1.194.1",
 		"react": "^17.0.2",
 		"react-dom": "^17.0.2",
 		"workbox-cli": "^6.5.4"

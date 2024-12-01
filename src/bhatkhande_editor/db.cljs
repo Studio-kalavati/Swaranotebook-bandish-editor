@@ -1,11 +1,8 @@
 (ns bhatkhande-editor.db
   (:require
    [sargam.spec :as us]
-   [chronoid.core :as c]
-   [reagent.core :as reagent]
    [sargam.talas :as talas :refer [taal-def]])
   (:require-macros [adzerk.env :as env]))
-
 
 (env/def
   apiKey :required
@@ -29,7 +26,7 @@
 (defn get-noteseq-index
   "given a multi-index of row,bhaag and note,
   returns the index of the note in noteseq.  "
-  [{:keys [row-index bhaag-index note-index] :as click-index} taal]
+  [{:keys [row-index bhaag-index note-index]} taal]
   (let [td (taal-def taal)
         num-beats (:num-beats td)
         a1 (* row-index num-beats)
@@ -52,7 +49,7 @@
                          :notes
                          (map vector (range))
                          (reduce
-                          (fn[acc1 [ni i]]
+                          (fn[acc1 [ni _]]
                             ;;create all notes in a single beat.
                             (let [note-xy-map [row-index
                                                bhaag-index
@@ -81,7 +78,7 @@
        (partition-all (-> taal-def :num-beats))
        (map vec)
        (mapv (fn[i]
-               (let [{:keys [fin acc] :as ac}
+               (let [{:keys [fin _]}
                      (reduce
                       (fn[ac bhaag-len]
                         (let [[a b] (split-at bhaag-len (:acc ac))
@@ -247,14 +244,12 @@
                 (zipmap [:row-index :bhaag-index :note-index :nsi] in))))}))
 
 
-
-
 (def default-db
-  (let []
-    (merge (comp-decorator init-comp)
-           {:init-state {:cursor-color 0}
-            :dispinfo (merge dispinfo m-dispinfo)
-            :m-dispinfo m-dispinfo
-            ;;for storing svara images to light up
-            :elem-index []
-            :dim {:editor (mapv dispinfo [:x-end :y-end])}})))
+  (merge (comp-decorator init-comp)
+         {:init-state {:cursor-color 0}
+          :dispinfo (merge dispinfo m-dispinfo)
+          :m-dispinfo m-dispinfo
+          ;;for storing svara images to light up
+          :elem-index []
+          :play-head-position 0
+          :dim {:editor (mapv dispinfo [:x-end :y-end])}}))
