@@ -766,14 +766,24 @@
                                           cursor-rect
                                           (if play-mode?
                                             ;;show rect that animates on playing
-                                            [:rect
-                                             {:width (int (* 0.6 @font-size)) :height @font-size
-                                              :fill "#f83600"
-                                              :fill-opacity 0
-                                              :ref #(when (identity %)
-                                                      (dispatch [::events/register-elem
-                                                                 nseq-index nsi %]))
-                                              :x (+ x1 (int (* 0.2 @font-size))) :y (int (* 0.2 @font-size))}]
+                                            (let [phi @(subscribe [::subs/play-head-position])]
+                                              [:rect
+                                               {:width (int (* 0.6 @font-size)) :height @font-size
+                                                :fill "#f83600"
+                                                :fill-opacity 0
+                                                :ref #(when (identity %)
+                                                        (let [opa "fill-opacity:0"
+                                                              opac (str opa
+                                                                        (if (and
+                                                                             (= phi nseq-index)
+                                                                             (= 0 nsi))
+                                                                          (do #_(println " highlight "
+                                                                                       [phi nseq-index nsi])
+                                                                              ".5") ""))]
+                                                          (set! (.-style %) opac)
+                                                          (dispatch [::events/register-elem
+                                                                     nseq-index note-xy-map %])))
+                                                :x (+ x1 (int (* 0.2 @font-size))) :y (int (* 0.2 @font-size))}])
                                             ;;show cursor
                                             [:rect (assoc rect-style
                                                           :x (+ x1 5) :y 5
@@ -1028,20 +1038,31 @@
                      [h-box :children
                       [(zmdi-butn2 "zmdi zmdi-close zmdi-hc-2x"
                                    #(reset! show-settings? false))]]]]]])
-        [h-box
-         :gap      "0.5vh"
-         :children
-         (if @(subscribe [::subs/playing?])
-           [(zmdi-butn2
-             "zmdi zmdi-pause-circle zmdi-hc-4x"
-             #(do (dispatch [::events/pause])))]
-           [(zmdi-butn2 "zmdi zmdi-arrow-left zmdi-hc-2x"
-                        #(do (dispatch [::events/set-mode :edit])))
-            (zmdi-butn2
-             "zmdi zmdi-play-circle zmdi-hc-4x"
-             #(do (dispatch [::events/play])))
-            (zmdi-butn2 "zmdi zmdi-settings zmdi-hc-2x"
-                        #(do (reset! show-settings? true)))])]]])))
+        (let [back-play-settings-butns (if @(subscribe [::subs/playing?])
+                                         [(zmdi-butn2
+                                           "zmdi zmdi-pause-circle zmdi-hc-4x"
+                                           #(do (dispatch [::events/pause])))]
+                                         [(zmdi-butn2 "zmdi zmdi-arrow-left zmdi-hc-2x"
+                                                      #(do (dispatch [::events/set-mode :edit])))
+                                          (zmdi-butn2
+                                           "zmdi zmdi-play-circle zmdi-hc-4x"
+                                           #(do (dispatch [::events/play])))
+                                          (zmdi-butn2 "zmdi zmdi-settings zmdi-hc-2x"
+                                                      #(do (reset! show-settings? true)))])
+              mobile? @(subscribe[::bp/mobile?])
+              slider-play-head [slider :model (or @(subscribe [::subs/bhaag-to-play-from]) 0)
+                                :max (dec @(subscribe [::subs/max-num-bhaags]))
+                                :style {:align-self :center :height (if mobile? "3vh" "")}
+                                :width (if mobile? "80vw" "max(25vw,150px)")
+                                :on-change #(do
+                                              (println " bi " %)
+                                              (dispatch [::events/set-play-position (or % 0)]))]]
+          [v-box :children
+           [(when-not @(subscribe [::subs/playing?])
+              slider-play-head)
+            [h-box
+             :gap      "0.5vh"
+             :children back-play-settings-butns]]])]])))
 
 (defn menu
   []
