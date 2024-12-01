@@ -20,7 +20,6 @@
    :id      :log-event
    :after  (fn [context]
              (let [[k v] (-> context :coeffects :event)]
-               #_(println " event fired " [k v])
                (.capture (-> context :coeffects :db :posthog) (str k) (clj->js v) "")
                 context))))
 
@@ -822,7 +821,6 @@
            ;;a sequence of vectors of the form [svara-index note-index]
            ;;where svara-index is usually less than note-index because
            ;;note index also contains beat & tanpura notes
-           _ (println " a1 " (take 20 a1))
            svara2note-indexes
            (->> a1
                 (map vector (range))
@@ -835,7 +833,6 @@
            ;;contains just the notes
            noteindex-to-svaraindex-map (->> svara2note-indexes
                                             (map (fn[[svara-index note-index inote]]
-                                                   (println " adding k "note-index " v " svara-index " inote " inote)
                                                    {note-index svara-index}))
                                             (apply merge))
            play-note-index 0]
@@ -877,7 +874,7 @@
 
 (reg-event-fx
  ::register-elem
- (fn [{:keys [db]} [_ index _ elem]]
+ (fn [{:keys [db]} [_ index {:keys [note-index nsi]} elem]]
    {:db
     (let [ndb
           (if (and (= 0 index) (= 0 nsi))
@@ -962,7 +959,6 @@
                                                           (last noteat) {})])
                                        (when view-note-index
                                          (let [notel (get-in (:elem-index db) [view-note-index])]
-                                           (println " lighting up note "view-note-index " indx " indx " notel " notel)
                                            (js/setTimeout
                                             (fn []
                                               (set! (.-style notel)

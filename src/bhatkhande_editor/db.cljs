@@ -251,4 +251,5 @@
           :m-dispinfo m-dispinfo
           ;;for storing svara images to light up
           :elem-index []
+          :play-head-position 0
           :dim {:editor (mapv dispinfo [:x-end :y-end])}}))
