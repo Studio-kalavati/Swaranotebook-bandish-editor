@@ -3,8 +3,8 @@
    [sargam.spec :as us]
    [reagent.core :as reagent]
    [re-frame.core :as re-frame
-    :refer [debug reg-event-db reg-event-fx
-            subscribe dispatch dispatch-sync]]
+    :refer [reg-event-db reg-event-fx
+            dispatch]]
    [chronoid.core :as c]
    [bhatkhande-editor.db :as db :refer [pitch-s-list]]
    ["firebase/app" :default firebase]
@@ -26,7 +26,7 @@
 
 (defn get-ns-index
   [db]
-  (let [{:keys [row-index bhaag-index note-index ni] :as click-index}
+  (let [{:keys [ni] :as click-index}
         (get-in db [:props :cursor-pos])
         nindex (db/get-noteseq-index click-index (get-in db [:composition :taal]))]
     [nindex ni]))
@@ -122,7 +122,6 @@
  [log-event]
  (fn [{:keys [db]} [_ {:keys [svara notes-per-beat]}]]
    (let [cpos (get-in db [:props :cursor-pos ] )
-         next-index(get-in db [:composition :index-forward-seq (vals cpos)])
          prev-index (get-in db [:composition :index-backward-seq (vals cpos)])
          note-index
          (if (nil? prev-index)
@@ -141,29 +140,26 @@
                   (into [{:notes [nsvara]}] %)
                   (into (conj (subvec % 0 (inc note-index)) {:notes [nsvara]})
                         (subvec % (inc note-index))))
-                next-note-cursor
-                (zipmap [:row-index :bhaag-index :note-index :nsi] next-index)
                 res
                 (if (> notes-per-beat 1)
                   ;;2 states here: either adding the first note of a multi-note
-                  (do
-                    ;;if not the same as the last npb
-                      (if
-                          (and (not= notes-per-beat (-> ln :notes count))
+                  ;;if not the same as the last npb
+                  (if
+                      (and (not= notes-per-beat (-> ln :notes count))
                            (= notes-per-beat (-> ln :notes last :npb)))
-                        [(update-in % [note-index :notes] conj nsvara)
-                         (do #_(println " a2 "(> notes-per-beat (-> ln :notes count)))
-                             (if (> notes-per-beat (-> ln :notes count))
-                               ;;if multi-note will be full after this, stay on the same note
-                               ;;don't increment the cursor
-                               :cur-cursor
-                               ;;increment just note-sub-index
-                               (zipmap [:row-index :bhaag-index :note-index :nsi]
-                                       (mapv (update-in cpos [:nsi] inc)
-                                             [:row-index :bhaag-index :note-index :nsi]))))]
-                        [note-insert :next-note-cursor]
-                        ;;otherwise append to multi-note
-                        ))
+                    [(update-in % [note-index :notes] conj nsvara)
+                     (if (> notes-per-beat (-> ln :notes count))
+                       ;;if multi-note will be full after this, stay on the same note
+                       ;;don't increment the cursor
+                       :cur-cursor
+                       ;;increment just note-sub-index
+                       (zipmap [:row-index :bhaag-index :note-index :nsi]
+                               (mapv (update-in cpos [:nsi] inc)
+                                     [:row-index :bhaag-index :note-index :nsi])))]
+                    [note-insert :next-note-cursor]
+                    ;;otherwise append to multi-note
+                    )
+                  
                   [note-insert :next-note-cursor])]
             res)
          [updated-ns updated-cursor] (noteseq-up-fn (get-in db [:composition :noteseq]))
@@ -179,8 +175,6 @@
                            (= updated-cursor :next-note-cursor)
                            (let [next-index
                                  (get-in ndb [:composition :index-forward-seq (vals cpos)])
-                                 prev-index
-                                 (get-in ndb [:composition :index-backward-seq (vals cpos)])
                                  k1 (zipmap [:row-index :bhaag-index :note-index :nsi] next-index)]
                              k1)
                            (= updated-cursor :cur-cursor) cpos
@@ -215,7 +209,7 @@
 (defn get-last-noteseq-index
   "get the level 4 index from the indexed-noteseq"
   [indexed-ns]
-  (let [[row-index bhaag-index note-index note-sub-index :as indx]
+  (let [indx
         [(count indexed-ns)
          (-> indexed-ns last count)
          (-> indexed-ns last last count)
@@ -234,7 +228,7 @@
 
 (reg-event-fx
  ::show-text-popup
- (fn [{:keys [db]} [_ {:keys [row-index bhaag-index text-val] :as imap}]]
+ (fn [{:keys [db]} [_ imap]]
    {:db
     (-> db
         (update-in [:props :show-text-popup]
@@ -252,7 +246,7 @@
  ::delete-single-swara
  [log-event]
  (fn [{:keys [db]} [_ _]]
-   (let [[note-index note-sub-index] (get-ns-index db)
+   (let [[note-index _] (get-ns-index db)
          cpos (get-in db [:props :cursor-pos ] )
          index-entry (get-in db [:composition :index-backward-seq (vals cpos)])]
      #_(println " delete index "[note-index note-sub-index]
@@ -262,8 +256,7 @@
      {:db
       (-> db
           (update-in [:composition :noteseq]
-                     #(let [to-remove (% note-index)
-                            res
+                     #(let [res
                             (if (= 0 note-index)
                               ;;dont delete  the first one
                               %
@@ -354,10 +347,8 @@
         file-ref  (.child storageRef path)]
     (-> (.putString file-ref bandish)
         (.then
-         (fn[i]
+         (fn[_]
            (dispatch [::navigate-to uid title])
-           #_(.pushState (.-history js/window) #js {} ""
-                       (db/get-long-url path))
            (dispatch [::set-active-panel :home-panel]))))))
 
 (reg-event-fx
@@ -432,33 +423,29 @@
  ::google-sign-in-fx
  [log-event]
  (fn [{:keys [db]} [_ _]]
-   (let [storage (.-sessionStorage js/window)]
-     ;;set a local storage because
-     ;;when the auth redirect is sent back to the page,
-     ;;the local DB atom will not remember and will load its
-     ;;original clean slate.
-     ;;(.setItem storage "sign-in" "inprogress")
-     {:db (-> db
-              (dissoc :firebase-error))
-      :firebase/google-sign-in {:sign-in-method :redirect}})))
+   ;;set a local storage because
+   ;;when the auth redirect is sent back to the page,
+   ;;the local DB atom will not remember and will load its
+   ;;original clean slate.
+   ;;(.setItem storage "sign-in" "inprogress")
+   {:db (dissoc db :firebase-error)
+    :firebase/google-sign-in {:sign-in-method :redirect}}))
 
 (reg-event-fx
  ::get-group-info
  [log-event]
- (fn [{:keys [db]} [_ {:keys [email display-name]}]]
-   (let []
-     (-> (js/fetch (str "https://connect.mailerlite.com/api/groups" )
-                   #js {"method" "get"
-                        "headers"
-                        #js {"Authorization" (str "Bearer " db/mailerliteApiToken)
-                             "Content-Type" "application/json"
-                             "Accept" "application/json"}})
-         (.then (fn[i] (.text i)))
-         (.then (fn[i]
-                  (let []
-                    (println " i "i))))
-         (.catch (fn[i] (println " error " i ))))
-     {:db db})))
+ (fn [{:keys [db]} [_ _]]
+   (-> (js/fetch (str "https://connect.mailerlite.com/api/groups" )
+                 #js {"method" "get"
+                      "headers"
+                      #js {"Authorization" (str "Bearer " db/mailerliteApiToken)
+                           "Content-Type" "application/json"
+                           "Accept" "application/json"}})
+       (.then (fn[i] (.text i)))
+       (.then (fn[i]
+                (println " i "i)))
+       (.catch (fn[i] (println " error " i ))))
+   {:db db}))
 
 (reg-event-fx
  ::add-contact-to-newsletter
@@ -476,9 +463,8 @@
                              "Accept" "application/json"}
                         "body" (.stringify js/JSON (clj->js body))})
          (.then (fn[i] (.text i)))
-         (.then (fn[i]
-                  (let []
-                    (println " added to email "))))
+         (.then (fn[_]
+                  (println " added to email ")))
          (.catch (fn[i] (println " error " i ))))
      {:db db})))
 
@@ -510,18 +496,14 @@
                   ;;:dispatch [::get-group-info]
                   }]
          (when storage
-           (do
-             (.removeItem storage "sign-in")))
+           (.removeItem storage "sign-in"))
          (if newsletter-signup?
-           (do
-             (assoc ndb :dispatch [::add-contact-to-newsletter
-                                   (select-keys user [:email :display-name])]))
+           (assoc ndb :dispatch [::add-contact-to-newsletter
+                                 (select-keys user [:email :display-name])])
            ndb))
        ;;the first event is user nil and the second one has the user mapv
        ;;therefor if it is set nil twice, then show login popup
-       (do 
-         #_(println " user not set ")
-       {:db (update-in db [:user-nil-times] (fnil inc 1))}))
+       {:db (update-in db [:user-nil-times] (fnil inc 1))})
      (catch js/Error e
        (println " got error in set-user " e)
        {}))))
@@ -638,8 +620,8 @@
                  [(drop id svara-keys) ivals]))))
          ;;return the lower of the two
          count-samples (dec (let [[s1 s2] (mapv count [skeys samples])]
-                              (if (> s1 s2) s2 s1)))
-         ibuffers (mapv (partial fetch-url count-samples imap ctx) skeys samples)]
+                              (if (> s1 s2) s2 s1)))]
+     (mapv (partial fetch-url count-samples imap ctx) skeys samples)
      imap)))
 
 (defn get-clock
@@ -652,7 +634,7 @@
 (reg-event-fx
  ::init-audio-buffers
  (fn [{:keys [db]} [_ _]]
-   (let  [{:keys [clock audio-context] :as clk-ctx} (get-clock)
+   (let  [{:keys [audio-context] :as clk-ctx} (get-clock)
           bufatom (get-tabla-sample-loc (reagent/atom {}) audio-context)]
      {:db (merge (assoc db :sample-buffers bufatom) clk-ctx)
       :dispatch [::set-active-panel :load-sounds-panel]})))
@@ -660,7 +642,7 @@
 (reg-event-fx
  ::init-note-buffers
  (fn [{:keys [db]} [_ pitches-above-c]]
-   (let [{:keys [clock audio-context] :as clk-ctx} (get-clock)
+   (let [{:keys [audio-context] :as clk-ctx} (get-clock)
          bufatom (reagent/atom {})
          bufatom (get-santoor-url-map pitches-above-c bufatom audio-context )
          new-pitch (or (:sample pitches-above-c) "c")]
@@ -686,7 +668,7 @@
 (reg-event-fx
  ::refresh-comp
  [log-event]
- (fn [{:keys [db]} [_ {:keys [composition] :as inp}]]
+ (fn [{:keys [db]} [_ inp]]
    (let [comp (db/add-indexes inp)
          lyrics? (> (->> comp :noteseq (map :lyrics) (filter identity) count) 0)
          ndb (-> db
@@ -773,10 +755,9 @@
                 (reduce into []))
            a1
            (->> a0
-                (map (fn[[at note-index {:keys [notes] :as ivec}]]
+                (map (fn[[at _ {:keys [notes]}]]
                        ;;make 0 based to 1 based index
-                       (let [note-index (mod (inc note-index) (-> taal-def taal :num-beats))
-                             notseq
+                       (let [notseq
                              (if (= 1 (count notes))
                                [[(-> notes first :shruti) (+ now at) note-interval]]
                                ;;if many notes in one beat, schedule them to play at equal intervals
@@ -803,7 +784,7 @@
                 (map vector (range))
                 reverse
                 (reduce
-                 (fn [iacc [indx [inote iat idur :as in0]]]
+                 (fn [iacc [indx [inote _ idur]]]
                    (if (= inote [:madhyam :a])
                      (-> iacc
                          (update-in [:indx] (constantly indx))
@@ -858,7 +839,6 @@
                                                    {note-index svara-index}))
                                             (apply merge))
            play-note-index 0]
-       (println " play-head-psition "play-head-position)
        {:db (assoc db
                    :clock clock
                    :play-state :start
@@ -897,7 +877,7 @@
 
 (reg-event-fx
  ::register-elem
- (fn [{:keys [db]} [_ index {:keys [note-index nsi] :as note-xy-map} elem]]
+ (fn [{:keys [db]} [_ index _ elem]]
    {:db
     (let [ndb
           (if (and (= 0 index) (= 0 nsi))
@@ -936,27 +916,25 @@
                            (take-while
                             (fn[i]
                               (and (> max-note-index i)
-                                   (let [[sample iat idur] (time-index i)
-                                         ret (>= at (time-change-fn iat))]
-                                     ret)))
+                                   (let [[_ iat _] (time-index i)]
+                                     (>= at (time-change-fn iat)))))
                             (iterate inc start-index)))
            past-notes-to-play (past-notes-fn play-at-time play-note-index #(- % 0.5))
-           idb {:db (if (-> past-notes-to-play empty? not)
+           idb {:db (if (seq past-notes-to-play)
                       (let [n-note-play-index
-                            (if (-> past-notes-to-play empty? not)
+                            (if (seq past-notes-to-play)
                               (-> past-notes-to-play last inc)
                               play-note-index)
                             scroll-fn
                             (fn[indx]
-                              (let [[inote iat idur :as noteat] (play-at-time indx)
+                              (let [[_ _ _] (play-at-time indx)
                                     view-note-index ((:play-to-view-map db) indx)]
                                 (when view-note-index
                                   (let [notel (get-in (:elem-index db) [view-note-index])
                                         bcr (.getBoundingClientRect notel)]
                                     (js/setTimeout
                                      (fn[]
-                                       (do
-                                         (let [mnotes-div (:music-notes-element db)
+                                       (let [mnotes-div (:music-notes-element db)
                                                cur-sctop (.-scrollTop mnotes-div)
                                                last-y (.-y bcr)
                                                ch (.-clientHeight mnotes-div)
@@ -972,9 +950,8 @@
                                            (when (= (dec (:num-notes db)) view-note-index)
                                              (.scrollTo mnotes-div
                                                         (clj->js {"top" 0 "behavior"
-                                                                  "smooth"}))))))
-                                     600)))))
-                            ]
+                                                                  "smooth"})))))
+                                     600)))))]
                         (->> past-notes-to-play
                              (mapv (fn[ indx]
                                      (let [[inote iat idur :as noteat] (play-at-time indx)
@@ -1001,7 +978,7 @@
                                                      (* 1000 2 (:note-interval db))})
                                                (.addEventListener
                                                 "finish"
-                                                (fn[e]
+                                                (fn[_]
                                                   (set! (.-style notel)
                                                         (str "fill-opacity:0"))))))
                                             (* 1000 iat))))))))
@@ -1020,8 +997,7 @@
                       db)}
            ret
            (if (= play-note-index (count play-at-time))
-             (do
-               (merge idb {:dispatch [::stop]}))
+             (merge idb {:dispatch [::stop]})
              idb)]
        ret)
      (catch js/Error e

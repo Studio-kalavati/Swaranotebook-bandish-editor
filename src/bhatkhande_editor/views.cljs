@@ -5,23 +5,16 @@
                                    hyperlink v-box h-box
                                    hyperlink-href
                                    single-dropdown
-                                   border
-                                   input-textarea
-                                   typeahead
                                    checkbox
                                    line
                                    radio-button
-                                   label
                                    slider
                                    box
                                    input-text
-                                   info-button
                                    md-icon-button
-                                   md-circle-icon-button
                                    ;;simple-v-table
                                    at
                                    button
-                                   p
                                    gap
                                    throbber
                                    modal-panel]]
@@ -33,10 +26,10 @@
    [sargam.spec :as us]
    [reagent.core :as reagent]
    [cognitect.transit :as t]
+   [clojure.string :as cstring]
    [bhatkhande-editor.events :as events]
    [bhatkhande-editor.routes :as routes]
-   [cljs.math :as math]
-   [bhatkhande-editor.db :as db :refer [note-seq mswaras pitch-options-list]]
+   [bhatkhande-editor.db :as db :refer [mswaras pitch-options-list]]
    [bhatkhande-editor.subs :as subs]))
 
 (defn box-size-padding
@@ -49,7 +42,7 @@
         (and (< 600 viewwidth)
              (> 800 viewwidth))
         ["50vw" "5vw"]
-        :default
+        :else
         ["80vw" "2vw"]))
 
 (defn swar36
@@ -154,22 +147,9 @@
 
 (defn swara-buttons
   []
-  (let [raga-info
-        [v-box
-         :children
-         [[:p.info-heading "Choose your raga"]
-          [:p "Only notes for the selected raga will be displayed for easy swara entry "]]]
-        taal-info [v-box
-                   :children [[:p.info-heading "Choose your taal"]
-                              [:p "Enter swaras in the selected taal"]]]
-        dugun-info [v-box
-                    :children [[:p.info-heading "Select number of notes per beat"]
-                               [:p "Select one beat to have 1, 2 or 3 notes in it."]]]
-        show-partname-popup (reagent/atom false)
-        show-raga-popup (reagent/atom false)
+  (let [show-raga-popup (reagent/atom false)
         show-select-svaras-popup (reagent/atom false)
         show-taal-popup (reagent/atom false)
-        show-lang-popup (reagent/atom false)
         show-login-popup? (reagent/atom false)
         show-settings-popup? (reagent/atom false)
         show-title-popup? (reagent/atom false)
@@ -194,12 +174,9 @@
                                 ;;all shuddha svaras true
                                 default-custom-svaras)]
     (fn []
-      (let [sbp (vec (repeat 21 (reagent/atom false)))
-            speed-switch-fn (fn[i] {:disp-fn #(reset! notes-per-beat i)
+      (let [speed-switch-fn (fn[i] {:disp-fn #(reset! notes-per-beat i)
                                     :state #(= i @notes-per-beat)})
-            lang @(subscribe [::subs/lang])
-            rag-box-style {:padding "10px 4px 10px 4px"}
-            ]
+            rag-box-style {:padding "10px 4px 10px 4px"}]
         [v-box
          :gap      "0.5vh"
          :children [[h-box
@@ -226,34 +203,21 @@
                                  :children
                                  [[h-box
                                    :children
-                                   [(box-button
-                                     rag-box-style
-                                     (let [taals (get-in lang-labels [lang :tala-labels])
-                                           taal @(subscribe [::subs/taal])]
-                                       ;;(taals taal)
-                                       "Tal")
+                                   [(box-button rag-box-style "Tal"
                                      {:disp-fn
                                       #(do (reset! show-taal-popup (not @show-taal-popup)))
-                                      :state #(true? @show-taal-popup)})
-                                    #_[info-button :info taal-info]]]
-                                  ]]
+                                      :state #(true? @show-taal-popup)})]]]]
                                 [h-box :align :center
                                  :min-width "15vw"
                                  :children
-                                 [(box-button
-                                   rag-box-style
-                                   (let [ragas (get-in lang-labels [lang :raga-labels])
-                                         raga @(subscribe [::subs/raga])]
-                                     #_(ragas raga)
-                                     "Rag")
+                                 [(box-button rag-box-style "Rag"
                                    {:disp-fn
                                     #(do (reset! show-select-svaras-popup
                                                  (not @show-select-svaras-popup)))
                                     :state #(true? @show-select-svaras-popup)}
                                    #_{:disp-fn
                                     #(do (reset! show-raga-popup (not @show-raga-popup)))
-                                    :state #(true? @show-raga-popup)})
-                                  #_[info-button :info raga-info]]]
+                                    :state #(true? @show-raga-popup)})]]
                                 (zmdi-box-button
                                  "zmdi zmdi-collection-item-1"
                                  (speed-switch-fn 1))
@@ -284,8 +248,7 @@
                        :class "middle-buttons"
                        :children
                        (into
-                        (let [raga-id (subscribe [::subs/raga])]
-                          [[h-box
+                        [[h-box
                             :gap      "0.5vw"
                             :children (mapv (partial mk-button
                                                      {:border-top
@@ -302,8 +265,7 @@
                             :children (mapv (partial mk-button
                                                      {:border-bottom "5px solid black"}
                                                      notes-per-beat)
-                                            (swaras-3oct 0))]])
-
+                                            (swaras-3oct 0))]]
                         [(let [logged-in? @(subscribe [::subs/user])]
                            [h-box
                             :gap      "0.5vw"
@@ -411,10 +373,10 @@
                                     :width "100px"
                                     :on-change
                                     (fn[x]
-                                      (do
-                                        (reset! selected-pitch x)
-                                        (dispatch
-                                         [::events/init-note-buffers (item-for-id @selected-pitch pitch-options-list)])))]]]]]
+                                      (reset! selected-pitch x)
+                                      (dispatch
+                                       [::events/init-note-buffers
+                                        (item-for-id @selected-pitch pitch-options-list)]))]]]]]
                                  [gap :size "50px"]
                                [box
                                 :align :center
@@ -426,8 +388,7 @@
                                  :on-click #(do (reset! show-settings-popup? false))]]
                                [gap :size "2vh"]]]]])
                          (when @show-title-popup?
-                           (let []
-                             [modal-panel
+                           [modal-panel
                               :backdrop-on-click #(reset! show-title-popup? false)
                               :child [:div {:class "popup"
                                             :style {:overflow-y :scroll
@@ -453,13 +414,12 @@
                                         [button
                                          :label " Save "
                                          :class "btn-hc-lg btn-primary "
-                                         :on-click #(let [tv (clojure.string/replace @title-val
+                                         :on-click #(let [tv (cstring/replace @title-val
                                                                                      #" " "-")]
                                                       (reset! show-title-popup? false)
-                                                      (dispatch [::events/upload-new-comp tv]))]]]]]))
+                                                      (dispatch [::events/upload-new-comp tv]))]]]]])
                          (when @show-login-popup?
-                           (let []
-                             [modal-panel
+                           [modal-panel
                               :backdrop-on-click #(reset! show-login-popup? false)
                               :child [:div {:class "popup" :style {:overflow-y :scroll
                                                                    :max-height "80vh"}}
@@ -496,7 +456,7 @@
                                           :label "Subscribe to newsletter"
                                           :on-change
                                           #(reset! newsletter-signup?
-                                                   (not @newsletter-signup?))]]]]]]))
+                                                   (not @newsletter-signup?))]]]]]])
                          (when @show-taal-popup
                            (let [ta (:tala-labels (lang-labels @(subscribe [::subs/lang])))
                                  taal-labels (mapv (fn[[a b]] {:id a  :label b}) ta)
@@ -698,27 +658,20 @@
                  :flex-flow "column" :flex "1 0 0px"}
          ;;this code sets the scroll bar to the bottom, so that the last type text is seen.
          :ref
-         #(if (identity %)
-            (let [iel (.querySelector js/document ".edit-composition")
-                  padding (.-padding (js->clj (.getComputedStyle js/window iel)))
-                  intpadding (int (if padding
-                                    (first (.split (first
-                                                    (.split padding " ")) "px")) " is nil"))]
-              (dispatch [::events/set-music-notes-element %])
-              (if play-mode?
-                (set! (.-scrollTop %) 0)
-                (do
-                  (when (> (.-scrollHeight % ) myhgt)
-                    (let [sctop  (- (.-scrollHeight % ) myhgt)
-                          curpos (+ @cursor-y (.-scrollTop %))]
-                      #_(println " setting sctop to  "  sctop " cursor-y " @cursor-y " myhgt " myhgt
-                               " sctop "(.-scrollHeight % ) " cur sroll top "(.-scrollTop %))
-                      (when (> curpos sctop )
-                        (set! (.-scrollTop %) sctop))))))))}
+         #(when (identity %)
+            (dispatch [::events/set-music-notes-element %])
+            (if play-mode?
+              (set! (.-scrollTop %) 0)
+              (when (> (.-scrollHeight % ) myhgt)
+                (let [sctop  (- (.-scrollHeight % ) myhgt)
+                      curpos (+ @cursor-y (.-scrollTop %))]
+                  #_(println " setting sctop to  "  sctop " cursor-y " @cursor-y " myhgt " myhgt
+                             " sctop "(.-scrollHeight % ) " cur sroll top "(.-scrollTop %))
+                  (when (> curpos sctop )
+                    (set! (.-scrollTop %) sctop))))))}
         [:div {:class "com-edit"}
          (let
-             [div-id "editor"
-              comp @(subscribe [::subs/composition])
+             [comp @(subscribe [::subs/composition])
               rect-style {:width 2 :height @font-size :y (int (* 0.3 @font-size))}
               image-map (db/image-map
                          (let [ilang @(subscribe [::subs/lang])]
@@ -738,7 +691,7 @@
                        note-map-seq
                        (map vector (range))
                        (reduce
-                        (fn[{:keys [x images] :as acc} [note-index note]]
+                        (fn[{:keys [x _] :as acc} [note-index note]]
                           (let [
                                 ;;this is the flat noteseq index.
                                 ;;example: at position 11, we find
@@ -756,8 +709,8 @@
                                  :notes
                                  (map vector (range))
                                  (reduce
-                                  (fn[{:keys [x1 images1] :as acc1}
-                                      [nsi {:keys [shruti] :as cur-note}]]
+                                  (fn[{:keys [x1 _] :as acc1}
+                                      [nsi {:keys [shruti]}]]
                                     ;;create all notes in a single beat.
                                     (let [note-xy-map {:row-index row-index
                                                        :bhaag-index bhaag-index
@@ -797,25 +750,23 @@
                                               :href ival
                                               :on-click
                                               (fn[i]
-                                                (do
-                                                  (reset! cursor-y (.-pageY i))
-                                                  (dispatch [::events/set-click-index
-                                                             ;;for multi-note, always show on the first
-                                                             (assoc note-xy-map
-                                                                    :nsi 0)])))
+                                                (reset! cursor-y (.-pageY i))
+                                                (dispatch [::events/set-click-index
+                                                           ;;for multi-note, always show on the first
+                                                           (assoc note-xy-map
+                                                                  :nsi 0)]))
                                               :x x1 :y 5}]
                                             ;;- and S
-                                            (do
-                                              [:text {:x (+ (int (* 0.3 @font-size)) x1)
-                                                      :y (cond 
-                                                           (> @font-size 32) 32
-                                                           (< @font-size 24) 24
-                                                           :else @font-size)
-                                                      :on-click
-                                                      (fn[i]
-                                                        (dispatch [::events/set-click-index
-                                                                   note-xy-map]))}
-                                               (name (second shruti))]))
+                                            [:text {:x (+ (int (* 0.3 @font-size)) x1)
+                                                    :y (cond 
+                                                         (> @font-size 32) 32
+                                                         (< @font-size 24) 24
+                                                         :else @font-size)
+                                                    :on-click
+                                                    (fn[_]
+                                                      (dispatch [::events/set-click-index
+                                                                 note-xy-map]))}
+                                             (name (second shruti))])
                                           r3 (-> acc1
                                                  (update-in [:images1] conj ith-note)
                                                  (update-in [:x1] + (int (* 0.7 @font-size))))
@@ -827,10 +778,8 @@
                                             (update-in r3 [:images1] conj cursor-rect)
                                             (let [curpos @(subscribe [::subs/get-click-index])]
                                               (if (= note-xy-map curpos)
-                                                (do
-                                                  (update-in r3 [:images1] conj cursor-rect))
-                                                r3))
-                                            )
+                                                (update-in r3 [:images1] conj cursor-rect)
+                                                r3)))
                                           r3 (if-let [sah (get sah-list note-index)]
                                                (if (= nsi 0)
                                                  (-> r3
@@ -868,7 +817,7 @@
                                                   :fill "none"}])
                                      r5)
                                 ;;add sam-khaali
-                                r7 (if (and (= 0 note-index))
+                                r7 (if (= 0 note-index)
                                      (update-in r6
                                                 [:images] conj
                                                 [:text {:x (int (* 0.5 @font-size))
@@ -912,7 +861,7 @@
                                                   {:fill "transparent"}
                                                   {:fill "url(#sahitya-fill)"})))
                                        :on-click
-                                       (fn[i]
+                                       (fn[_]
                                          (dispatch [::events/show-text-popup
                                                     {:row-index row-index
                                                      :text-val (if tv tv "")
@@ -1066,8 +1015,7 @@
 
 (defn menu
   []
-  (let []
-    (fn []
+(fn []
       (let [icon-style {:padding "10px 0px 10px 10vw" :color "black" :font-size "x-large"}
             logged-in? @(subscribe [::subs/user])
             text-style {:padding "10px 5vw 10px 1px"}
@@ -1174,24 +1122,23 @@
         [:div
          {:class "edit-composition"
           :style {:min-height "100vh"}}
-         bbox]))))
+         bbox])))
 
 (defn help-panel
   []
-  (let []
+  [v-box :children
+   [
     [v-box :children
-     [
-      [v-box :children
-       [[title :label "abcd" :level :level2]
-        [:img
-         {:src
-          "https://user-images.githubusercontent.com/89076/225162591-fef23263-0fa0-4262-9809-47fba749be38.gif"}]]]
-      [box
-       :style {:padding "10px 5vw 10px 1px"}
-       :size "10" :child
-       [hyperlink :label "Back"
-        :style {:font-size "x-large" :color "black"}
-        :on-click #(dispatch [::events/set-active-panel :home-panel])]]]]))
+     [[title :label "abcd" :level :level2]
+      [:img
+       {:src
+        "https://user-images.githubusercontent.com/89076/225162591-fef23263-0fa0-4262-9809-47fba749be38.gif"}]]]
+    [box
+     :style {:padding "10px 5vw 10px 1px"}
+     :size "10" :child
+     [hyperlink :label "Back"
+      :style {:font-size "x-large" :color "black"}
+      :on-click #(dispatch [::events/set-active-panel :home-panel])]]]])
 
 (defn list-comps
   []
@@ -1201,7 +1148,6 @@
       (let [bands @(subscribe [::subs/my-bandishes])
             bbox (mapv (fn[i0]
                          (let [i (second (clojure.string/split i0 #"/"))
-                               titl (clojure.string/split i #"-")
                                uuid (-> @(subscribe [::subs/user]) :uid)
                                id (clojure.string/join
                                    "" (rest (clojure.string/split i0 #"/")))
@@ -1229,7 +1175,7 @@
                                 [[box :size "1"
                                   :child
                                   [md-icon-button :md-icon-name "zmdi zmdi-share"
-                                   :on-click (fn[i]
+                                   :on-click (fn[_]
                                                (if (.-share js/navigator)
                                                  (-> (.share js/navigator
                                                              #js
@@ -1238,14 +1184,13 @@
                                                               " Check out this notation \n"
                                                               "url"
                                                               (db/get-long-url i0)})
-                                                     (.then (fn[i] (println " shared")))
+                                                     (.then (fn[i] (println " shared " i)))
                                                      (.catch (fn[i]
-                                                               (println " share error"))))
+                                                               (println " share error " i))))
                                                  ;;put in a popup if share is not enabled
-                                                 (do
-                                                   (reset! share-comp i0))))]]
+                                                 (reset! share-comp i0)))]]
                                  [box :size "1" :child [md-icon-button :md-icon-name "zmdi zmdi-delete "
-                                                        :on-click (fn[i] (reset! delete-comp i0))]]]]]]
+                                                        :on-click (fn[_] (reset! delete-comp i0))]]]]]]
                              [box
                               :align :center
                               :child
@@ -1286,14 +1231,13 @@
 
                                      [h-box :children
                                       [[button :label "Cancel"
-                                        :on-click (fn[i] (reset! delete-comp nil))]
+                                        :on-click (fn[_] (reset! delete-comp nil))]
                                        [gap :size "5vw"]
                                        [button :label "Delete"
                                         :class "btn-danger"
-                                        :on-click (fn[i]
-                                                    (do
-                                                      (dispatch [::events/delete-comp @delete-comp])
-                                                      (reset! delete-comp nil)))]]]]]]]
+                                        :on-click (fn[_]
+                                                    (dispatch [::events/delete-comp @delete-comp])
+                                                    (reset! delete-comp nil))]]]]]]]
             share-panel [modal-panel
                          :backdrop-on-click #(reset! share-comp nil)
                          :child [:div {:class "popup" :style {;;:overflow :scroll
@@ -1334,7 +1278,7 @@
   [:div
    [swara-display-area]
    [:div {:class "keyboard wow fadeInUp"
-          :ref #(if (identity %)
+          :ref #(when (identity %)
                   (let [ch (.-offsetHeight %)]
                     (reset! editor-height ch)))}
     (let [istate @(subscribe [::subs/mode])]

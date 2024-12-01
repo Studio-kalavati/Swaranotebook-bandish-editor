@@ -4,9 +4,7 @@
    [pushy.core :as pushy]
    [re-frame.core :as re-frame :refer [dispatch]]
    [cemerick.url :as curl]
-   [re-com.core :as re-com :refer [border
-                                   box
-                                   throbber
+   [re-com.core :as re-com :refer [throbber
                                    modal-panel]]
    [bhatkhande-editor.events :as events]))
 
