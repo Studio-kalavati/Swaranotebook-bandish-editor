@@ -655,13 +655,17 @@
  (fn [{:keys [db]} [_ ival]]
    (let [ndb (update-in db [:props :mode]
                         (constantly ival))]
-     (if (= :play ival)
-         (cond (nil? (:audio-context ndb))
+     (cond
+       (= :play ival)
+       (cond (nil? (:audio-context ndb))
            (assoc {:db ndb} :dispatch-n [[::init-audio-buffers] [::init-note-buffers]])
            (nil? (:sample-buffers ndb))
            {:db ndb :dispatch [::init-audio-buffers]}
            :else
            {:db ndb})
+       (= :bulk-edit ival)
+       {:db ndb}
+       :else
        {:db ndb}))))
 
 (reg-event-fx

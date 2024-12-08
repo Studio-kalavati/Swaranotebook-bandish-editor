@@ -1703,7 +1703,7 @@ input[type="search"]
     height: 100%;
     /* overflow-x: hidden; */
     padding-right: 17px; /* Increase/decrease this value for cross-browser compatibility */
-    box-sizing: content-box; 
+    box-sizing: content-box;
     display: flex;
     /*max-height: 20vh; */
     flex-wrap: wrap;
