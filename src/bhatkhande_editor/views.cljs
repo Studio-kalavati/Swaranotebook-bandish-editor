@@ -1042,7 +1042,7 @@
                       :on-click ifn]]]]))
               [box :align :center
                :child [line :class "menu-line-separator"]]
-              (let [ifn #(set! (.-href (.-location js/window)) "./docs/help.html")
+              (let [ifn #(set! (.-href (.-location js/window)) "/docs/help.html")
                     ]
                 [h-box :justify :between :align :center :children
                  [[box :size "1"
