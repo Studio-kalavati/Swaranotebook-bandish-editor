@@ -19,8 +19,9 @@
   (re-frame.core/->interceptor
    :id      :log-event
    :after  (fn [context]
-             (let [[k v] (-> context :coeffects :event)]
-               (.capture (-> context :coeffects :db :posthog) (str k) (clj->js v) "")
+             (let [[k v] (-> context :coeffects :event) ]
+                (.capture (-> context :coeffects :db :posthog) (name k) 
+                          (if (map? v) (clj->js v)(clj->js {(name k) v})))
                 context))))
 
 (defn get-ns-index
@@ -84,7 +85,6 @@
 
 (reg-event-fx
  ::set-active-panel
- [log-event]
  (fn [{:keys [db]} [_ active-panel]]
    {:db (assoc db :active-panel active-panel)}))
 
@@ -666,7 +666,6 @@
 
 (reg-event-fx
  ::refresh-comp
- [log-event]
  (fn [{:keys [db]} [_ inp]]
    (let [comp (db/add-indexes inp)
          lyrics? (> (->> comp :noteseq (map :lyrics) (filter identity) count) 0)
@@ -893,8 +892,8 @@
 ;;if there are 10 bhaags, the nth-bhaag-to-play from will have a value from 0-9
 (reg-event-fx
  ::set-play-position
+ [log-event]
  (fn [{:keys [db]} [_ nth-bhaag-to-play-from]]
-   (println "btfn " (:bhaag-first-note db))
    (let [a1 ((:bhaag-first-note db) nth-bhaag-to-play-from)]
      {:db
       (->
