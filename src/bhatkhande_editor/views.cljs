@@ -138,12 +138,14 @@
                           :x 0})))))
 
 (defn download-link
-  [compdata]
-  (let [w (t/writer :json)
-        json (t/write w compdata)
-        blob (js/Blob. [json] #js {"type" "octet/stream"})
-        url (.createObjectURL js/URL blob)]
-    (.assign (.-location js/window) url)))
+  [compdata title]
+  (let [json (.stringify js/JSON (clj->js compdata))
+        blob (js/Blob. [json]  #js {"type" "octet/stream"})
+        url (.createObjectURL js/URL blob)
+        a (.createElement js/document "a")]
+    (set! (.-href a) url)
+    (set! (.-download a) (str title ".json"))
+    (.click a)))
 
 (defn swara-buttons
   []
@@ -153,6 +155,7 @@
         show-login-popup? (reagent/atom false)
         show-settings-popup? (reagent/atom false)
         show-title-popup? (reagent/atom false)
+        show-file-popup? (reagent/atom false)
         newsletter-signup? (reagent/atom true)
         show-lyrics? (reagent/atom @(subscribe [::subs/show-lyrics?]))
         newline-on-avartan? (reagent/atom @(subscribe [::subs/newline-on-avartan?]))
@@ -271,9 +274,7 @@
                             :gap      "0.5vw"
                             :style {:flex-flow "row wrap"}
                             :class "last-bar"
-                            :children [
-
-                                       [box
+                            :children [[box
                                         :size "auto"
                                         :align-self :stretch
                                         :style {:flex "1 1 0px" }
@@ -286,12 +287,9 @@
                                                  #(do
                                                     (dispatch [::events/set-active-panel :menu-panel]))}
                                                 [:i {:class "zmdi zmdi-menu zmdi-hc-2x"}]]]
-                                       (zmdi-butn2 "zmdi zmdi-print zmdi-hc-lg"
-                                                   #(do (.print js/window)))
-                                       #_(zmdi-butn2 "zmdi zmdi-download zmdi-hc-lg"
-                                                   #(let [comp @(subscribe [::subs/composition])]
-                                                      (download-link
-                                                       (select-keys comp [:noteseq :taal]))))
+                                       (zmdi-butn2 "zmdi zmdi-file-text zmdi-hc-lg"
+                                                   #(reset! show-file-popup? true))
+                                       
                                        #_(if logged-in?
                                          (zmdi-butn2 "zmdi zmdi-sign-in zmdi-hc-lg"
                                                      #(do (dispatch [::events/sign-out])))
@@ -309,6 +307,56 @@
                                        (mk-button notes-per-beat {:shruti [:madhyam :-]})
                                        (mk-button notes-per-beat {:shruti [:madhyam :a]})
                                        (zmdi-butn2 "zmdi zmdi-tag-close zmdi-hc-lg" #(dispatch [::events/delete-single-swara]))]])
+                         (when @show-file-popup?
+                           [modal-panel
+                            :backdrop-on-click #(reset! show-file-popup? false)
+                            :child
+                            [:div {:style {:min-width "min(80vw,400px)"}}
+                             [v-box
+                              :gap      "0.5vh"
+                              :class "body"
+                              :children
+                              [[gap :size "2vh"]
+                               [h-box
+                                :align :start
+                                :justify :center
+                                :children
+                                [[title :label "Save PDF" :level :level3]
+                                 [gap :size "20px"]
+                                 [:button {:class "btn btn-lg" :on-click #(do (.print js/window))}
+                                  [:i {:class "zmdi zmdi-print zmdi-hc-lg"}]]]]
+                               [gap :size "50px"]
+                               [h-box
+                                :align :start
+                                :justify :center
+                                :children
+                                [[title :label "Save JSON" :level :level3]
+                                 [gap :size "20px"]
+                                 (let [comp @(subscribe [::subs/composition])
+                                       bpm @(subscribe [::subs/bpm])
+                                       pitch @(subscribe [::subs/pitch])
+                                       ctitle @(subscribe [::subs/comp-title])]
+                                   [:a {:class "btn btn-lg" :download "something.json"
+                                        :on-click #(download-link
+                                                    {:noteseq
+                                                     (events/get-play-at-time-seq
+                                                      {:composition comp
+                                                       :beat-mode :metronome
+                                                       :bpm bpm})
+                                                     :pitch pitch
+                                                     :taal (:taal comp)}
+                                                    (or ctitle "composition"))}
+                                    [:i {:class "zmdi zmdi-download zmdi-hc-lg"}]])]]
+                               [gap :size "2vh"]
+                               [box
+                                :align :center
+                                :child
+                                [button
+                                 :label "  OK  "
+                                 :style {:width "100px"}
+                                 :class "btn-hc-lg btn-primary "
+                                 :on-click #(do (reset! show-file-popup? false))]]
+                               [gap :size "2vh"]]]]])
                          (when @show-settings-popup?
                            [modal-panel
                             :backdrop-on-click #(reset! show-settings-popup? false)

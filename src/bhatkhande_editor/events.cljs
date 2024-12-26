@@ -712,45 +712,25 @@
  (fn [{:keys [db]} [_ ival]]
    {:db (update-in db [:props :tanpura?] (constantly ival))}))
 
-(reg-event-fx
- ::play
- [log-event]
- (fn [{:keys [db]} [_ _]]
-   (if-not (:audio-context db)
-     {:dispatch [::init-audio-buffers]}
-     (let [bpm (-> db :props :bpm)
-           note-interval (/ 60 bpm)
-           {:keys [audio-context clock]} db
-           now (.-currentTime audio-context)
-           taal (-> db :composition :taal)
-           num-beats (:num-beats (taal-def taal))
-           metronome-on-at (set (->> taal-def taal
-                                     :bhaags
-                                     (reductions +) ;;[4 8 12 16]
-                                     (map inc) ;;get start of next bhaag
-                                     butlast ;;drop the last one and add the first note
-                                     (into [1])))
-           play-head-position (:play-head-position db)
-           ;;play-head-position refers to whole notes (e.g 5 /16)
-           ;;but if the notes have dugun/tigun, we need the number of actual notes.
-           ;;for each if each note is dugun,
-           ;;if play-head-position is 4, then play-head-subnotes-position is 8
-           play-head-subnotes-position (->> db :composition :noteseq (take play-head-position)
-                                            (map (comp count :notes)) (apply + ))
-           a0 (->>
-               db :composition :noteseq
+(defn get-play-at-time-seq
+  [{:keys [composition play-head-position now
+           bpm beat-mode]
+    :or {play-head-position 0 now 0}}]
+  (let [noteseq (:noteseq composition)
+        note-interval (/ 60 bpm)
+        taal (:taal composition )
+        num-beats (:num-beats (taal-def taal))
+        metronome-on-at (set (->> taal-def taal
+                                  :bhaags
+                                  (reductions +) ;;[4 8 12 16]
+                                  (map inc) ;;get start of next bhaag
+                                  butlast ;;drop the last one and add the first note
+                                  (into [1])))
+        a0 (->>
+            noteseq
                (map vector (range))
                (drop-while (fn[[note-index _]] (> play-head-position note-index)))
-               (map (fn[at x] (into [at] x))(range 0 (->> db :composition :noteseq count inc) note-interval)))
-           metro-tick-seq-0-offset
-           (->> a0
-                (map (fn[[at note-index {:keys [notes] :as ivec}]]
-                       (let [note-index (mod (inc note-index) (-> taal-def taal :num-beats))]
-                         (if (and (-> db :props :beat-mode (= :metronome))
-                                  (metronome-on-at note-index))
-                           [[:tick at note-interval]]
-                           []))))
-                (reduce into []))
+               (map (fn[at x] (into [at] x))(range 0 (->> noteseq count inc) note-interval)))
            a1
            (->> a0
                 (map (fn[[at _ {:keys [notes]}]]
@@ -765,45 +745,80 @@
                                        (range at (+ at note-interval) sub-note-intervals))))]
                          notseq)))
                 (reduce into []))
-           num-notes (count a1)
-           metro-tick-seq
-           (->> metro-tick-seq-0-offset (mapv (fn[[a start-time dur]] [a (+ start-time now) dur])))
-           taal-len-in-secs (* num-beats note-interval)
-           num-cycles (inc (int (/ (->> db :composition :noteseq count dec) num-beats)))
-           tabla-beat-seq
-           (mapv #(vector
-                   (-> (str (name taal) bpm "bpm") keyword)
-                   (+ now (* taal-len-in-secs %)) taal-len-in-secs)
-                 (range num-cycles))
            ;;find note indexes where duration should be long if followed by avagraha
            ;;returns a list of 2-tuples, where first is index and second is duration of note
-           avagraha-note-indexes
-           (->> a1
-                (map vector (range))
-                reverse
-                (reduce
-                 (fn [iacc [indx [inote _ idur]]]
-                   (if (= inote [:madhyam :a])
-                     (-> iacc
-                         (update-in [:indx] (constantly indx))
-                         (update-in [:duracc] + idur))
-                     (if (> (-> iacc :duracc) 0)
-                       (-> iacc
-                           (update-in [:acc]
-                                      (fn[j]
-                                        (into j [(mapv iacc [:indx :duracc])])))
-                           (assoc :indx nil :duracc 0))
-                       iacc)))
-                 {:indx nil :duracc 0 :acc []})
-                :acc
-                (map (fn[[a b]] [(dec a) b])))
-           ;;update the noteindex from the previous var to have longer durations
-           a1 (->> (reduce (fn[acc i]
-                             (update-in acc [(first i)] (fn[[a b c]] [a b (+ c (second i))])))
-                           a1 avagraha-note-indexes)
-                   (into (if (-> db :props :beat-mode (= :tabla))
-                           tabla-beat-seq metro-tick-seq))
-                   (sort-by second))
+        avagraha-note-indexes
+        (->> a1
+             (map vector (range))
+             reverse
+             (reduce
+              (fn [iacc [indx [inote _ idur]]]
+                (if (= inote [:madhyam :a])
+                  (-> iacc
+                      (update-in [:indx] (constantly indx))
+                      (update-in [:duracc] + idur))
+                  (if (> (-> iacc :duracc) 0)
+                    (-> iacc
+                        (update-in [:acc]
+                                   (fn[j]
+                                     (into j [(mapv iacc [:indx :duracc])])))
+                        (assoc :indx nil :duracc 0))
+                    iacc)))
+              {:indx nil :duracc 0 :acc []})
+             :acc
+             (map (fn[[a b]] [(dec a) b])))
+        metro-tick-seq-0-offset
+        (->> a0
+             (map (fn[[at note-index {:keys [notes] :as ivec}]]
+                    (let [note-index (mod (inc note-index) (-> taal-def taal :num-beats))]
+                      (if (and (-> beat-mode (= :metronome))
+                               (metronome-on-at note-index))
+                        [[:tick at note-interval]]
+                        []))))
+             (reduce into []))
+
+        metro-tick-seq
+        (->> metro-tick-seq-0-offset (mapv (fn[[a start-time dur]] [a (+ start-time now) dur])))
+        taal-len-in-secs (* num-beats note-interval)
+        num-cycles (inc (int (/ (->> noteseq count dec) num-beats)))
+        tabla-beat-seq
+        (mapv #(vector
+                (-> (str (name taal) bpm "bpm") keyword)
+                (+ now (* taal-len-in-secs %)) taal-len-in-secs)
+              (range num-cycles))
+        ;;update the noteindex from the previous var to have longer durations
+        a1 (->> (reduce (fn[acc i]
+                          (update-in acc [(first i)] (fn[[a b c]] [a b (+ c (second i))])))
+                        a1 avagraha-note-indexes)
+                (into (if (= beat-mode :tabla)
+                        tabla-beat-seq metro-tick-seq))
+                (sort-by second))]
+    a1))
+
+(reg-event-fx
+ ::play
+ [log-event]
+ (fn [{:keys [db]} [_ _]]
+   (if-not (:audio-context db)
+     {:dispatch [::init-audio-buffers]}
+     (let [bpm (-> db :props :bpm)
+           note-interval (/ 60 bpm)
+           {:keys [audio-context clock]} db
+           now (.-currentTime audio-context)
+
+           play-head-position (:play-head-position db)
+           ;;play-head-position refers to whole notes (e.g 5 /16)
+           ;;but if the notes have dugun/tigun, we need the number of actual notes.
+           ;;for each if each note is dugun,
+           ;;if play-head-position is 4, then play-head-subnotes-position is 8
+           play-head-subnotes-position (->> db :composition :noteseq (take play-head-position)
+                                            (map (comp count :notes)) (apply + ))
+           a1 (get-play-at-time-seq {:composition (->> db :composition)
+                                     :beat-mode (-> db :props :beat-mode)
+                                     :bpm bpm
+                                     :play-head-position play-head-position
+                                     :now now})
+
            a1 (if (-> db :props :tanpura?)
                 (let [last-note-time (- (-> a1 last second) now )
                       sample-len 3
@@ -841,7 +856,7 @@
                    :play-at-time a1
                    :play-note-index play-note-index
                    :note-interval note-interval
-                   :num-notes num-notes
+                   :num-notes (count a1)
                    :bhaag-index 0
                    :elem-index (if (> play-head-position 0)
                                  (let [r (subvec (:elem-index db) play-head-subnotes-position)]
