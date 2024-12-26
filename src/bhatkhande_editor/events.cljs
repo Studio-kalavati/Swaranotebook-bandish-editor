@@ -813,40 +813,6 @@
            ;;if play-head-position is 4, then play-head-subnotes-position is 8
            play-head-subnotes-position (->> db :composition :noteseq (take play-head-position)
                                             (map (comp count :notes)) (apply + ))
-           _ (comment
-               taal (-> db :composition :taal)
-               num-beats (:num-beats (taal-def taal))
-               metronome-on-at (set (->> taal-def taal
-                                         :bhaags
-                                         (reductions +) ;;[4 8 12 16]
-                                         (map inc) ;;get start of next bhaag
-                                         butlast ;;drop the last one and add the first note
-                                         (into [1])))
-             metro-tick-seq-0-offset
-             (->> a0
-                  (map (fn[[at note-index {:keys [notes] :as ivec}]]
-                         (let [note-index (mod (inc note-index) (-> taal-def taal :num-beats))]
-                           (if (and (-> db :props :beat-mode (= :metronome))
-                                    (metronome-on-at note-index))
-                             [[:tick at note-interval]]
-                             []))))
-                  (reduce into []))
-
-             metro-tick-seq
-             (->> metro-tick-seq-0-offset (mapv (fn[[a start-time dur]] [a (+ start-time now) dur])))
-             taal-len-in-secs (* num-beats note-interval)
-             num-cycles (inc (int (/ (->> db :composition :noteseq count dec) num-beats)))
-             tabla-beat-seq
-             (mapv #(vector
-                     (-> (str (name taal) bpm "bpm") keyword)
-                     (+ now (* taal-len-in-secs %)) taal-len-in-secs)
-                   (range num-cycles))
-             ;;update the noteindex from the previous var to have longer durations
-             a1 (->> a1
-                     (into (if (-> db :props :beat-mode (= :tabla))
-                             tabla-beat-seq metro-tick-seq))
-                     (sort-by second))
-             )
            a1 (get-play-at-time-seq {:composition (->> db :composition)
                                      :beat-mode (-> db :props :beat-mode)
                                      :bpm bpm
