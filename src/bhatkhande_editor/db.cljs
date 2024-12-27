@@ -221,8 +221,11 @@
                     :show-lyrics false
                     :bpm 120
                     :beat-mode :metronome
+                    :note-octave :madhyam
+                    :keyboard-mode :onscreen-kbd
                     :pitch "c"
                     :tanpura? true
+                    :notes-per-beat 1
                     :note-index []})
 
 (def pitch-sharps-list ["C" "C#" "D" "D#" "E" "F" "F#" "G" "G#" "A" "A#" "B"])

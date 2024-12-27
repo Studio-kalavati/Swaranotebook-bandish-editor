@@ -20,6 +20,7 @@
                                    modal-panel]]
    [re-com.util     :refer [item-for-id]]
    [breaking-point.core :as bp]
+   [re-pressed.core :as rp]
    [sargam.ragas :refer [varjit-svaras]]
    [sargam.talas :refer [taal-def]]
    [sargam.languages :refer [lang-labels]]
@@ -80,16 +81,15 @@
             [:span text]]]))
 
 (defn mk-button
-  ([beat-mode swaralem] (mk-button {} beat-mode swaralem))
-  ([style notes-per-beat {:keys [shruti] :as sh}]
+  ([swaralem] (mk-button {} swaralem))
+  ([style {:keys [shruti] :as sh}]
    (let [msmap @(subscribe [::subs/swaramap])
          m2 (msmap (second shruti))]
      (butn2 m2
             #(do
                ;;since on IOS it needs a input to start the audio context
                (dispatch-sync [::events/play-svara shruti])
-               (dispatch [::events/conj-svara
-                          {:svara sh :notes-per-beat @notes-per-beat}]))
+               (dispatch [::events/conj-svara {:svara sh}]))
             {:style (merge style {:width "100%"})}))))
 
 (defn zmdi-box-button
@@ -147,6 +147,15 @@
     (set! (.-download a) (str title ".json"))
     (.click a)))
 
+(defn asjc-hbox
+  ([children] (asjc-hbox {} children))
+  ([style children]
+   [h-box
+    :style style
+    :align :start
+    :justify :center
+    :children children]))
+
 (defn swara-buttons
   []
   (let [show-raga-popup (reagent/atom false)
@@ -155,12 +164,13 @@
         show-login-popup? (reagent/atom false)
         show-settings-popup? (reagent/atom false)
         show-title-popup? (reagent/atom false)
+        show-keyboard-help? (reagent/atom false)
         show-file-popup? (reagent/atom false)
         newsletter-signup? (reagent/atom true)
         show-lyrics? (reagent/atom @(subscribe [::subs/show-lyrics?]))
         newline-on-avartan? (reagent/atom @(subscribe [::subs/newline-on-avartan?]))
         title-val (reagent/atom "")
-        notes-per-beat (reagent/atom 1)
+        ;;notes-per-beat (reagent/atom (or @(subscribe [::subs/notes-per-beat])))
         svaras-on @(subscribe [::subs/custom-svaras])
         font-size (reagent/atom @(subscribe [::subs/font-size]))
         selected-pitch (reagent/atom (:id (first (filter #(= (:sample %) @(subscribe [::subs/pitch])) pitch-options-list))))
@@ -175,514 +185,575 @@
         octave-notes-list (mapv (fn[_ istate] (reagent/atom istate))
                                 (range 12)
                                 ;;all shuddha svaras true
-                                default-custom-svaras)]
+                                default-custom-svaras)
+        menu-btn [box
+         :size "auto"
+         :align-self :stretch
+         :style {:flex "1 1 0px" }
+         :child [:button
+                 {:style {:width "100%"
+                          ;; :background-color "coral"
+                          }
+                  :class "btn btn-lg"
+                  :on-click
+                  #(do
+                     (dispatch [::events/set-active-panel :menu-panel]))}
+                 [:i {:class "zmdi zmdi-menu zmdi-hc-2x"}]]]
+        file-btn (zmdi-butn2 "zmdi zmdi-file-text zmdi-hc-lg"
+                    #(reset! show-file-popup? true))
+        ]
+    (dispatch
+     [::rp/set-keydown-rules
+      {:event-keys [
+                    [[::events/keyboard-conj-svara :s] [{:keyCode 83}]]
+                    [[::events/keyboard-conj-svara :-r] [{:keyCode 82 :shiftKey true}]]
+                    [[::events/keyboard-conj-svara :r] [{:keyCode 82}]]
+                    [[::events/keyboard-conj-svara :-g] [{:keyCode 71 :shiftKey true}]]
+                    [[::events/keyboard-conj-svara :g] [{:keyCode 71}]]
+                    [[::events/keyboard-conj-svara :m+] [{:keyCode 77 :shiftKey true}]]
+                    [[::events/keyboard-conj-svara :m] [{:keyCode 77}]]
+                    [[::events/keyboard-conj-svara :p] [{:keyCode 80}]]
+                    [[::events/keyboard-conj-svara :-d][{:keyCode 68 :shiftKey true}]]
+                    [[::events/keyboard-conj-svara :d] [{:keyCode 68}]]
+                    [[::events/keyboard-conj-svara :-n] [{:keyCode 78 :shiftKey true}]]
+                    [[::events/keyboard-conj-svara :n] [{:keyCode 78}]]
+                    [[::events/keyboard-conj-svara :a] [{:keyCode 65}]]
+                    [[::events/keyboard-conj-svara :-] [{:keyCode 189}]]
+
+                    ;;notes per beat
+                    [[::events/notes-per-beat 1] [{:keyCode 49}]]
+                    [[::events/notes-per-beat 2] [{:keyCode 50}]]
+                    [[::events/notes-per-beat 3] [{:keyCode 51}]]
+                    [[::events/notes-per-beat 4] [{:keyCode 52}]]
+                    ;;note-octave
+                    [[::events/inc-octave] [{:keyCode 85}]];;u
+                    [[::events/dec-octave] [{:keyCode 76}]];;l
+
+                    ;;navigation
+                    [[::events/move-cursor-left] [{:keyCode 37}]];;<-
+                    [[::events/move-cursor-right] [{:keyCode 39}]];;<-
+
+                    [[::events/delete-single-swara] [{:keyCode 8}]] ;;backspace
+                    ]
+       :clear-keys [;; escape
+                    [{:keyCode 27}]]}])
     (fn []
-      (let [speed-switch-fn (fn[i] {:disp-fn #(reset! notes-per-beat i)
-                                    :state #(= i @notes-per-beat)})
-            rag-box-style {:padding "10px 4px 10px 4px"}]
+      (let [speed-switch-fn (fn[i] {:disp-fn #(dispatch [::events/notes-per-beat i])
+                                    :state #(= i (or @(subscribe [::subs/notes-per-beat]) 1))})
+            rag-box-style {:padding "10px 4px 10px 4px"}
+            but-style {:width (let [iw (.-innerWidth js/window)]
+                                (if (> iw 200)
+                                  200 "50vw"))}
+            logged-in? @(subscribe [::subs/user])
+            save-btn
+            (if @(subscribe [::subs/save-possible?])
+              (zmdi-butn2
+               "zmdi zmdi-floppy zmdi-hc-lg"
+               #(dispatch [::events/upsert-comp]))
+              (zmdi-butn2
+               "zmdi zmdi-cloud-upload zmdi-hc-lg"
+               #(if logged-in?
+                  (reset! show-title-popup? true)
+                  (reset! show-login-popup? true))))
+            lang-btn
+            [h-box
+             :children
+             [(box-button
+               rag-box-style
+               (let [lang @(subscribe [::subs/lang])]
+                 (cond
+                   (= :hindi lang)
+                   "সা  রে"
+                   (= :bangla lang)
+                   "S R"
+                   (= :english lang)
+                   "सा रे"))
+               {:disp-fn
+                #(do (dispatch [::events/toggle-lang] ))
+                :state (constantly false)})]]
+            taal-btn
+            [h-box
+             :align :center
+             :children
+             [[h-box
+               :children
+               [(box-button rag-box-style "Tal"
+                            {:disp-fn
+                             #(do (reset! show-taal-popup (not @show-taal-popup)))
+                             :state #(true? @show-taal-popup)})]]]]
+            raga-btn
+            [h-box :align :center
+             :min-width "15vw"
+             :children
+             [(box-button rag-box-style "Rag"
+                          {:disp-fn
+                           #(do (reset! show-select-svaras-popup
+                                        (not @show-select-svaras-popup)))
+                           :state #(true? @show-select-svaras-popup)})]]
+            onebeat-btn (zmdi-box-button
+                         "zmdi zmdi-collection-item-1"
+                         (speed-switch-fn 1))
+            twobeat-btn (zmdi-box-button
+                         "zmdi zmdi-collection-item-2"
+                         (speed-switch-fn 2))
+            threebeat-btn (zmdi-box-button
+                           "zmdi zmdi-collection-item-3"
+                           (speed-switch-fn 3))
+            fourbeat-btn (zmdi-box-button
+                          "zmdi zmdi-collection-item-4"
+                          (speed-switch-fn 4))
+            settings-btn (zmdi-box-button
+                          "zmdi zmdi-settings zmdi-hc-lg"
+                          {:disp-fn #(do (reset! show-settings-popup? true))
+                           :state (constantly false)})
+            play-btn (zmdi-box-button
+                      "zmdi zmdi-hc-lg zmdi-play-circle"
+                      {:disp-fn #(do (dispatch [::events/set-mode :play]))
+                       :state (constantly false)})
+            swaras-3oct (swar36 @(subscribe [::subs/raga]))
+            ]
         [v-box
          :gap      "0.5vh"
-         :children [[h-box
-                     :justify :between
-                     :class "first-bar"
-                     :align :center
-                     :children [[h-box
-                                 :children
-                                 [(box-button
-                                   rag-box-style
-                                   (let [lang @(subscribe [::subs/lang])]
-                                     (cond
-                                       (= :hindi lang)
-                                       "সা  রে"
-                                       (= :bangla lang)
-                                       "S R"
-                                       (= :english lang)
-                                       "सा रे"))
-                                   {:disp-fn
-                                    #(do (dispatch [::events/toggle-lang] ))
-                                    :state (constantly false)})]]
-                                [h-box
-                                 :align :center
-                                 :children
-                                 [[h-box
-                                   :children
-                                   [(box-button rag-box-style "Tal"
-                                     {:disp-fn
-                                      #(do (reset! show-taal-popup (not @show-taal-popup)))
-                                      :state #(true? @show-taal-popup)})]]]]
-                                [h-box :align :center
-                                 :min-width "15vw"
-                                 :children
-                                 [(box-button rag-box-style "Rag"
-                                   {:disp-fn
-                                    #(do (reset! show-select-svaras-popup
+         :children [(when @show-keyboard-help?
+                      [modal-panel
+                       :backdrop-on-click #(reset! show-keyboard-help? false)
+                       :child
+                       [:div {:style {:min-width "min(80vw,400px)"}}
+                        [v-box
+                         :gap      "0.5vh"
+                         :class "body"
+                         :children
+                         [(asjc-hbox
+                           [[:p "Lower case s,r,g..: Shuddha Svaras."]])
+                          (asjc-hbox
+                           [[:p "Shift-r,g,d,n : Komal Svaras. Shift-M : Tivra M. "]])
+                          [gap :size "2vh"]
+                          (asjc-hbox [[:p "u: upper octave. l:lower octave "]])
+                          [gap :size "2vh"]
+                          (asjc-hbox [[:p "1: 1 note per beat. 2: 2 notes per beat.. "]])
+                          [box
+                           :align :center
+                           :child
+                           [button
+                            :label "  OK  "
+                            :style {:width "100px"}
+                            :class "btn-hc-lg btn-primary "
+                            :on-click #(do (reset! show-keyboard-help? false))]]
+                          [gap :size "2vh"]]]]])
+                    (when @show-file-popup?
+                      [modal-panel
+                       :backdrop-on-click #(reset! show-file-popup? false)
+                       :child
+                       [:div {:style {:min-width "min(80vw,400px)"}}
+                        [v-box
+                         :gap      "0.5vh"
+                         :class "body"
+                         :children
+                         [[gap :size "2vh"]
+                          (asjc-hbox
+                           [[title :label "Save PDF" :level :level3]
+                            [gap :size "20px"]
+                            [:button {:class "btn btn-lg" :on-click #(do (.print js/window))}
+                             [:i {:class "zmdi zmdi-print zmdi-hc-lg"}]]])
+                          [gap :size "50px"]
+                          (asjc-hbox
+                           [[title :label "Save JSON" :level :level3]
+                            [gap :size "20px"]
+                            (let [comp @(subscribe [::subs/composition])
+                                  bpm @(subscribe [::subs/bpm])
+                                  pitch @(subscribe [::subs/pitch])
+                                  ctitle @(subscribe [::subs/comp-title])]
+                              [:a {:class "btn btn-lg" :download "something.json"
+                                   :on-click #(download-link
+                                               {:noteseq
+                                                (events/get-play-at-time-seq
+                                                 {:composition comp
+                                                  :beat-mode :metronome
+                                                  :bpm bpm})
+                                                :pitch pitch
+                                                :taal (:taal comp)}
+                                               (or ctitle "composition"))}
+                               [:i {:class "zmdi zmdi-download zmdi-hc-lg"}]])])
+                          [gap :size "2vh"]
+                          [box
+                           :align :center
+                           :child
+                           [button
+                            :label "  OK  "
+                            :style {:width "100px"}
+                            :class "btn-hc-lg btn-primary "
+                            :on-click #(do (reset! show-file-popup? false))]]
+                          [gap :size "2vh"]]]]])
+                    (when @show-settings-popup?
+                      [modal-panel
+                       :backdrop-on-click #(reset! show-settings-popup? false)
+                       :child
+                       [:div {:style {:min-width "min(80vw,400px)"}}
+                        [v-box
+                         :gap      "0.5vh"
+                         :class "body"
+                         :children
+                         [[gap :size "2vh"]
+                          (asjc-hbox
+                           [[checkbox
+                             :model show-lyrics?
+                             :style {:width "auto" :height "20px" }
+                             :on-change
+                             #(let [nval (not @show-lyrics?)]
+                                (reset! show-lyrics? nval)
+                                (dispatch [::events/show-lyrics? nval]))]
+                            [gap :size "20px"]
+                            [title :label "Show Lyrics?"
+                             :level :level3]])
+                          (asjc-hbox
+                           [[checkbox
+                             :model newline-on-avartan?
+                             :style {:width "auto" :height "20px" }
+                             :on-change
+                             #(let [nval (not @newline-on-avartan?)]
+                                (reset! newline-on-avartan? nval)
+                                (dispatch [::events/newline-on-avartan? nval]))]
+                            [gap :size "20px"]
+                            [title :label "Newline on each Avartan?"
+                             :level :level3]])
+                          [gap :size "50px"]
+                          [v-box
+                           :align :center
+                           :children
+                           [[slider :model font-size
+                             :min 24
+                             :max 40
+                             :step 4
+                             :style {:align-self :center}
+                             :width "max(25vw,150px)"
+                             :on-change #(do (reset! font-size %)
+                                             (dispatch [::events/set-font-size %]))]
+                            [title :label
+                             (str "Zoom: " (* 100 (/ (/ (- @font-size 24) 4) 4)) "%") :level :level3]]]
+                          [gap :size "50px"]
+                          [v-box
+                           :align :center
+                           :children
+                           [[h-box :children
+                             [[title :level :level3 :label "Change pitch to: "]
+                              [single-dropdown
+                               :choices pitch-options-list
+                               :model selected-pitch
+                               :width "100px"
+                               :on-change
+                               (fn[x]
+                                 (reset! selected-pitch x)
+                                 (dispatch
+                                  [::events/init-note-buffers
+                                   (item-for-id @selected-pitch pitch-options-list)]))]]]]]
+                          [gap :size "50px"]
+                          [box
+                           :align :center
+                           :child
+                           [button
+                            :label "  OK  "
+                            :style {:width "100px"}
+                            :class "btn-hc-lg btn-primary "
+                            :on-click #(do (reset! show-settings-popup? false))]]
+                          [gap :size "2vh"]]]]])
+                    (when @show-title-popup?
+                      [modal-panel
+                       :backdrop-on-click #(reset! show-title-popup? false)
+                       :child [:div {:class "popup"
+                                     :style {:overflow-y :scroll
+                                             :max-height "80vh"}}
+                               [v-box
+                                :gap "2vh"
+                                :class "body"
+                                :align :center
+                                :children
+                                [[box
+                                  :align :center
+                                  :child [title :level :level2 :label "Title of the Bandish"]]
+                                 [gap :size "2vh"]
+                                 [box :align :center
+                                  :child
+                                  [input-text
+                                   :src (at)
+                                   :model            title-val
+                                   :style {:font-size "large" :width "100%"
+                                           :justify-content "center"
+                                           :text-align "center"}
+                                   :on-change        #(reset! title-val %)]]
+                                 [button
+                                  :label " Save "
+                                  :class "btn-hc-lg btn-primary "
+                                  :on-click #(let [tv (cstring/replace @title-val
+                                                                       #" " "-")]
+                                               (reset! show-title-popup? false)
+                                               (dispatch [::events/upload-new-comp tv]))]]]]])
+                    (when @show-login-popup?
+                      [modal-panel
+                       :backdrop-on-click #(reset! show-login-popup? false)
+                       :child [:div {:class "popup" :style {:overflow-y :scroll
+                                                            :max-height "80vh"}}
+                               [v-box
+                                :gap "2vh"
+                                :class "body"
+                                :align :center
+                                :children
+                                [[box
+                                  :align :center
+                                  :child
+                                  [title :level :level2
+                                   :label "Login to save Bandish"]]
+                                 [gap :size "3vh"]
+                                 [button
+                                  :style {:min-height "min(10vh,100px)"
+                                          :min-width "max(20vw,200px)"}
+                                  :label "Google + "
+                                  :class "btn-hc-lg btn-primary btn-danger"
+                                  :on-click
+                                  #(do (reset! show-login-popup? false)
+                                       (when @newsletter-signup?
+                                         (.setItem (.-sessionStorage js/window)
+                                                   "newsletter-subscribe?"
+                                                   (str @newsletter-signup?)))
+                                       (dispatch [::events/google-sign-in-fx]))]
+
+                                 [gap :size "2vh"]
+                                 [box
+                                  :child
+                                  [checkbox
+                                   :style {:width "50px"}
+                                   :model newsletter-signup?
+                                   :label "Subscribe to newsletter"
+                                   :on-change
+                                   #(reset! newsletter-signup?
+                                            (not @newsletter-signup?))]]]]]])
+                    (when @show-taal-popup
+                      (let [ta (:tala-labels (lang-labels @(subscribe [::subs/lang])))
+                            taal-labels (mapv (fn[[a b]] {:id a  :label b}) ta)
+
+                            box-fn (fn[{:keys [id label]}]
+                                     [button
+                                      :label label
+                                      :style but-style
+                                      :on-click
+                                      #(do
+                                         (dispatch [::events/set-taal id])
+                                         (reset! show-taal-popup
+                                                 (not @show-taal-popup)))
+                                      :class "btn btn-default"])
+                            children (mapv box-fn taal-labels)]
+                        [modal-panel
+                         :backdrop-on-click #(reset! show-taal-popup false)
+                         :child [:div {:class "popup" :style {:overflow-y :scroll
+                                                              :max-height "80vh"}}
+                                 [v-box
+                                  :gap "2vh"
+                                  :class "body"
+                                  :children
+                                  [[box
+                                    :align :center
+                                    :child [title :level :level3
+                                            :label "Select Taal"]]
+                                   [v-box
+                                    :align :center
+                                    :children children]]]]]))
+                    (when @show-select-svaras-popup
+                      (let [box-fn (fn[model-atom lab]
+                                     [h-box
+                                      :style  {:width "100px"}
+                                      :align :center
+                                      :justify :center
+                                      :children
+                                      [[checkbox
+                                        :model model-atom
+                                        :label-style (if @model-atom  {:color "#f83600"})
+                                        :on-change
+                                        #(do
+                                           (reset! model-atom (not @model-atom)))
+                                        :style {:width "auto"
+                                                :height "20px" }
+                                        ]
+                                       [gap :size "20px"]
+                                       [title :label lab :level :level2
+                                        :style {:color (if @model-atom
+                                                         "#f83600" "#000000")}]]])
+                            children (mapv box-fn octave-notes-list
+                                           ["S" "r" "R" "g" "G" "m" "M" "P"
+                                            "d" "D" "n" "N"])]
+                        [modal-panel
+                         :backdrop-on-click #(reset! show-select-svaras-popup false)
+                         :child [:div {:class "popup" :style {:overflow-y :scroll
+                                                              :max-height "80vh"}}
+                                 [v-box
+                                  :gap "2vh"
+                                  :class "body"
+                                  :children
+                                  [[box
+                                    :align :center
+                                    :child [title :level :level3
+                                            :label "Select Svaras"]]
+                                   (asjc-hbox {:min-width "100px" :flex-flow "row wrap"}
+                                              children)
+                                   [v-box
+                                    :align :center
+                                    :justify :center
+                                    :children
+                                    [[button
+                                      :label "OK"
+                                      :style (assoc but-style
+                                                    :background-color "#f83600")
+                                      :on-click
+                                      #(let [iargs (->>
+                                                    (map vector (take 12 us/i-note-seq)
+                                                         (map deref octave-notes-list))
+                                                    (filter (fn[[a b]] (when b a)))
+                                                    (map first))]
+                                         (dispatch [::events/set-custom-svaras iargs])
+                                         (reset! show-select-svaras-popup
                                                  (not @show-select-svaras-popup)))
-                                    :state #(true? @show-select-svaras-popup)}
-                                   #_{:disp-fn
-                                    #(do (reset! show-raga-popup (not @show-raga-popup)))
-                                    :state #(true? @show-raga-popup)})]]
-                                (zmdi-box-button
-                                 "zmdi zmdi-collection-item-1"
-                                 (speed-switch-fn 1))
-                                (zmdi-box-button
-                                 "zmdi zmdi-collection-item-2"
-                                 (speed-switch-fn 2))
-                                (zmdi-box-button
-                                 "zmdi zmdi-collection-item-3"
-                                 (speed-switch-fn 3))
-                                (zmdi-box-button
-                                 "zmdi zmdi-collection-item-4"
-                                 (speed-switch-fn 4))
-                                (zmdi-box-button
-                                 "zmdi zmdi-settings zmdi-hc-lg"
-                                 {:disp-fn #(do (reset! show-settings-popup? true))
-                                  :state (constantly false)})
-                                (zmdi-box-button
-                                 "zmdi zmdi-hc-lg zmdi-play-circle"
-                                 {:disp-fn #(do (dispatch [::events/set-mode :play]))
-                                  :state (constantly false)})
-                                ]]
-                    (let [swaras-3oct (swar36 @(subscribe [::subs/raga]))
-                          but-style {:width (let [iw (.-innerWidth js/window)]
-                                              (if (> iw 200)
-                                                200 "50vw"))}]
-                      [v-box
-                       :gap "0.5vh"
-                       :class "middle-buttons"
-                       :children
-                       (into
-                        [[h-box
-                            :gap      "0.5vw"
-                            :children (mapv (partial mk-button
-                                                     {:border-top
-                                                      "5px solid black"}
-                                                     notes-per-beat)
-                                            (swaras-3oct 2))]
-                           [h-box
-                            :gap      "0.5vw"
-                            :children (mapv (partial mk-button
-                                                     notes-per-beat)
-                                            (swaras-3oct 1))]
-                           [h-box
-                            :gap      "0.5vw"
-                            :children (mapv (partial mk-button
-                                                     {:border-bottom "5px solid black"}
-                                                     notes-per-beat)
-                                            (swaras-3oct 0))]]
-                        [(let [logged-in? @(subscribe [::subs/user])]
-                           [h-box
-                            :gap      "0.5vw"
-                            :style {:flex-flow "row wrap"}
-                            :class "last-bar"
-                            :children [[box
-                                        :size "auto"
-                                        :align-self :stretch
-                                        :style {:flex "1 1 0px" }
-                                        :child [:button
-                                                {:style {:width "100%"
-                                                        ;; :background-color "coral"
-                                                         }
-                                                 :class "btn btn-lg"
-                                                 :on-click
-                                                 #(do
-                                                    (dispatch [::events/set-active-panel :menu-panel]))}
-                                                [:i {:class "zmdi zmdi-menu zmdi-hc-2x"}]]]
-                                       (zmdi-butn2 "zmdi zmdi-file-text zmdi-hc-lg"
-                                                   #(reset! show-file-popup? true))
-                                       
-                                       #_(if logged-in?
-                                         (zmdi-butn2 "zmdi zmdi-sign-in zmdi-hc-lg"
-                                                     #(do (dispatch [::events/sign-out])))
-                                         (zmdi-butn2 "zmdi zmdi-google-plus zmdi-hc-lg"
-                                                     #(do (reset! show-login-popup? true))))
-                                       (if @(subscribe [::subs/save-possible?])
-                                         (zmdi-butn2
-                                          "zmdi zmdi-floppy zmdi-hc-lg"
-                                          #(dispatch [::events/upsert-comp]))
-                                         (zmdi-butn2
-                                          "zmdi zmdi-cloud-upload zmdi-hc-lg"
-                                          #(if logged-in?
-                                             (reset! show-title-popup? true)
-                                             (reset! show-login-popup? true))))
-                                       (mk-button notes-per-beat {:shruti [:madhyam :-]})
-                                       (mk-button notes-per-beat {:shruti [:madhyam :a]})
-                                       (zmdi-butn2 "zmdi zmdi-tag-close zmdi-hc-lg" #(dispatch [::events/delete-single-swara]))]])
-                         (when @show-file-popup?
-                           [modal-panel
-                            :backdrop-on-click #(reset! show-file-popup? false)
-                            :child
-                            [:div {:style {:min-width "min(80vw,400px)"}}
-                             [v-box
-                              :gap      "0.5vh"
-                              :class "body"
-                              :children
-                              [[gap :size "2vh"]
-                               [h-box
-                                :align :start
-                                :justify :center
-                                :children
-                                [[title :label "Save PDF" :level :level3]
-                                 [gap :size "20px"]
-                                 [:button {:class "btn btn-lg" :on-click #(do (.print js/window))}
-                                  [:i {:class "zmdi zmdi-print zmdi-hc-lg"}]]]]
-                               [gap :size "50px"]
-                               [h-box
-                                :align :start
-                                :justify :center
-                                :children
-                                [[title :label "Save JSON" :level :level3]
-                                 [gap :size "20px"]
-                                 (let [comp @(subscribe [::subs/composition])
-                                       bpm @(subscribe [::subs/bpm])
-                                       pitch @(subscribe [::subs/pitch])
-                                       ctitle @(subscribe [::subs/comp-title])]
-                                   [:a {:class "btn btn-lg" :download "something.json"
-                                        :on-click #(download-link
-                                                    {:noteseq
-                                                     (events/get-play-at-time-seq
-                                                      {:composition comp
-                                                       :beat-mode :metronome
-                                                       :bpm bpm})
-                                                     :pitch pitch
-                                                     :taal (:taal comp)}
-                                                    (or ctitle "composition"))}
-                                    [:i {:class "zmdi zmdi-download zmdi-hc-lg"}]])]]
-                               [gap :size "2vh"]
-                               [box
-                                :align :center
-                                :child
-                                [button
-                                 :label "  OK  "
-                                 :style {:width "100px"}
-                                 :class "btn-hc-lg btn-primary "
-                                 :on-click #(do (reset! show-file-popup? false))]]
-                               [gap :size "2vh"]]]]])
-                         (when @show-settings-popup?
-                           [modal-panel
-                            :backdrop-on-click #(reset! show-settings-popup? false)
-                            :child
-                            [:div {:style {:min-width "min(80vw,400px)"}}
-                             [v-box
-                              :gap      "0.5vh"
-                              :class "body"
-                              :children
-                              [[gap :size "2vh"]
-                               [h-box
-                                :align :start
-                                :justify :center
-                                :children
-                                [[checkbox
-                                  :model show-lyrics?
-                                  :style {:width "auto" :height "20px" }
-                                  :on-change
-                                  #(let [nval (not @show-lyrics?)]
-                                     (reset! show-lyrics? nval)
-                                     (dispatch [::events/show-lyrics? nval]))]
-                                 [gap :size "20px"]
-                                 [title :label "Show Lyrics?"
-                                  :level :level3]]]
-                               [h-box
-                                :align :start
-                                :justify :center
-                                :children
-                                [[checkbox
-                                  :model newline-on-avartan?
-                                  :style {:width "auto" :height "20px" }
-                                  :on-change
-                                  #(let [nval (not @newline-on-avartan?)]
-                                     (reset! newline-on-avartan? nval)
-                                     (dispatch [::events/newline-on-avartan? nval]))]
-                                 [gap :size "20px"]
-                                 [title :label "Newline on each Avartan?"
-                                  :level :level3]]]
-                               [gap :size "50px"]
-                               [v-box
-                                :align :center
-                                :children
-                                [[slider :model font-size
-                                  :min 24
-                                  :max 40
-                                  :step 4
-                                  :style {:align-self :center}
-                                  :width "max(25vw,150px)"
-                                  :on-change #(do (reset! font-size %)
-                                                  (dispatch [::events/set-font-size %]))]
-                                 [title :label
-                                  (str "Zoom: " (* 100 (/ (/ (- @font-size 24) 4) 4)) "%") :level :level3]]]
-                               [gap :size "50px"]
-                               [v-box
-                                :align :center
-                                :children
-                                [[h-box :children
-                                  [[title :level :level3 :label "Change pitch to: "]
-                                   [single-dropdown
-                                    :choices pitch-options-list
-                                    :model selected-pitch
-                                    :width "100px"
-                                    :on-change
-                                    (fn[x]
-                                      (reset! selected-pitch x)
-                                      (dispatch
-                                       [::events/init-note-buffers
-                                        (item-for-id @selected-pitch pitch-options-list)]))]]]]]
-                                 [gap :size "50px"]
-                               [box
-                                :align :center
-                                :child
-                                [button
-                                 :label "  OK  "
-                                 :style {:width "100px"}
-                                 :class "btn-hc-lg btn-primary "
-                                 :on-click #(do (reset! show-settings-popup? false))]]
-                               [gap :size "2vh"]]]]])
-                         (when @show-title-popup?
-                           [modal-panel
-                              :backdrop-on-click #(reset! show-title-popup? false)
-                              :child [:div {:class "popup"
-                                            :style {:overflow-y :scroll
-                                                    :max-height "80vh"}}
-                                      [v-box
-                                       :gap "2vh"
-                                       :class "body"
-                                       :align :center
-                                       :children
-                                       [[box
+                                      :class "btn btn-default"]
+                                     [gap :size "2vh"]
+                                     [button
+                                      :label "Select Raga"
+                                      ;;:style but-style
+                                      :on-click
+                                      #(do
+                                         (reset! show-select-svaras-popup
+                                                 (not @show-select-svaras-popup))
+                                         (reset! show-raga-popup
+                                                 (not @show-raga-popup)))
+                                      :class "btn btn-default"]
+                                     ]]]]]]))
+                    (when @show-raga-popup
+                      (let [raga-labels (mapv (fn[[a b]] {:id a  :label b})
+                                              (:raga-labels @(subscribe [::subs/lang-data])))
+                            box-fn (fn[{:keys [id label]}]
+                                     [button
+                                      :label label
+                                      :style but-style
+                                      :on-click
+                                      #(do
+                                         (dispatch [::events/set-raga id])
+                                         (reset! show-raga-popup
+                                                 (not @show-raga-popup)))
+                                      :class "btn btn-default"])
+                            children (mapv box-fn raga-labels)]
+                        [modal-panel
+                         :backdrop-on-click #(reset! show-raga-popup false)
+                         :child [:div {:class "popup" :style {:overflow-y :scroll
+                                                              :max-height "80vh"}}
+                                 [v-box
+                                  :gap "2vh"
+                                  :class "body"
+                                  :children
+                                  [[box
+                                    :align :center
+                                    :child [title :level :level3
+                                            :label "Show Swaras from Raga"]]
+                                   [v-box
+                                    :align :center
+                                    :children children]
+                                   [box
+                                    :align :center
+                                    :child
+                                    [button
+                                     :label "Cancel"
+                                     :on-click
+                                     #(do
+                                        (reset! show-raga-popup
+                                                (not @show-raga-popup)))
+                                     :class "btn btn-default"]]]]]]))
+                    (when-let [{:keys [row-index bhaag-index]}
+                               @(subscribe [::subs/show-text-popup])]
+                      (let [text-val
+                            @(subscribe [::subs/get-sahitya
+                                         [row-index bhaag-index]])
+                            tval (reagent/atom text-val)]
+                        [modal-panel
+                         :backdrop-on-click #(dispatch [::events/hide-text-popup])
+                         :child [:div {:class "popup"
+                                       :style {:overflow-y :scroll
+                                               :max-height "80vh"}}
+                                 [v-box
+                                  :gap "2vh"
+                                  :class "body"
+                                  :align :center
+                                  :children
+                                  [[box :align :center
+                                    :child
+                                    [input-text
+                                     :src (at)
+                                     :model            tval
+                                     :style {:font-size "large" :width "200px"}
+                                     ;;debug height
+                                     :on-change
+                                     #(do
+                                        (reset! tval %))]]
+                                   [button :label " OK "
+                                    :class "btn-lg btn btn-default"
+                                    :on-click
+                                    #(do
+                                       (dispatch [::events/conj-sahitya
+                                                  {:text-val @tval
+                                                   :bhaag-index bhaag-index
+                                                   :row-index row-index}])
+                                       (dispatch [::events/hide-text-popup]))]]]]]))
+                    (if (= :hw-keyboard @(subscribe [::subs/keyboard-mode]))
+                      [v-box :children [[h-box
                                          :align :center
-                                         :child [title :level :level2 :label "Title of the Bandish"]]
-                                        [gap :size "2vh"]
-                                        [box :align :center
-                                         :child
-                                         [input-text
-                                          :src (at)
-                                          :model            title-val
-                                          :style {:font-size "large" :width "100%"
-                                                  :justify-content "center"
-                                                  :text-align "center"}
-                                          :on-change        #(reset! title-val %)]]
-                                        [button
-                                         :label " Save "
-                                         :class "btn-hc-lg btn-primary "
-                                         :on-click #(let [tv (cstring/replace @title-val
-                                                                                     #" " "-")]
-                                                      (reset! show-title-popup? false)
-                                                      (dispatch [::events/upload-new-comp tv]))]]]]])
-                         (when @show-login-popup?
-                           [modal-panel
-                              :backdrop-on-click #(reset! show-login-popup? false)
-                              :child [:div {:class "popup" :style {:overflow-y :scroll
-                                                                   :max-height "80vh"}}
-                                      [v-box
-                                       :gap "2vh"
-                                       :class "body"
-                                       :align :center
-                                       :children
-                                       [[box
-                                         :align :center
-                                         :child
-                                         [title :level :level2
-                                          :label "Login to save Bandish"]]
-                                        [gap :size "3vh"]
-                                        [button
-                                         :style {:min-height "min(10vh,100px)"
-                                                 :min-width "max(20vw,200px)"}
-                                         :label "Google + "
-                                         :class "btn-hc-lg btn-primary btn-danger"
-                                         :on-click
-                                         #(do (reset! show-login-popup? false)
-                                              (when @newsletter-signup?
-                                                (.setItem (.-sessionStorage js/window)
-                                                          "newsletter-subscribe?"
-                                                          (str @newsletter-signup?)))
-                                              (dispatch [::events/google-sign-in-fx]))]
-
-                                        [gap :size "2vh"]
-                                        [box
-                                         :child
-                                         [checkbox
-                                          :style {:width "50px"}
-                                          :model newsletter-signup?
-                                          :label "Subscribe to newsletter"
-                                          :on-change
-                                          #(reset! newsletter-signup?
-                                                   (not @newsletter-signup?))]]]]]])
-                         (when @show-taal-popup
-                           (let [ta (:tala-labels (lang-labels @(subscribe [::subs/lang])))
-                                 taal-labels (mapv (fn[[a b]] {:id a  :label b}) ta)
-
-                                 box-fn (fn[{:keys [id label]}]
-                                          [button
-                                           :label label
-                                           :style but-style
-                                           :on-click
-                                           #(do
-                                              (dispatch [::events/set-taal id])
-                                              (reset! show-taal-popup
-                                                      (not @show-taal-popup)))
-                                           :class "btn btn-default"])
-                                 children (mapv box-fn taal-labels)]
-                             [modal-panel
-                              :backdrop-on-click #(reset! show-taal-popup false)
-                              :child [:div {:class "popup" :style {:overflow-y :scroll
-                                                                   :max-height "80vh"}}
-                                      [v-box
-                                       :gap "2vh"
-                                       :class "body"
-                                       :children
-                                       [[box
-                                         :align :center
-                                         :child [title :level :level3
-                                                 :label "Select Taal"]]
-                                        [v-box
-                                         :align :center
-                                         :children children]]]]]))
-
-                         (when @show-select-svaras-popup
-                           (let [
-                                 box-fn (fn[model-atom lab]
-                                          [h-box
-                                           :style  {
-                                                    :width "100px"
-                                                    }
-                                           :align :center
-                                           :justify :center
-                                           :children
-                                           [[checkbox
-                                             :model model-atom
-                                             :label-style (if @model-atom  {:color "#f83600"})
-                                             :on-change
-                                             #(do
-                                                (reset! model-atom (not @model-atom)))
-                                             :style {:width "auto"
-                                                     :height "20px" }
-                                             ]
-                                            [gap :size "20px"]
-                                            [title :label lab :level :level2
-                                             :style {:color (if @model-atom
-                                                              "#f83600" "#000000")}]]])
-                                 children (mapv box-fn octave-notes-list
-                                                ["S" "r" "R" "g" "G" "m" "M" "P"
-                                                 "d" "D" "n" "N"])]
-                             [modal-panel
-                              :backdrop-on-click #(reset! show-select-svaras-popup false)
-                              :child [:div {:class "popup" :style {:overflow-y :scroll
-                                                                   :max-height "80vh"}}
-                                      [v-box
-                                       :gap "2vh"
-                                       :class "body"
-                                       :children
-                                       [[box
-                                         :align :center
-                                         :child [title :level :level3
-                                                 :label "Select Svaras"]]
-                                        [h-box
-                                         :align :center
-                                         :justify :center
-                                         :style {:min-width "100px" :flex-flow "row wrap"}
-                                         :children children]
-                                        [v-box
-                                         :align :center
-                                         :justify :center
+                                         :justify :around
                                          :children
-                                         [[button
-                                           :label "OK"
-                                           :style (assoc but-style
-                                                         :background-color "#f83600")
+                                         [[:p "Shuddha Svaras: s,r,g.. "]
+                                          [button :label "View Keyboard Help "
+                                           :class "btn-lg btn btn-default"
                                            :on-click
-                                           #(let [iargs (->>
-                                                         (map vector (take 12 us/i-note-seq)
-                                                              (map deref octave-notes-list))
-                                                         (filter (fn[[a b]] (when b a)))
-                                                         (map first))]
-                                              (dispatch [::events/set-custom-svaras iargs])
-                                              (reset! show-select-svaras-popup
-                                                      (not @show-select-svaras-popup)))
-                                           :class "btn btn-default"]
-                                          [gap :size "2vh"]
-                                          [button
-                                           :label "Select Raga"
-                                           ;;:style but-style
-                                           :on-click
-                                           #(do
-                                              (reset! show-select-svaras-popup
-                                                      (not @show-select-svaras-popup))
-                                              (reset! show-raga-popup
-                                                      (not @show-raga-popup)))
-                                           :class "btn btn-default"]
-                                          ]]]]]]))
-                         (when @show-raga-popup
-                           (let [raga-labels (mapv (fn[[a b]] {:id a  :label b})
-                                                   (:raga-labels @(subscribe [::subs/lang-data])))
-                                 box-fn (fn[{:keys [id label]}]
-                                          [button
-                                           :label label
-                                           :style but-style
-                                           :on-click
-                                           #(do
-                                              (dispatch [::events/set-raga id])
-                                              (reset! show-raga-popup
-                                                      (not @show-raga-popup)))
-                                           :class "btn btn-default"])
-                                 children (mapv box-fn raga-labels)]
-                             [modal-panel
-                              :backdrop-on-click #(reset! show-raga-popup false)
-                              :child [:div {:class "popup" :style {:overflow-y :scroll
-                                                                   :max-height "80vh"}}
-                                      [v-box
-                                       :gap "2vh"
-                                       :class "body"
-                                       :children
-                                       [[box
+                                           #(reset! show-keyboard-help? true)]]]
+                                        [h-box
+                                         :gap      "0.5vw"
+                                         :style {:flex-flow "row wrap"}
+                                         :class "last-bar"
+                                         :children [menu-btn file-btn save-btn
+                                                    lang-btn
+                                                    taal-btn
+                                                    onebeat-btn twobeat-btn threebeat-btn fourbeat-btn
+                                                    settings-btn play-btn]]]]
+                      [v-box :children [[h-box
+                                         :justify :between
+                                         :class "first-bar"
                                          :align :center
-                                         :child [title :level :level3
-                                                 :label "Show Swaras from Raga"]]
+                                         :children [lang-btn
+                                                    taal-btn
+                                                    raga-btn
+                                                    onebeat-btn twobeat-btn threebeat-btn fourbeat-btn
+                                                    settings-btn play-btn]]
                                         [v-box
-                                         :align :center
-                                         :children children]
-                                        [box
-                                         :align :center
-                                         :child
-                                         [button
-                                          :label "Cancel"
-                                          :on-click
-                                          #(do
-                                             (reset! show-raga-popup
-                                                     (not @show-raga-popup)))
-                                          :class "btn btn-default"]]]]]]))
-                         (when-let [{:keys [row-index bhaag-index]}
-                                    @(subscribe [::subs/show-text-popup])]
-                           (let [text-val
-                                 @(subscribe [::subs/get-sahitya
-                                              [row-index bhaag-index]])
-                                 tval (reagent/atom text-val)]
-                             [modal-panel
-                              :backdrop-on-click #(dispatch [::events/hide-text-popup])
-                              :child [:div {:class "popup"
-                                            :style {:overflow-y :scroll
-                                                    :max-height "80vh"}}
-                                      [v-box
-                                       :gap "2vh"
-                                       :class "body"
-                                       :align :center
-                                       :children
-                                       [[box :align :center
-                                         :child
-                                         [input-text
-                                          :src (at)
-                                          :model            tval
-                                          :style {:font-size "large" :width "200px"}
-                                          ;;debug height
-                                          :on-change
-                                          #(do
-                                             (reset! tval %))]]
-                                        [button :label " OK "
-                                         :class "btn-lg btn btn-default"
-                                         :on-click
-                                         #(do
-                                            (dispatch [::events/conj-sahitya
-                                                         {:text-val @tval
-                                                          :bhaag-index bhaag-index
-                                                          :row-index row-index}])
-                                            (dispatch [::events/hide-text-popup]))]]]]]))])])]]))))
+                                         :gap "0.5vh"
+                                         :class "middle-buttons"
+                                         :children
+                                         (into
+                                          [[h-box
+                                            :gap      "0.5vw"
+                                            :children (mapv (partial mk-button
+                                                                     {:border-top
+                                                                      "5px solid black"})
+                                                            (swaras-3oct 2))]
+                                           [h-box
+                                            :gap      "0.5vw"
+                                            :children (mapv (partial mk-button)
+                                                            (swaras-3oct 1))]
+                                           [h-box
+                                            :gap      "0.5vw"
+                                            :children (mapv (partial mk-button
+                                                                     {:border-bottom "5px solid black"})
+                                                            (swaras-3oct 0))]]
+                                          [[h-box
+                                            :gap      "0.5vw"
+                                            :style {:flex-flow "row wrap"}
+                                            :class "last-bar"
+                                            :children [menu-btn file-btn save-btn
+                                                       (mk-button {:shruti [:madhyam :-]})
+                                                       (mk-button {:shruti [:madhyam :a]})
+                                                       (zmdi-butn2 "zmdi zmdi-tag-close zmdi-hc-lg"
+                                                                   #(dispatch [::events/delete-single-swara]))]]])]]])]]))))
 
 (def editor-height (reagent/atom 0))
 (def cursor-y (reagent/atom 0))

@@ -20,7 +20,7 @@
   [adzerk/env "0.4.0"]
   [binaryage/devtools "1.0.6"]
   [cider/cider-nrepl "0.28.4"]
-
+  [org.clojars.betontalpfa/re-pressed "0.4.0"]
 
   ;;[com.google.guava/guava "30.0-jre"]
 ]

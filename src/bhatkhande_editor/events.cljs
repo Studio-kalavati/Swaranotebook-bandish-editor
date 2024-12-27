@@ -117,10 +117,29 @@
      {:dispatch [::init-note-buffers]})))
 
 (reg-event-fx
+ ::keyboard-conj-svara
+ (fn[{:keys [db]} [_ svara]]
+   {:db (update-in db [:props :keyboard-mode] (constantly :hw-keyboard))
+    :dispatch [::conj-svara
+               {:svara {:shruti
+                        [(if (#{:- :a} svara)
+                           :madhyam
+                           (or (-> db :props :note-octave) :madhyam)) svara]}}]}))
+
+(defn move-cursor-forward
+  [ndb cursor-pos]
+  (let [next-index (get-in ndb [:composition :index-forward-seq (vals cursor-pos)])]
+    (if next-index
+      (zipmap [:row-index :bhaag-index :note-index :nsi] next-index)
+      cursor-pos)))
+
+(reg-event-fx
  ::conj-svara
  [log-event]
- (fn [{:keys [db]} [_ {:keys [svara notes-per-beat]}]]
+ (fn [{:keys [db]} [_ {:keys [svara]}]]
    (let [cpos (get-in db [:props :cursor-pos ] )
+         _ (println " svara " svara)
+         notes-per-beat (-> db :props :notes-per-beat)
          prev-index (get-in db [:composition :index-backward-seq (vals cpos)])
          note-index
          (if (nil? prev-index)
@@ -158,7 +177,6 @@
                     [note-insert :next-note-cursor]
                     ;;otherwise append to multi-note
                     )
-                  
                   [note-insert :next-note-cursor])]
             res)
          [updated-ns updated-cursor] (noteseq-up-fn (get-in db [:composition :noteseq]))
@@ -172,10 +190,7 @@
                         (constantly
                          (cond
                            (= updated-cursor :next-note-cursor)
-                           (let [next-index
-                                 (get-in ndb [:composition :index-forward-seq (vals cpos)])
-                                 k1 (zipmap [:row-index :bhaag-index :note-index :nsi] next-index)]
-                             k1)
+                           (move-cursor-forward ndb cpos)
                            (= updated-cursor :cur-cursor) cpos
                            :else
                            updated-cursor))))]
@@ -241,6 +256,42 @@
         (update-in [:props :show-text-popup]
                    (constantly false)))}))
 
+(defn move-cursor-backward
+  [{:keys [note-index index-entry cursor-pos]}]
+  (constantly
+   (let [res
+         (if (= 0 note-index)
+           cursor-pos
+           (zipmap [:row-index :bhaag-index :note-index :nsi]
+                   (if (> (last index-entry) 0 )
+                     ;;if deleting a multi-note, the ni is > 0
+                     ;;instead make it 0
+                     (conj (subvec index-entry 0 3) 0)
+                     index-entry)))]
+     res)))
+
+(reg-event-fx
+ ::move-cursor-right
+ (fn[{:keys [db]}]
+   (let [cpos (get-in db [:props :cursor-pos ] )]
+     {:db
+      (-> db
+          (update-in [:props :cursor-pos]
+                     (constantly (move-cursor-forward db cpos))))})))
+
+(reg-event-fx
+ ::move-cursor-left
+ (fn[{:keys [db]}]
+   (let [[note-index _] (get-ns-index db)
+         cpos (get-in db [:props :cursor-pos ] )
+         index-entry (get-in db [:composition :index-backward-seq (vals cpos)])]
+     {:db
+      (-> db
+          (update-in [:props :cursor-pos]
+                     (move-cursor-backward
+                      {:note-index note-index :index-entry index-entry
+                       :cursor-pos cpos})))})))
+
 (reg-event-fx
  ::delete-single-swara
  [log-event]
@@ -263,17 +314,9 @@
                         res))
           (update-in [:composition] db/add-indexes)
           (update-in [:props :cursor-pos]
-                     (constantly
-                      (let [res 
-                            (if (= 0 note-index)
-                              cpos
-                              (zipmap [:row-index :bhaag-index :note-index :nsi]
-                                      (if (> (last index-entry) 0 )
-                                        ;;if deleting a multi-note, the ni is > 0
-                                        ;;instead make it 0
-                                        (conj (subvec index-entry 0 3) 0)
-                                        index-entry)))]
-                        res))))
+                     (move-cursor-backward
+                      {:note-index note-index :index-entry index-entry
+                       :cursor-pos cpos})))
       :dispatch [::save-to-localstorage]})))
 
 (reg-event-fx
@@ -315,6 +358,7 @@
  ::set-click-index
  [log-event]
  (fn [{:keys [db]} [_ click-index]]
+   (println " click index " click-index)
    {:db (update-in db [:props :cursor-pos] (constantly click-index))}))
 
 (reg-event-fx
@@ -711,6 +755,29 @@
  ::tanpura?
  (fn [{:keys [db]} [_ ival]]
    {:db (update-in db [:props :tanpura?] (constantly ival))}))
+
+(reg-event-fx
+ ::inc-octave
+ (fn [{:keys [db]} [_ _]]
+   {:db (update-in db [:props :note-octave]
+                   (fn[i] (cond
+                            (= i :madhyam) :taar
+                            (= i :mandra) :madhyam
+                            :else i)))}))
+
+(reg-event-fx
+ ::dec-octave
+ (fn [{:keys [db]} [_ _]]
+   {:db (update-in db [:props :note-octave]
+                   (fn[i] (cond
+                            (= i :madhyam) :mandra
+                            (= i :taar) :madhyam
+                            :else i)))}))
+
+(reg-event-fx
+ ::notes-per-beat
+ (fn [{:keys [db]} [_ ival]]
+   {:db (update-in db [:props :notes-per-beat] (constantly ival))}))
 
 (defn get-play-at-time-seq
   [{:keys [composition play-head-position now

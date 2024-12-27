@@ -39,13 +39,25 @@
 (reg-sub
  ::raga
  :<- [::props]
- (fn [props _]     
+ (fn [props _]
    (-> props :raga)))
+
+(reg-sub
+ ::keyboard-mode
+ :<- [::props]
+ (fn [props _]
+   (-> props :keyboard-mode)))
+
+(reg-sub
+ ::notes-per-beat
+ :<- [::props]
+ (fn [props _]
+   (-> props :notes-per-beat)))
 
 (reg-sub
  ::x-switch
  :<- [::props]
- (fn [props _]     
+ (fn [props _]
    (-> props :x-switch)))
 
 (reg-sub
