@@ -139,6 +139,8 @@
 (defn move-cursor-forward
   [ndb cursor-pos]
   (let [next-index (get-in ndb [:composition :index-forward-seq (vals cursor-pos)])]
+    (println " move cursor " (get-in ndb [:composition :index-forward-seq])
+             " cursor " cursor-pos)
     (if next-index
       (zipmap [:row-index :bhaag-index :note-index :nsi] next-index)
       cursor-pos)))
@@ -250,19 +252,38 @@
                      (constantly ncomp)))})))
 
 (reg-event-fx
- ::show-text-popup
+ ::show-lyrics-popup
  (fn [{:keys [db]} [_ imap]]
    {:db
     (-> db
-        (update-in [:props :show-text-popup]
+        (update-in [:props :show-lyrics-popup]
                    (constantly imap)))}))
 
 (reg-event-fx
- ::hide-text-popup
+ ::next-bhaag-lyrics-popup
+ (fn [{:keys [db]} [_ {:keys [row-index bhaag-index] :as imap}]]
+   (let [fsmap (get-in db [:composition :index-forward-seq])
+         next-bhaag-note
+         (loop [rb [row-index bhaag-index 0 0]]
+           (let [[r b x y :as next-note-index] (fsmap rb)]
+             (if (or (and (= x 0) (= y 0)) (nil? next-note-index))
+               [r b]
+               (recur next-note-index ))))
+         slpop-value (if (= [nil nil] next-bhaag-note)
+                       false
+                       {:row-index (first next-bhaag-note)
+                        :bhaag-index (second next-bhaag-note)})]
+     {:db
+      (-> db
+          (update-in [:props :show-lyrics-popup]
+                     (constantly slpop-value)))})))
+
+(reg-event-fx
+ ::hide-lyrics-popup
  (fn [{:keys [db]} [_ _]]
    {:db
     (-> db
-        (update-in [:props :show-text-popup]
+        (update-in [:props :show-lyrics-popup]
                    (constantly false)))}))
 
 (defn move-cursor-backward

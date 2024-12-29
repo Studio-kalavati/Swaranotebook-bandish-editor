@@ -327,7 +327,7 @@
                           :align :center
                           :justify :center
                           :children
-                          [[title :label "Use physical keyboard?" :level :level3]
+                          [[title :label "Use computer keyboard?" :level :level3]
                            (asjc-hbox
                             [[button
                               :label "  Yes  "
@@ -708,13 +708,13 @@
                                                  (not @show-raga-popup)))
                                       :class "btn btn-default"]]]]]]))
                      (when-let [{:keys [row-index bhaag-index]}
-                                @(subscribe [::subs/show-text-popup])]
+                                @(subscribe [::subs/show-lyrics-popup])]
                        (let [text-val
                              @(subscribe [::subs/get-sahitya
                                           [row-index bhaag-index]])
                              tval (reagent/atom text-val)]
                          [modal-panel
-                          :backdrop-on-click #(dispatch [::events/hide-text-popup])
+                          :backdrop-on-click #(dispatch [::events/hide-lyrics-popup])
                           :child [:div {:class "popup"
                                         :style {:overflow-y :scroll
                                                 :max-height "80vh"}}
@@ -723,25 +723,46 @@
                                    :class "body"
                                    :align :center
                                    :children
-                                   [[box :align :center
+                                   [
+                                    [title :level :level2 :label "Lyrics"]
+                                    [title :level :level4 :label
+                                     "Put a comma between beats. E.g. Ae,ri,aa,li"]
+                                    [gap :size "2vh"]
+                                    [box :align :center
                                      :child
                                      [input-text
                                       :src (at)
                                       :model            tval
-                                      :style {:font-size "large" :width "200px"}
+                                      :style {:font-size "large" :min-width "200px" :width "100%"}
                                       ;;debug height
                                       :on-change
                                       #(do
                                          (reset! tval %))]]
-                                    [button :label " OK "
-                                     :class "btn-lg btn btn-default"
-                                     :on-click
-                                     #(do
-                                        (dispatch [::events/conj-sahitya
-                                                   {:text-val @tval
-                                                    :bhaag-index bhaag-index
-                                                    :row-index row-index}])
-                                        (dispatch [::events/hide-text-popup]))]]]]]))
+                                    [asjc-hbox
+                                     [[button :label " OK "
+                                       :class "btn-lg btn btn-default"
+                                       :on-click
+                                       #(do
+                                          (println " lyrics ok "{:text-val @tval
+                                                                 :bhaag-index bhaag-index
+                                                                 :row-index row-index})
+                                          (dispatch [::events/conj-sahitya
+                                                     {:text-val @tval
+                                                      :bhaag-index bhaag-index
+                                                      :row-index row-index}])
+                                          (dispatch [::events/hide-lyrics-popup]))]
+                                      [gap :size "2vh"]
+                                      [button :label " Next "
+                                       :class "btn-lg btn btn-default"
+                                       :on-click
+                                       #(do
+                                          (dispatch [::events/conj-sahitya
+                                                     {:text-val @tval
+                                                      :bhaag-index bhaag-index
+                                                      :row-index row-index}])
+                                          (dispatch [::events/next-bhaag-lyrics-popup
+                                                     {:row-index row-index
+                                                      :bhaag-index bhaag-index}]))]]]]]]]))
                      (if (= :hw-keyboard @(subscribe [::subs/keyboard-mode]))
                        [v-box :children [[h-box
                                           :justify :end
@@ -909,7 +930,14 @@
                                             [:rect (assoc rect-style
                                                           :x (+ x1 5) :y 5
                                                           :height (int (* 1.3 @font-size))
-                                                          :class "blinking-cursor")]
+                                                          :ref #(when (identity %)
+                                                                  ;;when moving, don't blink
+                                                                  ;;after its stationary start blinking
+                                                                  (js/setTimeout
+                                                                   (fn[]
+                                                                     (.add (.-classList %)
+                                                                           "blinking-cursor"))
+                                                                   1000)))]
                                             )
                                           ith-note
                                           (if-let [ival (image-map shruti)]
@@ -1013,8 +1041,7 @@
                         (-> (:images r3)
                             (into (let [tv @(subscribe [::subs/get-sahitya
                                                         [row-index bhaag-index]])]
-                                    [
-                                     [:defs
+                                    [[:defs
                                       [:linearGradient {:id "sahitya-fill"}
                                        [:stop {:offset "0%" :stop-color "gray"}]
                                        [:stop {:offset "100%" :stop-color "lightgray"}]]]
@@ -1030,7 +1057,7 @@
                                                   {:fill "url(#sahitya-fill)"})))
                                        :on-click
                                        (fn[_]
-                                         (dispatch [::events/show-text-popup
+                                         (dispatch [::events/show-lyrics-popup
                                                     {:row-index row-index
                                                      :text-val (if tv tv "")
                                                      :bhaag-index bhaag-index}]))}]])))

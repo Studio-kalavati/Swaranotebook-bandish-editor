@@ -113,9 +113,9 @@
    (get-in db [:props :cursor-pos])))
 
 (reg-sub
- ::show-text-popup
+ ::show-lyrics-popup
  (fn [db [_ _]]
-   (get-in db [:props :show-text-popup])))
+   (get-in db [:props :show-lyrics-popup])))
 
 (reg-sub
  ::get-sahitya
