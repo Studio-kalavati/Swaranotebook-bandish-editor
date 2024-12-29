@@ -13,6 +13,7 @@
    ["firebase/firestore" :as firebase-firestore]
    ["posthog-js" :default posthog]
    [cognitect.transit :as t]
+   [clojure.string :as cstring]
    [sargam.talas :refer [taal-def]]))
 
 (def log-event
@@ -103,6 +104,7 @@
 (reg-event-fx
  ::play-svara
  (fn [{:keys [db]} [_ shruti]]
+   (println " shruti " shruti)
    (if (:audio-context db)
      (let [audctx (:audio-context db)
            buf (@(:note-buffers db) shruti)
@@ -117,14 +119,22 @@
      {:dispatch [::init-note-buffers]})))
 
 (reg-event-fx
+ ::set-keyboard-mode
+ (fn[{:keys [db]} [_ mode]]
+   {:db (update-in db [:props :keyboard-mode] (constantly mode))}))
+
+(reg-event-fx
  ::keyboard-conj-svara
  (fn[{:keys [db]} [_ svara]]
-   {:db (update-in db [:props :keyboard-mode] (constantly :hw-keyboard))
-    :dispatch [::conj-svara
-               {:svara {:shruti
-                        [(if (#{:- :a} svara)
-                           :madhyam
-                           (or (-> db :props :note-octave) :madhyam)) svara]}}]}))
+   (let [mod-svara [(if (#{:- :a} svara)
+                      :madhyam
+                      (or (-> db :props :note-octave) :madhyam)) svara]]
+     {:db (if (-> db :props :keyboard-mode (= :onscreen-kbd))
+            (update-in db [:props :keyboard-mode] (constantly :ask-hw-kbd))
+            db)
+      :dispatch-n
+      [[::conj-svara {:svara {:shruti mod-svara}}]
+       [::play-svara mod-svara]]})))
 
 (defn move-cursor-forward
   [ndb cursor-pos]
@@ -138,7 +148,6 @@
  [log-event]
  (fn [{:keys [db]} [_ {:keys [svara]}]]
    (let [cpos (get-in db [:props :cursor-pos ] )
-         _ (println " svara " svara)
          notes-per-beat (-> db :props :notes-per-beat)
          prev-index (get-in db [:composition :index-backward-seq (vals cpos)])
          note-index

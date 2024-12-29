@@ -43,6 +43,12 @@
    (-> props :raga)))
 
 (reg-sub
+ ::note-octave
+ :<- [::props]
+ (fn [props _]
+   (-> props :note-octave)))
+
+(reg-sub
  ::keyboard-mode
  :<- [::props]
  (fn [props _]
