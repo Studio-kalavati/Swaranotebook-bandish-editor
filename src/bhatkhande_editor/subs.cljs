@@ -112,6 +112,8 @@
  (fn [db [_ _]]
    (get-in db [:props :cursor-pos])))
 
+
+
 (reg-sub
  ::show-lyrics-popup
  (fn [db [_ _]]
@@ -162,6 +164,12 @@
  :<- [::props]
  (fn [props [_ _]]
    (:custom-svaras props)))
+
+(reg-sub
+ ::highlighted-pos-set
+ :<- [::props]
+ (fn [props [_ _]]
+   (:highlighted-pos props)))
 
 (reg-sub
  ::newline-on-avartan?

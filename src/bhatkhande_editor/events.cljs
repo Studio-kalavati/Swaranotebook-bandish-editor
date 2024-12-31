@@ -27,10 +27,9 @@
 
 (defn get-ns-index
   [db]
-  (let [{:keys [ni] :as click-index}
-        (get-in db [:props :cursor-pos])
+  (let [click-index (get-in db [:props :cursor-pos])
         nindex (db/get-noteseq-index click-index (get-in db [:composition :taal]))]
-    [nindex ni]))
+    nindex))
 
 (defn sched-play-url
   ([ctx start-at dur absn ] (sched-play-url ctx start-at dur absn {}))
@@ -104,7 +103,6 @@
 (reg-event-fx
  ::play-svara
  (fn [{:keys [db]} [_ shruti]]
-   (println " shruti " shruti)
    (if (:audio-context db)
      (let [audctx (:audio-context db)
            buf (@(:note-buffers db) shruti)
@@ -137,13 +135,28 @@
        [::play-svara mod-svara]]})))
 
 (defn move-cursor-forward
-  [ndb cursor-pos]
-  (let [next-index (get-in ndb [:composition :index-forward-seq (vals cursor-pos)])]
-    (println " move cursor " (get-in ndb [:composition :index-forward-seq])
-             " cursor " cursor-pos)
+  [ndb]
+  (let [cursor-pos(get-in ndb [:props :cursor-pos ] )
+        next-index (get-in ndb [:composition :index-forward-seq (vals cursor-pos)])]
     (if next-index
       (zipmap [:row-index :bhaag-index :note-index :nsi] next-index)
       cursor-pos)))
+
+(defn move-cursor-backward
+  [ndb ]
+  (let [cursor-pos (get-in ndb [:props :cursor-pos ] )
+        prev-index (get-in ndb [:composition :index-backward-seq (vals cursor-pos)])
+        note-index (get-ns-index ndb)]
+    (let [res
+          (if (= 0 note-index)
+            cursor-pos
+            (zipmap [:row-index :bhaag-index :note-index :nsi]
+                    (if (> (last prev-index) 0 )
+                      ;;if deleting a multi-note, the ni is > 0
+                      ;;instead make it 0
+                      (conj (subvec prev-index 0 3) 0)
+                      prev-index)))]
+      res)))
 
 (reg-event-fx
  ::conj-svara
@@ -158,10 +171,8 @@
            (db/get-noteseq-index
             (zipmap [:row-index :bhaag-index :note-index :nsi] prev-index)
             (get-in db [:composition :taal])))
-         ;;_ (println " pie2 " note-index " count of ns " (count (get-in db [:composition :noteseq])))
          ln (get-in db [:composition :noteseq note-index])
          nsvara (assoc svara :npb notes-per-beat)
-         ;;_ (println nsvara " note at index " ln " notes per beat " notes-per-beat)
          noteseq-up-fn
          #(let [note-insert
                 (if (= -1 note-index)
@@ -201,7 +212,7 @@
                         (constantly
                          (cond
                            (= updated-cursor :next-note-cursor)
-                           (move-cursor-forward ndb cpos)
+                           (move-cursor-forward ndb)
                            (= updated-cursor :cur-cursor) cpos
                            :else
                            updated-cursor))))]
@@ -286,47 +297,53 @@
         (update-in [:props :show-lyrics-popup]
                    (constantly false)))}))
 
-(defn move-cursor-backward
-  [{:keys [note-index index-entry cursor-pos]}]
-  (constantly
-   (let [res
-         (if (= 0 note-index)
-           cursor-pos
-           (zipmap [:row-index :bhaag-index :note-index :nsi]
-                   (if (> (last index-entry) 0 )
-                     ;;if deleting a multi-note, the ni is > 0
-                     ;;instead make it 0
-                     (conj (subvec index-entry 0 3) 0)
-                     index-entry)))]
-     res)))
+(reg-event-fx
+ ::clear-highlight
+ (fn[{:keys [db]}]
+   {:db
+    (-> db
+        (update-in [:props :highlighted-pos] (constantly #{})))}))
+
+(defn update-highlight
+  [next-cp highlight-set]
+  (let [res  (if (highlight-set next-cp)
+               (disj highlight-set next-cp)
+               (conj highlight-set next-cp))]
+    res))
 
 (reg-event-fx
- ::move-cursor-right
- (fn[{:keys [db]}]
-   (let [cpos (get-in db [:props :cursor-pos ] )]
+ ::copy-cursor
+ [log-event]
+ (fn[{:keys [db]} [_ to]]
+   (let [cursor-pos (get-in db [:props :cursor-pos ] )
+         next-cp (if (= :left to)
+                   (move-cursor-backward db)
+                   (move-cursor-forward db))]
      {:db
       (-> db
-          (update-in [:props :cursor-pos]
-                     (constantly (move-cursor-forward db cpos))))})))
+          (update-in [:props :cursor-pos] (constantly next-cp))
+          (update-in [:props :highlighted-pos]
+                     (partial update-highlight
+                              (if (= to :left)
+                                next-cp cursor-pos))))})))
 
 (reg-event-fx
- ::move-cursor-left
- (fn[{:keys [db]}]
-   (let [[note-index _] (get-ns-index db)
-         cpos (get-in db [:props :cursor-pos ] )
-         index-entry (get-in db [:composition :index-backward-seq (vals cpos)])]
-     {:db
-      (-> db
-          (update-in [:props :cursor-pos]
-                     (move-cursor-backward
-                      {:note-index note-index :index-entry index-entry
-                       :cursor-pos cpos})))})))
+ ::move-cursor
+ [log-event]
+ (fn[{:keys [db]} [_ to]]
+   {:db
+    (update-in db
+               [:props :cursor-pos]
+               (constantly
+                (if (= :left to)
+                  (move-cursor-backward db)
+                  (move-cursor-forward db))))}))
 
 (reg-event-fx
  ::delete-single-swara
  [log-event]
  (fn [{:keys [db]} [_ _]]
-   (let [[note-index _] (get-ns-index db)
+   (let [note-index (get-ns-index db)
          cpos (get-in db [:props :cursor-pos ] )
          index-entry (get-in db [:composition :index-backward-seq (vals cpos)])]
      #_(println " delete index "[note-index note-sub-index]
@@ -344,9 +361,7 @@
                         res))
           (update-in [:composition] db/add-indexes)
           (update-in [:props :cursor-pos]
-                     (move-cursor-backward
-                      {:note-index note-index :index-entry index-entry
-                       :cursor-pos cpos})))
+                     (constantly (move-cursor-backward db))))
       :dispatch [::save-to-localstorage]})))
 
 (reg-event-fx
@@ -388,7 +403,6 @@
  ::set-click-index
  [log-event]
  (fn [{:keys [db]} [_ click-index]]
-   (println " click index " click-index)
    {:db (update-in db [:props :cursor-pos] (constantly click-index))}))
 
 (reg-event-fx
@@ -1090,17 +1104,7 @@
                                                         (str "fill-opacity:0"))))))
                                             (* 1000 iat))))))))
                         (->> past-notes-to-play last scroll-fn)
-                        (assoc db :play-note-index n-note-play-index)
-                        #_(let [svara-index (set (filter #((:play-to-view-map db) %) past-notes-to-play))
-                              bhaag-playing (->> (map vector (range) (:bhaag-first-note db))
-                                                 (filter (fn[[a b]] (svara-index b)))
-                                                 first)
-                              i2db (assoc db :play-note-index n-note-play-index)]
-                          (println " bhaag-playing- " bhaag-playing)
-                          (if (-> bhaag-playing first )
-                            (do (println " setting bhaag-playing " bhaag-playing)
-                                (assoc i2db :nth-bhaag-to-play-from (-> bhaag-playing first)))
-                            i2db)))
+                        (assoc db :play-note-index n-note-play-index))
                       db)}
            ret
            (if (= play-note-index (count play-at-time))

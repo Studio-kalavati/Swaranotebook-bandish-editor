@@ -184,14 +184,16 @@
                     [[::events/inc-octave] [{:keyCode 85}] [{:keyCode 85 :shiftKey true}]];;u
                     [[::events/dec-octave] [{:keyCode 76}] [{:keyCode 76 :shiftKey true}]];;l
 
+                    [[::events/clear-highlight] [{:keyCode 27}]];esc
+                    [[::events/copy-cursor :left] [{:keyCode 37 :shiftKey true}]];;copy leftwards
+                    [[::events/copy-cursor :right] [{:keyCode 39 :shiftKey true}]];;copy leftwards
                     ;;navigation
-                    [[::events/move-cursor-left] [{:keyCode 37}]];;<-
-                    [[::events/move-cursor-right] [{:keyCode 39}]];;<-
+                    [[::events/move-cursor :left] [{:keyCode 37}]];;<-
+                    [[::events/move-cursor :right] [{:keyCode 39}]];;<-
 
                     [[::events/delete-single-swara] [{:keyCode 8}]] ;;backspace
                     ]
-       :clear-keys [;; escape
-                    [{:keyCode 27}]]}]))
+       }]))
 
 (defn reset-keydown-rules
   []
@@ -214,7 +216,6 @@
         show-lyrics? (reagent/atom @(subscribe [::subs/show-lyrics?]))
         newline-on-avartan? (reagent/atom @(subscribe [::subs/newline-on-avartan?]))
         title-val (reagent/atom "")
-        ;;notes-per-beat (reagent/atom (or @(subscribe [::subs/notes-per-beat])))
         svaras-on @(subscribe [::subs/custom-svaras])
         font-size (reagent/atom @(subscribe [::subs/font-size]))
         selected-pitch (reagent/atom (:id (first (filter #(= (:sample %) @(subscribe [::subs/pitch])) pitch-options-list))))
@@ -919,13 +920,12 @@
                                                                         (if (and
                                                                              (= phi nseq-index)
                                                                              (= 0 nsi))
-                                                                          (do #_(println " highlight "
-                                                                                       [phi nseq-index nsi])
-                                                                              ".5") ""))]
+                                                                          ".5" ""))]
                                                           (set! (.-style %) opac)
                                                           (dispatch [::events/register-elem
                                                                      nseq-index note-xy-map %])))
-                                                :x (+ x1 (int (* 0.2 @font-size))) :y (int (* 0.2 @font-size))}])
+                                                :x (+ x1 (int (* 0.2 @font-size)))
+                                                :y (int (* 0.2 @font-size))}])
                                             ;;show cursor
                                             [:rect (assoc rect-style
                                                           :x (+ x1 5) :y 5
@@ -944,6 +944,9 @@
                                             [:image
                                              {:height @font-size :width @font-size
                                               :href ival
+                                              :class
+                                              (if (@(subscribe [::subs/highlighted-pos-set])
+                                                   note-xy-map) "highlight-color" "")
                                               :on-click
                                               (fn[i]
                                                 (reset! cursor-y (.-pageY i))
