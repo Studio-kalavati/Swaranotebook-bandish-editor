@@ -223,7 +223,7 @@
                     :beat-mode :metronome
                     :note-octave :madhyam
                     :keyboard-mode :onscreen-kbd
-                    :highlighted-pos #{}
+                    :highlighted-pos []
                     :pitch "c"
                     :tanpura? true
                     :notes-per-beat 1

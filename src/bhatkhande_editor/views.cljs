@@ -184,9 +184,15 @@
                     [[::events/inc-octave] [{:keyCode 85}] [{:keyCode 85 :shiftKey true}]];;u
                     [[::events/dec-octave] [{:keyCode 76}] [{:keyCode 76 :shiftKey true}]];;l
 
+                    ;;select
                     [[::events/clear-highlight] [{:keyCode 27}]];esc
-                    [[::events/copy-cursor :left] [{:keyCode 37 :shiftKey true}]];;copy leftwards
-                    [[::events/copy-cursor :right] [{:keyCode 39 :shiftKey true}]];;copy leftwards
+                    [[::events/select :left] [{:keyCode 37 :shiftKey true}]];;select leftwards
+                    [[::events/select :right] [{:keyCode 39 :shiftKey true}]];;select leftwards
+
+                    ;;copy
+                    [[::events/copy-to-clipboard] [{:keyCode 67 :ctrlKey true}]];;copy highlighted
+                    [[::events/paste-from-clipboard] [{:keyCode 86 :ctrlKey true}]];;copy highlighted
+
                     ;;navigation
                     [[::events/move-cursor :left] [{:keyCode 37}]];;<-
                     [[::events/move-cursor :right] [{:keyCode 39}]];;<-
@@ -945,8 +951,9 @@
                                              {:height @font-size :width @font-size
                                               :href ival
                                               :class
-                                              (if (@(subscribe [::subs/highlighted-pos-set])
-                                                   note-xy-map) "highlight-color" "")
+                                              (if (some #(= note-xy-map %)
+                                                        @(subscribe [::subs/highlighted-pos-set]))
+                                                "highlight-color" "")
                                               :on-click
                                               (fn[i]
                                                 (reset! cursor-y (.-pageY i))

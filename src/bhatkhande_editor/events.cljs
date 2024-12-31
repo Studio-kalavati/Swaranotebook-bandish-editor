@@ -21,9 +21,15 @@
    :id      :log-event
    :after  (fn [context]
              (let [[k v] (-> context :coeffects :event) ]
-                (.capture (-> context :coeffects :db :posthog) (name k) 
+                (.capture (-> context :coeffects :db :posthog) (name k)
                           (if (map? v) (clj->js v)(clj->js {(name k) v})))
                 context))))
+
+(def clear-highlight-interceptor
+  (re-frame.core/->interceptor
+   :id      :clear-highlight-interceptor
+   :after  (fn [context]
+             (update-in context [:effects :dispatch] (constantly [::clear-highlight])))))
 
 (defn get-ns-index
   [db]
@@ -123,6 +129,7 @@
 
 (reg-event-fx
  ::keyboard-conj-svara
+ [clear-highlight-interceptor]
  (fn[{:keys [db]} [_ svara]]
    (let [mod-svara [(if (#{:- :a} svara)
                       :madhyam
@@ -135,6 +142,8 @@
        [::play-svara mod-svara]]})))
 
 (defn move-cursor-forward
+  "returns the index of the next note group when cursor is moved forward
+  by a note group (which can contain 1-4 notes, all played in the same beat)"
   [ndb]
   (let [cursor-pos(get-in ndb [:props :cursor-pos ] )
         next-index (get-in ndb [:composition :index-forward-seq (vals cursor-pos)])]
@@ -143,6 +152,7 @@
       cursor-pos)))
 
 (defn move-cursor-backward
+  "returns the index of the previous note group."
   [ndb ]
   (let [cursor-pos (get-in ndb [:props :cursor-pos ] )
         prev-index (get-in ndb [:composition :index-backward-seq (vals cursor-pos)])
@@ -302,18 +312,22 @@
  (fn[{:keys [db]}]
    {:db
     (-> db
-        (update-in [:props :highlighted-pos] (constantly #{})))}))
+        (update-in [:props :highlighted-pos] (constantly [])))}))
 
 (defn update-highlight
-  [next-cp highlight-set]
-  (let [res  (if (highlight-set next-cp)
-               (disj highlight-set next-cp)
-               (conj highlight-set next-cp))]
+  "given the next index to add, return the highlight vector
+  by conjing the next index.
+  However when the user changes the direction of highlight
+  (e.g first goes right 2 chars then back one char), remove the last item if its the same as
+  the index"
+  [next-cp highlight-vec]
+  (let [res  (if (some #(= next-cp %) highlight-vec)
+               (filterv #(not= next-cp %) highlight-vec)
+               (conj highlight-vec next-cp))]
     res))
 
 (reg-event-fx
- ::copy-cursor
- [log-event]
+ ::select
  (fn[{:keys [db]} [_ to]]
    (let [cursor-pos (get-in db [:props :cursor-pos ] )
          next-cp (if (= :left to)
@@ -328,8 +342,40 @@
                                 next-cp cursor-pos))))})))
 
 (reg-event-fx
- ::move-cursor
+ ::copy-to-clipboard
  [log-event]
+ (fn[{:keys [db]} [_ _]]
+   (let [notes (->>
+                (get-in db [:props :highlighted-pos] )
+                (map #(db/get-noteseq-index
+                       % (get-in db [:composition :taal])))
+                (map #(get-in db [:composition :noteseq %])))]
+     {:db (update-in db [:props :clipboard]
+                     (constantly notes))})))
+
+(reg-event-fx
+ ::paste-from-clipboard
+ [log-event]
+ (fn[{:keys [db]} [_ _]]
+   (let [selected-notes (get-in db [:props :clipboard])
+         note-index
+         (db/get-noteseq-index
+          (get-in db [:props :cursor-pos])
+          (get-in db [:composition :taal]))
+         noteseq (get-in db [:composition :noteseq])
+         prefix (subvec noteseq 0 note-index)
+         postfix (subvec noteseq note-index)]
+    (println " note-index " note-index
+            " prefix " prefix " postfix " postfix)
+     {:db
+      (-> db
+          (update-in [:composition :noteseq]
+                     (constantly (into (into prefix selected-notes) postfix)))
+          (update-in [:composition] db/add-indexes))})))
+
+(reg-event-fx
+ ::move-cursor
+ [clear-highlight-interceptor]
  (fn[{:keys [db]} [_ to]]
    {:db
     (update-in db
@@ -341,7 +387,7 @@
 
 (reg-event-fx
  ::delete-single-swara
- [log-event]
+ [clear-highlight-interceptor]
  (fn [{:keys [db]} [_ _]]
    (let [note-index (get-ns-index db)
          cpos (get-in db [:props :cursor-pos ] )
@@ -802,6 +848,7 @@
 
 (reg-event-fx
  ::inc-octave
+ [clear-highlight-interceptor]
  (fn [{:keys [db]} [_ _]]
    {:db (update-in db [:props :note-octave]
                    (fn[i] (cond
@@ -811,6 +858,7 @@
 
 (reg-event-fx
  ::dec-octave
+ [clear-highlight-interceptor]
  (fn [{:keys [db]} [_ _]]
    {:db (update-in db [:props :note-octave]
                    (fn[i] (cond
@@ -820,6 +868,7 @@
 
 (reg-event-fx
  ::notes-per-beat
+ [clear-highlight-interceptor]
  (fn [{:keys [db]} [_ ival]]
    {:db (update-in db [:props :notes-per-beat] (constantly ival))}))
 
