@@ -26,7 +26,7 @@
 (defn get-noteseq-index
   "given a multi-index of row,bhaag and note,
   returns the index of the note in noteseq.  "
-  [{:keys [row-index bhaag-index note-index]} taal]
+  [{:keys [row-index bhaag-index note-index] :as inp} taal]
   (let [td (taal-def taal)
         num-beats (:num-beats td)
         a1 (* row-index num-beats)

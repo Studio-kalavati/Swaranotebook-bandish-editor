@@ -919,9 +919,14 @@
                                              {:height @font-size :width @font-size
                                               :href ival
                                               :class
-                                              (if (some #(= note-xy-map %)
-                                                        @(subscribe [::subs/highlighted-pos-set]))
-                                                "highlight-color" "")
+                                              (let [highlight-v
+                                                    ;;don't match note sub index because only the
+                                                    ;;first (or single) note is present in the highlight vector
+                                                    (map #(dissoc % :nsi)
+                                                         @(subscribe [::subs/highlighted-pos-set]))]
+                                                (if (some #(= (dissoc note-xy-map :nsi) %)
+                                                          highlight-v)
+                                                  "highlight-color" ""))
                                               :on-click
                                               (fn[i]
                                                 (reset! cursor-y (.-pageY i))

@@ -146,7 +146,16 @@
   by a note group (which can contain 1-4 notes, all played in the same beat)"
   [ndb]
   (let [cursor-pos(get-in ndb [:props :cursor-pos ] )
-        next-index (get-in ndb [:composition :index-forward-seq (vals cursor-pos)])]
+        ;;when multiple notes in a beat, index-forward-seq's next-index
+        ;;returns the next note in the same beat
+        ;;so skip forward until the next full note is found.
+        next-index (loop [n0 (vals cursor-pos)]
+           (let [n1 (get-in ndb [:composition :index-forward-seq n0])]
+             ;;note sub-index should be 0 for the next whole note
+             (cond
+               (nil? n1) n0 ;;at the end
+               (= 0 (last n1)) n1
+               :else (recur n1))))]
     (if next-index
       (zipmap [:row-index :bhaag-index :note-index :nsi] next-index)
       cursor-pos)))
@@ -323,9 +332,11 @@
   [next-cp direction highlight-vec ]
   (let [res
         (if (some #(= next-cp %) highlight-vec)
+          ;;remove if index exists in the highlight-vec
           (filterv #(not= next-cp %) highlight-vec)
           (if (= :right direction)
             (conj highlight-vec next-cp)
+            ;;when going left,append to the front 
             (into [next-cp] highlight-vec)))]
     res))
 
@@ -335,15 +346,18 @@
    (let [cursor-pos (get-in db [:props :cursor-pos ] )
          next-cp (if (= :left to)
                    (move-cursor-backward db)
-                   (move-cursor-forward db))]
+                   (move-cursor-forward db))
+         is-last-note? (nil? (get-in db [:composition :index-forward-seq (vals cursor-pos)]))
+         ndb (update-in db [:props :cursor-pos] (constantly next-cp))]
      {:db
-      (-> db
-          (update-in [:props :cursor-pos] (constantly next-cp))
-          (update-in [:props :highlighted-pos]
-                     (partial update-highlight
-                              (if (= to :left)
-                                next-cp cursor-pos)
-                              to)))})))
+      ;;don't add the last - note to the highlight set
+      (if is-last-note?
+        ndb
+        (update-in ndb [:props :highlighted-pos]
+                   (partial update-highlight
+                            (if (= to :left)
+                              next-cp cursor-pos)
+                            to)))})))
 
 (reg-event-fx
  ::copy-to-clipboard
@@ -360,10 +374,9 @@
 (reg-event-fx
  ::cut-to-clipboard
  (fn[{:keys [db]} [_ _]]
-   (let [note-indexes (->>
-                (get-in db [:props :highlighted-pos] )
-                (map #(db/get-noteseq-index
-                       % (get-in db [:composition :taal]))))
+   (let [highlighted (get-in db [:props :highlighted-pos] )
+         note-indexes (map #(db/get-noteseq-index
+                             % (get-in db [:composition :taal])) highlighted)
          noteseq (get-in db [:composition :noteseq])
          notes (->>
                 note-indexes
@@ -376,6 +389,7 @@
       (-> db
           (update-in [:composition :noteseq]
                      (constantly noteseq-wo-highlight))
+          (update-in [:props :cursor-pos] (constantly (first highlighted)))
           (update-in [:props :clipboard]
                      (constantly notes))
           (update-in [:composition] db/add-indexes))
@@ -403,13 +417,13 @@
  ::move-cursor
  [clear-highlight-interceptor]
  (fn[{:keys [db]} [_ to]]
-   {:db
-    (update-in db
-               [:props :cursor-pos]
-               (constantly
-                (if (= :left to)
-                  (move-cursor-backward db)
-                  (move-cursor-forward db))))}))
+   (let [new-cursor-pos (if (= :left to)
+                          (move-cursor-backward db)
+                          (move-cursor-forward db))]
+     {:db
+      (update-in db
+                 [:props :cursor-pos]
+                 (constantly new-cursor-pos))})))
 
 (reg-event-fx
  ::delete-single-swara
