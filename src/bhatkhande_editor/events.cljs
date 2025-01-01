@@ -320,10 +320,13 @@
   However when the user changes the direction of highlight
   (e.g first goes right 2 chars then back one char), remove the last item if its the same as
   the index"
-  [next-cp highlight-vec]
-  (let [res  (if (some #(= next-cp %) highlight-vec)
-               (filterv #(not= next-cp %) highlight-vec)
-               (conj highlight-vec next-cp))]
+  [next-cp direction highlight-vec ]
+  (let [res
+        (if (some #(= next-cp %) highlight-vec)
+          (filterv #(not= next-cp %) highlight-vec)
+          (if (= :right direction)
+            (conj highlight-vec next-cp)
+            (into [next-cp] highlight-vec)))]
     res))
 
 (reg-event-fx
@@ -339,7 +342,8 @@
           (update-in [:props :highlighted-pos]
                      (partial update-highlight
                               (if (= to :left)
-                                next-cp cursor-pos))))})))
+                                next-cp cursor-pos)
+                              to)))})))
 
 (reg-event-fx
  ::copy-to-clipboard
@@ -354,8 +358,32 @@
                      (constantly notes))})))
 
 (reg-event-fx
+ ::cut-to-clipboard
+ (fn[{:keys [db]} [_ _]]
+   (let [note-indexes (->>
+                (get-in db [:props :highlighted-pos] )
+                (map #(db/get-noteseq-index
+                       % (get-in db [:composition :taal]))))
+         noteseq (get-in db [:composition :noteseq])
+         notes (->>
+                note-indexes
+                (map #(get-in db [:composition :noteseq %])))
+         noteseq-wo-highlight (vec (keep-indexed
+                                    (fn [indx item]
+                                      (when-not ((set note-indexes) indx) item))
+                                    noteseq))]
+     {:db
+      (-> db
+          (update-in [:composition :noteseq]
+                     (constantly noteseq-wo-highlight))
+          (update-in [:props :clipboard]
+                     (constantly notes))
+          (update-in [:composition] db/add-indexes))
+      :dispatch [::clear-highlight]})))
+
+(reg-event-fx
  ::paste-from-clipboard
- [log-event]
+ ;;[log-event]
  (fn[{:keys [db]} [_ _]]
    (let [selected-notes (get-in db [:props :clipboard])
          note-index
@@ -365,8 +393,6 @@
          noteseq (get-in db [:composition :noteseq])
          prefix (subvec noteseq 0 note-index)
          postfix (subvec noteseq note-index)]
-    (println " note-index " note-index
-            " prefix " prefix " postfix " postfix)
      {:db
       (-> db
           (update-in [:composition :noteseq]

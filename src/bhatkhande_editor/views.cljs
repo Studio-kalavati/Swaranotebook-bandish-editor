@@ -190,8 +190,9 @@
                     [[::events/select :right] [{:keyCode 39 :shiftKey true}]];;select leftwards
 
                     ;;copy
-                    [[::events/copy-to-clipboard] [{:keyCode 67 :ctrlKey true}]];;copy highlighted
-                    [[::events/paste-from-clipboard] [{:keyCode 86 :ctrlKey true}]];;copy highlighted
+                    [[::events/copy-to-clipboard] [{:keyCode 67 :ctrlKey true}]];;c copy highlighted
+                    [[::events/paste-from-clipboard] [{:keyCode 86 :ctrlKey true}]];; v copy highlighted
+                    [[::events/cut-to-clipboard] [{:keyCode 88 :ctrlKey true}]];; x copy highlighted
 
                     ;;navigation
                     [[::events/move-cursor :left] [{:keyCode 37}]];;<-
