@@ -913,39 +913,6 @@
                                                        :bhaag-index bhaag-index
                                                        :note-index note-index
                                                        :nsi nsi}
-                                          cursor-rect
-                                          (if play-mode?
-                                            ;;show rect that animates on playing
-                                            (let [phi @(subscribe [::subs/play-head-position])]
-                                              [:rect
-                                               {:width (int (* 0.6 @font-size)) :height @font-size
-                                                :fill "#f83600"
-                                                :fill-opacity 0
-                                                :ref #(when (identity %)
-                                                        (let [opa "fill-opacity:0"
-                                                              opac (str opa
-                                                                        (if (and
-                                                                             (= phi nseq-index)
-                                                                             (= 0 nsi))
-                                                                          ".5" ""))]
-                                                          (set! (.-style %) opac)
-                                                          (dispatch [::events/register-elem
-                                                                     nseq-index note-xy-map %])))
-                                                :x (+ x1 (int (* 0.2 @font-size)))
-                                                :y (int (* 0.2 @font-size))}])
-                                            ;;show cursor
-                                            [:rect (assoc rect-style
-                                                          :x (+ x1 5) :y 5
-                                                          :height (int (* 1.3 @font-size))
-                                                          :ref #(when (identity %)
-                                                                  ;;when moving, don't blink
-                                                                  ;;after its stationary start blinking
-                                                                  (js/setTimeout
-                                                                   (fn[]
-                                                                     (.add (.-classList %)
-                                                                           "blinking-cursor"))
-                                                                   1000)))]
-                                            )
                                           ith-note
                                           (if-let [ival (image-map shruti)]
                                             [:image
@@ -982,10 +949,38 @@
                                           ;;if play mode, add all rects
                                           r3
                                           (if play-mode?
-                                            (update-in r3 [:images1] conj cursor-rect)
+                                            (update-in r3 [:images1] conj
+                                                       (let [phi @(subscribe [::subs/play-head-position])]
+                                                         [:rect
+                                                          {:width (int (* 0.6 @font-size)) :height @font-size
+                                                           :fill "#f83600"
+                                                           :fill-opacity 0
+                                                           :ref #(when (identity %)
+                                                                   (let [opa "fill-opacity:0"
+                                                                         opac (str opa
+                                                                                   (if (and
+                                                                                        (= phi nseq-index)
+                                                                                        (= 0 nsi))
+                                                                                     ".5" ""))]
+                                                                     (set! (.-style %) opac)
+                                                                     (dispatch [::events/register-elem
+                                                                                nseq-index note-xy-map %])))
+                                                           :x (+ x1 (int (* 0.2 @font-size)))
+                                                           :y (int (* 0.2 @font-size))}]))
                                             (let [curpos @(subscribe [::subs/get-click-index])]
                                               (if (= note-xy-map curpos)
-                                                (update-in r3 [:images1] conj cursor-rect)
+                                                (update-in r3 [:images1] conj
+                                                           [:rect (assoc rect-style
+                                                                         :x (+ x1 5) :y 5
+                                                                         :height (int (* 1.3 @font-size))
+                                                                         :ref #(when (identity %)
+                                                                                 ;;when moving, don't blink
+                                                                                 ;;after its stationary start blinking
+                                                                                 (js/setTimeout
+                                                                                  (fn[]
+                                                                                    (.add (.-classList %)
+                                                                                          "blinking-cursor"))
+                                                                                  1000)))])
                                                 r3)))
                                           r3 (if-let [sah (get sah-list note-index)]
                                                (if (= nsi 0)
@@ -1076,11 +1071,17 @@
                       x-end (:x r3)]
                   ;;add vertical bars for bhaag
                   ;;2 bars if the avartan starts
-                  {:images (if (= 0 bhaag-index)
-                             (into images
-                                   [[:rect (assoc rect-style :x 0)]
-                                    [:rect (assoc rect-style :x 3)]])
-                             (conj images [:rect (assoc rect-style :x 0)]))
+                  {:images
+                   (let [pfn (fn[i] (int (* i @font-size)))
+                         line-style {:y2 (+ @font-size (pfn 0.3))
+                                     :y1 (pfn 0.3)
+                                     :stroke-width (pfn 0.05)
+                                     :stroke :black}]
+                     (if (= 0 bhaag-index)
+                       (into images
+                             [[:line (assoc line-style :x1 1 :x2 1)]
+                              [:line (assoc line-style :x1 (pfn 0.1) :x2 (pfn 0.1))]])
+                       (conj images [:line (assoc line-style :x1 1 :x2 1)])))
                    :x x-end}))
               ;;returns  list of lists
               ;;each element is one avartan
