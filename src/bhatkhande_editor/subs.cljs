@@ -49,10 +49,10 @@
    (-> props :note-octave)))
 
 (reg-sub
- ::keyboard-mode
+ ::onscreen-keyboard
  :<- [::props]
  (fn [props _]
-   (-> props :keyboard-mode)))
+   (-> props :onscreen-keyboard)))
 
 (reg-sub
  ::notes-per-beat

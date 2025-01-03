@@ -325,7 +325,7 @@
                     (reset! editor-height ch)))}
          [v-box
           :gap      "0.5vh"
-          :children [(when (= :ask-hw-kbd @(subscribe [::subs/keyboard-mode]))
+          :children [(when (= :ask-hw-kbd @(subscribe [::subs/onscreen-keyboard]))
                        [modal-panel
                         :child
                         [:div {:style {:min-width "min(80vw,400px)"}}
@@ -335,19 +335,14 @@
                           :align :center
                           :justify :center
                           :children
-                          [[title :label "Use computer keyboard?" :level :level3]
+                          [[title :label "Hiding onscreen keyboard. Click the ⌨ icon to use the onscreen keyboard." :level :level3]
                            (asjc-hbox
                             [[button
-                              :label "  Yes  "
+                              :label "  OK  "
                               :style {:width "100px"}
                               :class "btn-hc-lg btn-primary "
-                              :on-click #(dispatch [::events/set-keyboard-mode :hw-keyboard])]
-                             [gap :size "5vw"]
-                             [button
-                              :label "  No  "
-                              :style {:width "100px"}
-                              :class "btn-hc-lg btn-default "
-                              :on-click #(dispatch [::events/set-keyboard-mode :onscreen-keyboard])]])
+                              :on-click #(dispatch [::events/hide-onscreen-keyboard])]
+                             [gap :size "5vw"]])
                            [gap :size "2vh"]]]]])
                      (when @show-keyboard-help?
                        (let [bfn (fn[text kys]
@@ -358,20 +353,22 @@
                                                 :child [:p kys]]]))]
                          [modal-panel
                           :backdrop-on-click #(reset! show-keyboard-help? false)
+                          :style {:style {:min-width "min(80vw,600px)"}}
                           :child
-                          [:div {:style {:min-width "min(80vw,600px)"}}
-                           [v-box
+                          [v-box
                             :gap      "0.5vh"
                             :class "body"
+                           :style {:max-height "90vh"
+                                   :overflow-y :scroll}
                             :children
                             [(asjc-hbox {:width "550px"}
                                         [[box :style {:width "250px"}
-                                          :child [:b "For"]]
+                                          :child [:b "To type"]]
                                          [box :style {:width "250px"}
-                                          :child [:b "Keystrokes"]]])
+                                          :child [:b "Use keystroke"]]])
                              (bfn "Shuddha Svaras" "s, r, g, m, p, d, n")
-                             (bfn "Komal Svaras" "Shift-r,Shift-g,Shift-d,Shift-n")
-                             (bfn "Tivra Madhyam" "Shift-m")
+                             (bfn "Komal Svaras" "Shift+r, Shift+g, Shift+d, Shift+n")
+                             (bfn "Tivra Madhyam" "Shift+m")
                              (bfn "Avagraha (S)" "a")
                              (bfn "Vishram" "-")
                              (bfn "(Shift to) higher octave" "u/U")
@@ -383,6 +380,11 @@
                              (bfn "Move cursor left" "<- (left)")
                              (bfn "Move cursor right" "-> (right)")
                              (bfn "Delete backward" "Backspace")
+                             (bfn "Select (to copy)" "Shift + ->, Shift + <-")
+                             (bfn "Copy" "Ctrl + c")
+                             (bfn "Paste" "Ctrl + v")
+                             (bfn "Cut" "Ctrl + x")
+                             (bfn "Deselect" "Esc")
                              [gap :size "2vh"]
                              [box
                               :align :center
@@ -392,7 +394,8 @@
                                :style {:width "100px"}
                                :class "btn-hc-lg btn-primary "
                                :on-click #(do (reset! show-keyboard-help? false))]]
-                             [gap :size "2vh"]]]]]))
+                             [gap :size "2vh"]]]
+                          ]))
                      (when @show-file-popup?
                        [modal-panel
                         :backdrop-on-click #(reset! show-file-popup? false)
@@ -771,30 +774,36 @@
                                           (dispatch [::events/next-bhaag-lyrics-popup
                                                      {:row-index row-index
                                                       :bhaag-index bhaag-index}]))]]]]]]]))
-                     (if (= :hw-keyboard @(subscribe [::subs/keyboard-mode]))
-                       [v-box :children [[h-box
-                                          :justify :end
-                                          :align :center
-                                          :style {:background "floralwhite"}
-                                          :children
-                                          [[box :child
-                                            [:p "Octave: "
-                                             [:b (cstring/capitalize
-                                                  (name @(subscribe[::subs/note-octave])))]]]
-                                           [gap :size "2vw"]
-                                           [button :label "View Keyboard Help "
-                                            :class "btn-lg btn btn-secondary "
-                                            :on-click
-                                            #(reset! show-keyboard-help? true)]]]
-                                         [h-box
-                                          :gap      "0.5vw"
-                                          :style {:flex-flow "row wrap"}
-                                          :class "last-bar"
-                                          :children [menu-btn file-btn save-btn
-                                                     lang-btn
-                                                     taal-btn
-                                                     onebeat-btn twobeat-btn threebeat-btn fourbeat-btn
-                                                     settings-btn play-btn]]]]
+                     (if (= :hide @(subscribe [::subs/onscreen-keyboard]))
+                       [v-box
+                        :children
+                        [[h-box
+                          :justify :end
+                          :align :center
+                          :style {:background "floralwhite"}
+                          :children
+                          [[box :child
+                            [:p "Octave: "
+                             [:b (cstring/capitalize
+                                  (name @(subscribe[::subs/note-octave])))]]]
+                           [gap :size "2vw"]
+                           [button :label "View Keyboard Help "
+                            :class "btn-lg btn btn-secondary "
+                            :on-click
+                            #(reset! show-keyboard-help? true)]]]
+                         [h-box
+                          :gap      "0.5vw"
+                          :style {:flex-flow "row wrap"}
+                          :class "last-bar"
+                          :children [menu-btn
+                                     (zmdi-butn2 transparent-style
+                                                 "zmdi zmdi-keyboard zmdi-hc-lg"
+                                                 #(dispatch [::events/show-onscreen-keyboard]))
+                                     file-btn save-btn
+                                     lang-btn
+                                     taal-btn
+                                     onebeat-btn twobeat-btn threebeat-btn fourbeat-btn
+                                     settings-btn play-btn]]]]
                        [v-box :children [[h-box
                                           :justify :between
                                           :class "first-bar"
@@ -844,7 +853,7 @@
           font-size (reagent/atom @(subscribe [::subs/font-size]))
           newline-on-avartan? @(subscribe [::subs/newline-on-avartan?])
           play-mode? (= :play @(subscribe [::subs/mode]))
-          _ @(subscribe [::subs/keyboard-mode])]
+          _ @(subscribe [::subs/onscreen-keyboard])]
       [:div
        [:div
         {:class "edit-composition"

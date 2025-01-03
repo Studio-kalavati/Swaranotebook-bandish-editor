@@ -222,7 +222,7 @@
                     :bpm 120
                     :beat-mode :metronome
                     :note-octave :madhyam
-                    :keyboard-mode :onscreen-kbd
+                    :onscreen-keyboard :show
                     :highlighted-pos []
                     :pitch "c"
                     :tanpura? true

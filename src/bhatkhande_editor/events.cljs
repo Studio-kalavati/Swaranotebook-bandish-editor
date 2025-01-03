@@ -123,23 +123,29 @@
      {:dispatch [::init-note-buffers]})))
 
 (reg-event-fx
- ::set-keyboard-mode
- (fn[{:keys [db]} [_ mode]]
-   {:db (update-in db [:props :keyboard-mode] (constantly mode))}))
+ ::hide-onscreen-keyboard
+ (fn[{:keys [db]} [_ _]]
+   {:db (update-in db [:props :onscreen-keyboard] (constantly :hide))}))
+
+(reg-event-fx
+ ::show-onscreen-keyboard
+ (fn[{:keys [db]} [_ _]]
+   {:db (update-in db [:props :onscreen-keyboard] (constantly :show))}))
 
 (reg-event-fx
  ::keyboard-conj-svara
  [clear-highlight-interceptor]
  (fn[{:keys [db]} [_ svara]]
-   (let [mod-svara [(if (#{:- :a} svara)
-                      :madhyam
-                      (or (-> db :props :note-octave) :madhyam)) svara]]
-     {:db (if (-> db :props :keyboard-mode (= :onscreen-kbd))
-            (update-in db [:props :keyboard-mode] (constantly :ask-hw-kbd))
-            db)
-      :dispatch-n
-      [[::conj-svara {:svara {:shruti mod-svara}}]
-       [::play-svara mod-svara]]})))
+   (if (-> db :props :onscreen-keyboard (= :show))
+     {:db (update-in db [:props :onscreen-keyboard] (constantly :ask-hw-kbd))}
+     {:dispatch-n
+      (let [mod-svara
+            [(if (#{:- :a} svara)
+               :madhyam
+               (or (-> db :props :note-octave) :madhyam)) svara]]
+        [[::conj-svara {:svara
+                        {:shruti mod-svara}}]
+         [::play-svara mod-svara]])})))
 
 (defn move-cursor-forward
   "returns the index of the next note group when cursor is moved forward
