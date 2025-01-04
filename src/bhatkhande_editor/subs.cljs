@@ -39,13 +39,31 @@
 (reg-sub
  ::raga
  :<- [::props]
- (fn [props _]     
+ (fn [props _]
    (-> props :raga)))
+
+(reg-sub
+ ::note-octave
+ :<- [::props]
+ (fn [props _]
+   (-> props :note-octave)))
+
+(reg-sub
+ ::onscreen-keyboard
+ :<- [::props]
+ (fn [props _]
+   (-> props :onscreen-keyboard)))
+
+(reg-sub
+ ::notes-per-beat
+ :<- [::props]
+ (fn [props _]
+   (-> props :notes-per-beat)))
 
 (reg-sub
  ::x-switch
  :<- [::props]
- (fn [props _]     
+ (fn [props _]
    (-> props :x-switch)))
 
 (reg-sub
@@ -94,10 +112,12 @@
  (fn [db [_ _]]
    (get-in db [:props :cursor-pos])))
 
+
+
 (reg-sub
- ::show-text-popup
+ ::show-lyrics-popup
  (fn [db [_ _]]
-   (get-in db [:props :show-text-popup])))
+   (get-in db [:props :show-lyrics-popup])))
 
 (reg-sub
  ::get-sahitya
@@ -144,6 +164,12 @@
  :<- [::props]
  (fn [props [_ _]]
    (:custom-svaras props)))
+
+(reg-sub
+ ::highlighted-pos-set
+ :<- [::props]
+ (fn [props [_ _]]
+   (:highlighted-pos props)))
 
 (reg-sub
  ::newline-on-avartan?
