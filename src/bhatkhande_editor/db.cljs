@@ -26,7 +26,7 @@
 (defn get-noteseq-index
   "given a multi-index of row,bhaag and note,
   returns the index of the note in noteseq.  "
-  [{:keys [row-index bhaag-index note-index]} taal]
+  [{:keys [row-index bhaag-index note-index] :as inp} taal]
   (let [td (taal-def taal)
         num-beats (:num-beats td)
         a1 (* row-index num-beats)
@@ -221,8 +221,12 @@
                     :show-lyrics false
                     :bpm 120
                     :beat-mode :metronome
+                    :note-octave :madhyam
+                    :onscreen-keyboard :show
+                    :highlighted-pos []
                     :pitch "c"
                     :tanpura? true
+                    :notes-per-beat 1
                     :note-index []})
 
 (def pitch-sharps-list ["C" "C#" "D" "D#" "E" "F" "F#" "G" "G#" "A" "A#" "B"])

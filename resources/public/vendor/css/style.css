@@ -1681,7 +1681,9 @@ input[type="search"]
 .blinking-cursor {
 	animation: 1s blink step-end infinite
 }
-
+.highlight-color{
+    filter: invert(48%) sepia(76%) saturate(1808%) hue-rotate(205deg) brightness(98%) contrast(98%);
+}
 @keyframes blink {
 	0% {opacity: 0;}
 	50% {opacity: 1;}

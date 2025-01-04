@@ -2,6 +2,7 @@
   (:require
    [reagent.dom :as rdom]
    [re-frame.core :as re-frame]
+   [re-pressed.core :as rp]
    [breaking-point.core :as bp]
    [bhatkhande-editor.events :as events]
    [bhatkhande-editor.routes :as routes]
@@ -56,5 +57,7 @@
                                           1200
                                           :large-monitor]
                             :debounce-ms 166}])
+  (re-frame/dispatch-sync [::rp/add-keyboard-event-listener "keydown"
+                           :clear-on-success-event-match true])
   (dev-setup)
   (mount-root))
