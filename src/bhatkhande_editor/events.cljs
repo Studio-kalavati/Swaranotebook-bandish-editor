@@ -556,20 +556,19 @@
              (let [j (-> (.parse js/JSON (-> e .-target .-result))
                          (js->clj)
                          (walk/keywordize-keys))
-                   _ (println " j " j)
-                   j1 (-> j
-                          (update-in
-                           [:noteseq]
-                           #(mapv (fn[{:keys [notes] :as imap}]
-                                         (update-in imap [:notes]
-                                                    (fn[notes]
-                                                      (mapv
-                                                       (fn[i]
-                                                         (update-in i [:shruti] (fn[j] (mapv keyword j))))
-                                                            notes)))) %))
-                          (update-in [:taal] keyword))]
-               (println " import " j1)
-               (dispatch [::refresh-comp j1]))))
+                   {:keys [noteseq taal]} (get-in j [:score :part])]
+               (if (and noteseq taal)
+                 (let [nns (->> noteseq
+                                (mapv (fn[{:keys [notes] :as imap}]
+                                        (update-in imap [:notes]
+                                                   (fn[notes]
+                                                     (->> notes
+                                                          (map
+                                                           (fn[i] (update-in i [:svara] (fn[j] (mapv keyword j)))))
+                                                          (mapv #(clojure.set/rename-keys % {:svara :shruti}))))))))
+                       j1 {:noteseq nns :taal (keyword taal)}]
+                   (dispatch [::refresh-comp j1]))
+                 (dispatch [::set-active-panel :import-error-panel])))))
      (.readAsText reader file)) db))
 
 (reg-event-fx
