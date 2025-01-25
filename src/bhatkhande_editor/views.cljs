@@ -136,9 +136,25 @@
                           :rx 1
                           :x 0})))))
 
+(defn json-cvt
+  [compdata]
+  (let [nseq (:noteseq compdata)
+        res {:score {:part {:noteseq
+                        (mapv (fn[{:keys [notes lyrics]}]
+                                (let [iret {:notes (mapv (fn[{:keys [shruti]}]
+                                                           {:svara shruti}) notes)}]
+                                  (if lyrics
+                                    (assoc iret :lyrics lyrics)
+                                    iret)))
+                              nseq)
+                        :taal (:taal compdata)}
+                 :version "2025-25-01"}}]
+    (println " json cvt " res)
+    res))
+
 (defn download-link
   [compdata title]
-  (let [json (.stringify js/JSON (clj->js compdata))
+  (let [json (.stringify js/JSON (clj->js (json-cvt compdata)))
         blob (js/Blob. [json]  #js {"type" "octet/stream"})
         url (.createObjectURL js/URL blob)
         a (.createElement js/document "a")]
@@ -420,16 +436,20 @@
                                    pitch @(subscribe [::subs/pitch])
                                    ctitle @(subscribe [::subs/comp-title])]
                                [:a {:class "btn btn-lg" :download "something.json"
-                                    :on-click #(download-link
-                                                {:noteseq
-                                                 (events/get-play-at-time-seq
-                                                  {:composition comp
-                                                   :beat-mode :metronome
-                                                   :bpm bpm})
-                                                 :pitch pitch
-                                                 :taal (:taal comp)}
-                                                (or ctitle "composition"))}
+                                    :on-click #(download-link comp (or ctitle "composition"))}
                                 [:i {:class "zmdi zmdi-download zmdi-hc-lg"}]])])
+                           [gap :size "2vh"]
+                           (asjc-hbox
+                            [[title :label "Import composition" :level :level3]
+                             [gap :size "20px"]
+                             [:div
+                              [:label "Upload a file: "
+                               [:input {:type "file"
+                                        :on-change
+                                        #(let [file (-> % .-target .-files (aget 0))]
+                                           (when file
+                                             (println " dispatching ")
+                                             (dispatch [::events/import-comp-json file])))}]]]])
                            [gap :size "2vh"]
                            [box
                             :align :center
