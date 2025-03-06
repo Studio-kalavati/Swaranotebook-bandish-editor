@@ -13,6 +13,7 @@
    ["firebase/firestore" :as firebase-firestore]
    ["posthog-js" :default posthog]
    [cognitect.transit :as t]
+   [clojure.walk :as walk]
    [clojure.string :as cstring]
    [sargam.talas :refer [taal-def]]))
 
@@ -545,6 +546,30 @@
      (upload-comp (-> ndb :user :uid) path comp)
      {:dispatch [::set-active-panel :wait-for-save-completion]
       :db ndb})))
+
+(reg-event-db
+ ::import-comp-json
+ (fn [db [_ file]]
+   (let [reader (js/FileReader.)]
+     (set! (.-onload reader)
+           (fn [e]
+             (let [j (-> (.parse js/JSON (-> e .-target .-result))
+                         (js->clj)
+                         (walk/keywordize-keys))
+                   {:keys [noteseq taal]} (get-in j [:score :part])]
+               (if (and noteseq taal)
+                 (let [nns (->> noteseq
+                                (mapv (fn[{:keys [notes] :as imap}]
+                                        (update-in imap [:notes]
+                                                   (fn[notes]
+                                                     (->> notes
+                                                          (map
+                                                           (fn[i] (update-in i [:svara] (fn[j] (mapv keyword j)))))
+                                                          (mapv #(clojure.set/rename-keys % {:svara :shruti}))))))))
+                       j1 {:noteseq nns :taal (keyword taal)}]
+                   (dispatch [::refresh-comp j1]))
+                 (dispatch [::set-active-panel :import-error-panel])))))
+     (.readAsText reader file)) db))
 
 (reg-event-fx
  ::delete-comp

@@ -136,9 +136,24 @@
                           :rx 1
                           :x 0})))))
 
+(defn json-cvt
+  [compdata]
+  (let [nseq (:noteseq compdata)
+        res {:score {:part {:noteseq
+                        (mapv (fn[{:keys [notes lyrics]}]
+                                (let [iret {:notes (mapv (fn[{:keys [shruti]}]
+                                                           {:svara shruti}) notes)}]
+                                  (if lyrics
+                                    (assoc iret :lyrics lyrics)
+                                    iret)))
+                              nseq)
+                        :taal (:taal compdata)}
+                 :version "2025-25-01"}}]
+    res))
+
 (defn download-link
   [compdata title]
-  (let [json (.stringify js/JSON (clj->js compdata))
+  (let [json (.stringify js/JSON (clj->js (json-cvt compdata)))
         blob (js/Blob. [json]  #js {"type" "octet/stream"})
         url (.createObjectURL js/URL blob)
         a (.createElement js/document "a")]
@@ -411,7 +426,7 @@
                              [gap :size "20px"]
                              [:button {:class "btn btn-lg" :on-click #(do (.print js/window))}
                               [:i {:class "zmdi zmdi-print zmdi-hc-lg"}]]])
-                           [gap :size "50px"]
+                           [gap :size "4vh"]
                            (asjc-hbox
                             [[title :label "Save JSON" :level :level3]
                              [gap :size "20px"]
@@ -419,18 +434,23 @@
                                    bpm @(subscribe [::subs/bpm])
                                    pitch @(subscribe [::subs/pitch])
                                    ctitle @(subscribe [::subs/comp-title])]
-                               [:a {:class "btn btn-lg" :download "something.json"
-                                    :on-click #(download-link
-                                                {:noteseq
-                                                 (events/get-play-at-time-seq
-                                                  {:composition comp
-                                                   :beat-mode :metronome
-                                                   :bpm bpm})
-                                                 :pitch pitch
-                                                 :taal (:taal comp)}
-                                                (or ctitle "composition"))}
+                               [:button {:class "btn btn-lg" :download "something.json"
+                                    :on-click #(download-link comp (or ctitle "composition"))}
                                 [:i {:class "zmdi zmdi-download zmdi-hc-lg"}]])])
-                           [gap :size "2vh"]
+                           [gap :size "4vh"]
+                           (asjc-hbox
+                            [[title :label "Import composition" :level :level3]
+                             [gap :size "20px"]
+                             [:div
+                              [:label ""
+                               [:input {:type "file"
+                                        :on-change
+                                        #(let [file (-> % .-target .-files (aget 0))]
+                                           (when file
+                                             (do
+                                               (reset! show-file-popup? false)
+                                               (dispatch [::events/import-comp-json file]))))}]]]])
+                           [gap :size "4vh"]
                            [box
                             :align :center
                             :child
@@ -1525,6 +1545,7 @@
                [title :level :level3 :label msg]]
               [throbber :color "coral" :size :large]]]]]])
 
+
 (defmethod routes/panels :load-panel []
   (wait-for "Loading notations"))
 
@@ -1541,6 +1562,29 @@
 
 (defmethod routes/panels :wait-for-save-completion []
   (wait-for "Saving notation"))
+
+(defmethod routes/panels :import-error-panel []
+  [:div
+   [modal-panel
+    :backdrop-color "floralwhite"
+    :child [:div {:class "popup"
+                  :style {:overflow-y :scroll
+                          :max-height "80vh"}}
+            [v-box
+             :gap "2vh"
+             :class "body"
+             :align :center
+             :children
+             [[box :align :center
+               :child
+               [title :level :level3 :label "Invalid format "]]
+              [box :align :center
+               :child
+               [button
+                :label "  OK  "
+                :style {:width "100px"}
+                :class "btn-hc-lg btn-primary "
+                :on-click #(dispatch [::events/set-active-panel :home-panel])]]]]]]])
 
 (defmethod routes/panels :wait-for-loading-comps []
   (wait-for "Loading notations"))
