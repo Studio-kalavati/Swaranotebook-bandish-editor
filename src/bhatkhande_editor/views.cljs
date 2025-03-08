@@ -1006,8 +1006,6 @@
                                                          {:x (+ x1 (int (* 0.3 @font-size)))
                                                           :y (int (* 1.7 @font-size))
                                                           :style {:font-size (* 0.5 @font-size)}} sah])]
-                                                   (println "len of sah " (count sah)
-                                                            " -- "(+ x1 (int (* 0.3 @font-size))))
                                                    (if (> 2 (count sah))
                                                      r4
                                                      (-> r4
