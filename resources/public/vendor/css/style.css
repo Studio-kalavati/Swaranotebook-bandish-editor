@@ -59,12 +59,6 @@ h6,.h6
 {
     color: darkgoldenrod;
 }
-.btn:hover,
-.btn:focus
-{
-    background-color: transparent;
-    color: #FFFFFF;
-}
 .red-carpet,
 .golden-carpet
 {
