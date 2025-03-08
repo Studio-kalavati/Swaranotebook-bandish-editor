@@ -998,15 +998,19 @@
                                                 r3)))
                                           r3 (if-let [sah (get sah-list note-index)]
                                                (if (= nsi 0)
-                                                 (-> r3
-                                                     (update-in
-                                                      [:images1]
-                                                      conj
-                                                      [:text
-                                                       {;;:x (+ 10 x1) :y 60
-                                                        :x (+ x1 (int (* 0.3 @font-size)))
-                                                        :y (int (* 1.7 @font-size))
-                                                        :style {:font-size (* 0.5 @font-size)}} sah]))
+                                                 (let [r4
+                                                       (update-in r3
+                                                        [:images1]
+                                                        conj
+                                                        [:text
+                                                         {:x (+ x1 (int (* 0.3 @font-size)))
+                                                          :y (int (* 1.7 @font-size))
+                                                          :style {:font-size (* 0.5 @font-size)}} sah])]
+                                                   (if (> 2 (count sah))
+                                                     r4
+                                                     (-> r4
+                                                         (update-in [:x1] + (int (* (* 0.3 (count sah))
+                                                                                    (* 0.7 @font-size)))))))
                                                  r3)
                                                r3)]
                                       r3))
