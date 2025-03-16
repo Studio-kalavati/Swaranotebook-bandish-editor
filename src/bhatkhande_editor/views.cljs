@@ -87,14 +87,27 @@
 (defn mk-button
   ([swaralem] (mk-button {} swaralem))
   ([style {:keys [shruti] :as sh}]
-   (let [msmap @(subscribe [::subs/swaramap])
-         m2 (msmap (second shruti))]
-     (butn2 m2
-            #(do
-               ;;since on IOS it needs a button press to start the audio context
-               (dispatch-sync [::events/play-svara shruti])
-               (dispatch [::events/conj-svara {:svara sh}]))
-            {:style (merge style {:width "100%"})}))))
+   (let [image-map (db/image-map
+                    (let [ilang @(subscribe [::subs/lang])]
+                      (if (or (= :bangla ilang) (= :hindi ilang))
+                        (name ilang)
+                        "english_SrR")))
+         font-size @(subscribe [::subs/font-size])
+         butn-image (image-map shruti)]
+     [box
+      :size "auto"
+      :justify :center
+      :align-self :center
+      :class "btn btn-lg swarabuttons btn-sm"
+      :style (merge style {:flex "1 1 0px"
+                           :border-color "gray"})
+      :child [:img
+              {:height font-size :width (* 1.2 font-size)
+               :src butn-image
+               :on-click
+               (fn[_]
+                 (dispatch-sync [::events/play-svara shruti])
+                 (dispatch [::events/conj-svara {:svara sh}]))}]])))
 
 (defn zmdi-box-button
   [icon-class {:keys [disp-fn state]}]
@@ -821,8 +834,7 @@
                                            [[h-box
                                              :gap      "0.5vw"
                                              :children (mapv (partial mk-button
-                                                                      {:border-top
-                                                                       "5px solid black"})
+                                                                      {:border-width "5px 1px 1px 1px"})
                                                              (swaras-3oct 2))]
                                             [h-box
                                              :gap      "0.5vw"
@@ -831,7 +843,7 @@
                                             [h-box
                                              :gap      "0.5vw"
                                              :children (mapv (partial mk-button
-                                                                      {:border-bottom "5px solid black"})
+                                                                      {:border-width "1px 1px 5px 1px"})
                                                              (swaras-3oct 0))]]
                                            [[h-box
                                              :gap      "0.5vw"
