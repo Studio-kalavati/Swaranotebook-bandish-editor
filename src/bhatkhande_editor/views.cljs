@@ -774,9 +774,6 @@
                                        :class "btn-lg btn btn-default"
                                        :on-click
                                        #(do
-                                          (println " lyrics ok "{:text-val @tval
-                                                                 :bhaag-index bhaag-index
-                                                                 :row-index row-index})
                                           (dispatch [::events/conj-sahitya
                                                      {:text-val @tval
                                                       :bhaag-index bhaag-index
@@ -1400,7 +1397,6 @@
                                title-label (->> (clojure.string/split i #"-")
                                                 rest
                                                 (clojure.string/join "-"))]
-                           (println " long url " iurl)
                            [v-box
                             :children
                             [[h-box
