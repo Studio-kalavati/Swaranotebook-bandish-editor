@@ -12,10 +12,12 @@
                                    box
                                    input-text
                                    md-icon-button
-                                   ;;simple-v-table
                                    at
+                                   p
                                    button
                                    gap
+                                   popover-anchor-wrapper
+                                   popover-content-wrapper
                                    throbber
                                    modal-panel]]
    [re-com.util     :refer [item-for-id]]
@@ -35,6 +37,19 @@
 
 (def editor-height (reagent/atom 0))
 (def cursor-y (reagent/atom 0))
+(def curr-position (reagent/atom :below-center))
+
+(defn complex-popover-demo
+  [showing?]
+  [popover-anchor-wrapper :src (at)
+   :showing? showing?
+   :position :right-below
+   :anchor   [button :src (at)
+              :label (if @showing? "pop-down" "click me")
+              :on-click #(swap! showing? not)
+              :class "btn-success"]
+   :popover  [popover-content-wrapper :src (at)
+              :title "popover title" :body "body text"]])
 
 (defn box-size-padding
   [viewwidth]
@@ -966,7 +981,7 @@
                                               :x x1 :y 5}]
                                             ;;- and S
                                             [:text {:x (+ (int (* 0.3 @font-size)) x1)
-                                                    :y (cond 
+                                                    :y (cond
                                                          (> @font-size 32) 32
                                                          (< @font-size 24) 24
                                                          :else @font-size)
@@ -1128,19 +1143,37 @@
                     (->> bhaag
                          (map vector (range))
                          (mapv (fn[[indx i]]
-                                 (let [{:keys [images x]} (draw-bhaag row-index indx i )]
-                                   [:div {:class "bhaag-item" :style
-                                          (merge
-                                           {:max-width (+ x (int (* @font-size 0.7))) }
-                                           {:max-height (int (*
-                                                              (if @(subscribe [::subs/show-lyrics?]) 2.5 2)
-                                                              @font-size))}
-                                           )}
-                                    (reduce conj
-                                            [:svg {:xmlns "http://www.w3.org/2000/svg"
-                                                   :width (+ x (int (* @font-size 0.6)))}]
-                                            images)])))
-                         #_(reduce conj [:div {:class "box-row"}])))
+                                 (let [{:keys [images x]} (draw-bhaag row-index indx i )
+                                       showing? (reagent/atom false)]
+                                   [popover-anchor-wrapper :src (at)
+                                    :showing? showing?
+                                    :position :below-center
+                                    :anchor
+                                    [:div {:class "bhaag-item" :style
+                                           (merge
+                                            {:max-width (+ x (int (* @font-size 0.7)))
+                                             :on-click #(do (println " popover click")
+                                                            )}
+                                            {:max-height (int (*
+                                                               (if @(subscribe [::subs/show-lyrics?]) 2.5 2)
+                                                               @font-size))})}
+                                     (reduce conj
+                                             [:svg {:xmlns "http://www.w3.org/2000/svg"
+                                                    :on-click #(do
+                                                                 (swap! showing? not))
+                                                    :width (+ x (int (* @font-size 0.6)))}]
+                                             images)]
+                                    :popover  [popover-content-wrapper :src (at)
+                                               :title "popover title"
+                                               :body
+                                               [v-box :children
+                                                [
+                                                 [:p "hello"]
+                                                 [:p "hello"]
+                                                 [:p "hello"]
+                                                 [:p "hello"]
+                                                 [:p "hello"]
+                                                 ]]]])))))
               b1
               (->> comp
                    :indexed-noteseq
