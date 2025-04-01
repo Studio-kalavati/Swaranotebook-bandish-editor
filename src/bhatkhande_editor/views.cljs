@@ -449,6 +449,10 @@
                                            (when file
                                              (do
                                                (reset! show-file-popup? false)
+                                               (dispatch [::events/clear-url-path])
+                                               (.pushState (.-history js/window)
+                                                           #js {} ""
+                                                           (str (.-origin (.-location js/window)) "/app"))
                                                (dispatch [::events/import-comp-json file]))))}]]]])
                            [gap :size "4vh"]
                            [box
