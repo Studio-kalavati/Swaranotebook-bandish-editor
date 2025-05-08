@@ -7,6 +7,7 @@
             dispatch]]
    [chronoid.core :as c]
    [bhatkhande-editor.db :as db :refer [pitch-s-list]]
+   [bhatkhande-editor.utils :as utils :refer [json-onload]]
    ["firebase/app" :default firebase]
    ["firebase/auth" :default fbauth]
    ["firebase/storage" :default storage]
@@ -228,8 +229,9 @@
                   [note-insert :next-note-cursor])]
             res)
          [updated-ns updated-cursor] (noteseq-up-fn (get-in db [:composition :noteseq]))
+         _ (println " updated-ns " updated-ns)
          ndb
-         (-> db 
+         (-> db
              (update-in [:composition :noteseq] (constantly updated-ns))
              (update-in [:composition] db/add-indexes))
          ndb
@@ -554,21 +556,9 @@
      (set! (.-onload reader)
            (fn [e]
              (let [j (-> (.parse js/JSON (-> e .-target .-result))
-                         (js->clj)
-                         (walk/keywordize-keys))
-                   {:keys [noteseq taal]} (get-in j [:score :part])]
-               (if (and noteseq taal)
-                 (let [nns (->> noteseq
-                                (mapv (fn[{:keys [notes] :as imap}]
-                                        (update-in imap [:notes]
-                                                   (fn[notes]
-                                                     (->> notes
-                                                          (map
-                                                           (fn[i] (update-in i [:svara] (fn[j] (mapv keyword j)))))
-                                                          (mapv #(clojure.set/rename-keys % {:svara :shruti}))))))))
-                       j1 {:noteseq nns :taal (keyword taal)}]
-                   (dispatch [::refresh-comp j1]))
-                 (dispatch [::set-active-panel :import-error-panel])))))
+                         (js->clj) json-onload)]
+               (dispatch (if (map? j) [::refresh-comp j]
+                             [::set-active-panel :import-error-panel])))))
      (.readAsText reader file)) db))
 
 (reg-event-fx
