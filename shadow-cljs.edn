@@ -31,12 +31,19 @@
 
  :builds
  {
-  ;;AI! create a new test target for tests in test/bhatkhande_editor/puppeteer/
-  ;;before running this test,it should start the http server on port 8280
   :test
   {:target    :node-test
    :output-to "out/node-tests.js"
    :autorun   true}
+  
+  :puppeteer-test
+  {:target    :node-test
+   :output-to "out/puppeteer-tests.js"
+   :autorun   true
+   :devtools  {:before-load-async bhatkhande-editor.puppeteer.test-setup/start-server
+               :after-load-async bhatkhande-editor.puppeteer.test-setup/stop-server}
+   :compiler-options {:closure-defines {bhatkhande-editor.puppeteer.test-setup/SERVER-PORT 8280}}
+   :test-dir "test/bhatkhande_editor/puppeteer"}
   :app
   {:target     :browser
    :output-dir "resources/public/js/compiled"
