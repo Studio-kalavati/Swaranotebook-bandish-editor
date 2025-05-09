@@ -1,7 +1,6 @@
 import fs from 'fs';
 import path from 'path';
 import { createRunner, parse } from '@puppeteer/replay';
-;; AI! duplicate this test in a cljs test which fails if the recording assertions fail
 const recordingsDir = path.join(__dirname, '../puppeteer_recordings');
 
 (async () => {
