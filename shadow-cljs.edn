@@ -42,9 +42,9 @@
    :output-to "out/puppeteer-tests.js"
    :autorun   true
    ;;:devtools  {:before-load-async puppeteer.test-setup/start-server :after-load-async puppeteer.test-setup/stop-server}
-   ;;:compiler-options {:closure-defines {puppeteer.test-setup/SERVER-PORT 8280}}
+   ;:compiler-options {:closure-defines {puppeteer.test-setup/SERVER-PORT 8280}}
    :ns-regexp "puppeteer.*-test"
-   }
+     }
   :app
   {:target     :browser
    :output-dir "resources/public/js/compiled"
