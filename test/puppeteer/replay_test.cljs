@@ -7,6 +7,7 @@
   (testing "Loading a recording from puppeteer_recordings"
     (async done
       (let [recording-file "add_svara.json"
+            ;AI! first list the files in the `base` directory and print to console
             recording-url (str "/base/puppeteer_recordings/" recording-file)]
         (-> (js/fetch recording-url)
             (.then (fn [response]
