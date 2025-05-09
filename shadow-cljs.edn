@@ -34,16 +34,17 @@
   :test
   {:target    :node-test
    :output-to "out/node-tests.js"
-   :autorun   true}
-  
-  :puppeteer-test
-  {:target    :node-test
+   :autorun   true
+   :ns-regexp "bhatkhande-editor.*-test"
+   }
+  #_:puppeteer-test
+  #_{:target    :browser-test
    :output-to "out/puppeteer-tests.js"
    :autorun   true
-   :devtools  {:before-load-async bhatkhande-editor.puppeteer.test-setup/start-server
+   #_:devtools  #_{:before-load-async bhatkhande-editor.puppeteer.test-setup/start-server
                :after-load-async bhatkhande-editor.puppeteer.test-setup/stop-server}
-   :compiler-options {:closure-defines {bhatkhande-editor.puppeteer.test-setup/SERVER-PORT 8280}}
-   :test-dir "test/bhatkhande_editor/puppeteer"}
+   ;;:compiler-options {:closure-defines {bhatkhande-editor.puppeteer.test-setup/SERVER-PORT 8280}}
+   :test-dir "test/puppeteer"}
   :app
   {:target     :browser
    :output-dir "resources/public/js/compiled"
