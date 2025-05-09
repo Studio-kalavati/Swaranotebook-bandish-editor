@@ -11,6 +11,9 @@ module.exports = function (config) {
       // Serve the recordings directory
       { pattern: '../puppeteer_recordings/*.json', included: false, served: true, nocache: true }
     ],
+    proxies: {
+      '/puppeteer_recordings/': '/base/../puppeteer_recordings/'
+    },
     frameworks: ['cljs-test'],
     plugins: [
         'karma-cljs-test',

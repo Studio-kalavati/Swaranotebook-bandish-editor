@@ -6,14 +6,28 @@
 (deftest load-recording-test
   (testing "Loading a recording from puppeteer_recordings"
     (async done
-      (let [recording-file "add_svara.json"
-            ;AI! first list the files in the `base` directory and print to console
-            recording-url (str "/base/puppeteer_recordings/" recording-file)]
-        (-> (js/fetch recording-url)
-            (.then (fn [response]
-                     (if (.-ok response)
-                       (.json response)
-                       (throw (js/Error. (str "Failed to fetch recording: " recording-file))))))
+      (js/console.log "Listing available files in Karma...")
+      (-> (js/fetch "/base/puppeteer-tests.js")
+          (.then (fn [response]
+                   (if (.-ok response)
+                     (do
+                       (js/console.log "Found puppeteer-tests.js - Karma is serving files correctly")
+                       (js/console.log "Attempting to list puppeteer_recordings directory...")
+                       (-> (js/fetch "/base/../puppeteer_recordings/index.json")
+                           (.then (fn [resp]
+                                    (if (.-ok resp)
+                                      (.json resp)
+                                      (throw (js/Error. "Failed to fetch recordings index")))))
+                           (.then (fn [index-json]
+                                    (js/console.log "Available recordings:", (js->clj index-json))
+                                    (let [recording-file "add_svara.json"
+                                          recording-url (str "/base/../puppeteer_recordings/" recording-file)]
+                                      (js/console.log "Attempting to fetch:", recording-url)
+                                      (-> (js/fetch recording-url)
+                                          (.then (fn [response]
+                                                   (if (.-ok response)
+                                                     (.json response)
+                                                     (throw (js/Error. (str "Failed to fetch recording: " recording-file))))))
             (.then (fn [recording-json]
                      (js/console.log (str "Successfully loaded recording: " recording-file))
                      (is (map? (js->clj recording-json)) "Recording should be a valid JSON object")
@@ -37,8 +51,17 @@
                              (is (not (nil? attr-value)) 
                                  (str "Attribute " attr-name " should have a value for selector: " selector))))))
                      
-                     (done)))
-            (.catch (fn [err]
-                      (js/console.error (str "Failed to fetch recording " recording-file ":") err)
-                      (is false (str "Failed to fetch recording " recording-file ": " (.-message err)))
-                      (done))))))))
+                                                   (done)))
+                                          (.catch (fn [err]
+                                                    (js/console.error (str "Failed to fetch recording " recording-file ":") err)
+                                                    (is false (str "Failed to fetch recording " recording-file ": " (.-message err)))
+                                                    (done)))))))))))
+                           (.catch (fn [err]
+                                     (js/console.error "Failed to fetch recordings index:" err)
+                                     (is false (str "Failed to fetch recordings index: " (.-message err)))
+                                     (done)))))
+                     (throw (js/Error. "Failed to fetch puppeteer-tests.js"))))
+          (.catch (fn [err]
+                    (js/console.error "Failed to access base files:" err)
+                    (is false (str "Failed to access base files: " (.-message err)))
+                    (done)))))))
