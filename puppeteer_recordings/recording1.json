@@ -1,0 +1,20 @@
+{
+  "title": "Sample Recording",
+  "steps": [
+    {
+      "type": "navigate",
+      "url": "https://example.com"
+    },
+    {
+      "type": "waitForElement",
+      "selector": "h1"
+    },
+    {
+      "type": "assertElement",
+      "selector": "h1",
+      "attributes": {
+        "textContent": "Example Domain"
+      }
+    }
+  ]
+}
