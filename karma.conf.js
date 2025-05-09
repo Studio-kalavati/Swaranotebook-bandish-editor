@@ -7,7 +7,9 @@ module.exports = function (config) {
     files: [
       // Add global polyfill first
       { pattern: '../test/karma-setup.js', included: true },
-      'puppeteer-tests.js'
+      'puppeteer-tests.js',
+      // Serve the recordings directory
+      { pattern: '../puppeteer_recordings/**/*.json', included: false, served: true }
     ],
     frameworks: ['cljs-test'],
     plugins: [

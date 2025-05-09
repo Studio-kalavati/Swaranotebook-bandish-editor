@@ -6,7 +6,7 @@
 (deftest load-recording-test
   (testing "Loading a recording from puppeteer_recordings"
     (async done
-      (let [recording-file "add_svara.json"
+      (let [recording-file "recording1.json"
             recording-url (str "/base/puppeteer_recordings/" recording-file)]
         (-> (js/fetch recording-url)
             (.then (fn [response]
