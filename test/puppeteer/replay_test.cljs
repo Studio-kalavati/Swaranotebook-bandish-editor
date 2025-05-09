@@ -51,7 +51,7 @@
                              (is (not (nil? attr-value)) 
                                  (str "Attribute " attr-name " should have a value for selector: " selector))))))
                      
-                                                   (done)))
+                     (done)))
                                           (.catch (fn [err]
                                                     (js/console.error (str "Failed to fetch recording " recording-file ":") err)
                                                     (is false (str "Failed to fetch recording " recording-file ": " (.-message err)))
