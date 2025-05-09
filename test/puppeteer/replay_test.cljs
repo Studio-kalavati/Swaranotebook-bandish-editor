@@ -6,7 +6,8 @@
 (deftest load-recording-test
   (testing "Loading a recording from puppeteer_recordings"
     (async done
-      (let [recording-file "recording1.json"
+      (let [recording-file "add_svara.json"
+            ;AI! fix the path and adjust it to the current path of `puppeteer_recordings`
             recording-url (str "/base/puppeteer_recordings/" recording-file)]
         (-> (js/fetch recording-url)
             (.then (fn [response]
