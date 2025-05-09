@@ -1,11 +1,12 @@
 (ns puppeteer.test-setup)
 
+;; Define global before any code runs
+(js* "if (typeof window !== 'undefined' && typeof global === 'undefined') { window.global = window; console.log('Added global polyfill for browser environment'); }")
+
 ;; This will be executed before tests run
 (defn ^:export init []
-  ;; Polyfill for 'global' in browser environment
-  (when (and (exists? js/window) (not (exists? js/global)))
-    (set! js/global js/window)
-    (js/console.log "Added global polyfill for browser environment")))
+  ;; Additional setup can go here
+  (js/console.log "Test setup initialized"))
 
 ;; Call init immediately
 (init)
