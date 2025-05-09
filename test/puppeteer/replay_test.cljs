@@ -7,6 +7,7 @@
   (testing "Loading a recording from puppeteer_recordings"
     (async done
       (let [recording-file "add_svara.json"
+            ;AI! the path `/base/puppeteer_recordings/add_svara.json` is not found, fix the error"
             recording-url (str "/base/puppeteer_recordings/" recording-file)]
         (-> (js/fetch recording-url)
             (.then (fn [response]
