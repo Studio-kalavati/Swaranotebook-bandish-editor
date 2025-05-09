@@ -9,8 +9,11 @@ module.exports = function (config) {
       { pattern: '../test/karma-setup.js', included: true },
       'puppeteer-tests.js',
       // Serve the recordings directory
-      { pattern: '../puppeteer_recordings/**/*.json', included: false, served: true }
+      { pattern: '../puppeteer_recordings/**/*.json', included: false, served: true, nocache: false }
     ],
+    proxies: {
+      '/base/puppeteer_recordings/': '/base/../puppeteer_recordings/'
+    },
     frameworks: ['cljs-test'],
     plugins: [
         'karma-cljs-test',
