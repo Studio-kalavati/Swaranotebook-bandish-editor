@@ -26,7 +26,8 @@
                                 
                                 (-> (createRunner recording)
                                     (.then (fn [runner]
-                                             (-> (.run runner)
+                                             ;; Explicitly call the run method to fix type inference warning
+                                             (-> (.run ^js runner)
                                                  (.then (fn []
                                                           (js/console.log (str "Replay for " file " completed successfully."))
                                                           ;; Use the named function to avoid undeclared var
