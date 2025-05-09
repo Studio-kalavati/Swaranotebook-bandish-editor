@@ -31,6 +31,8 @@
 
  :builds
  {
+  ;;AI! create a new test target for tests in test/bhatkhande_editor/puppeteer/
+  ;;before running this test,it should start the http server on port 8280
   :test
   {:target    :node-test
    :output-to "out/node-tests.js"
