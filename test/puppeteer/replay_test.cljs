@@ -1,6 +1,7 @@
 (ns puppeteer.replay-test
   (:require [cljs.test :refer-macros [deftest is testing async]]
-            [cljs.core.async :refer [go]]))
+            [cljs.core.async :refer [go]]
+            ["@puppeteer/replay" :as replay]))
 
 ;; Simple test that loads a recording JSON file
 (deftest load-recording-test
@@ -31,9 +32,26 @@
                                                      (throw (js/Error. (str "Failed to fetch recording: " recording-file))))))
                                           (.then (fn [recording-json]
                                                    (js/console.log (str "Successfully loaded recording: " recording-file))
-                                                   ;;AI! run puppeteer replay on the loaded json file 
                                                    (is (map? (js->clj recording-json)) "Recording should be a valid JSON object")
                                                    (is (contains? (js->clj recording-json) "steps") "Recording should contain steps")
+                                                   
+                                                   ;; Run puppeteer replay on the loaded JSON file
+                                                   (js/console.log "Setting up replay for recording...")
+                                                   (let [parsed-recording (.parse replay recording-json)]
+                                                     (js/console.log "Recording parsed successfully")
+                                                     (-> (.createRunner replay parsed-recording)
+                                                         (.then (fn [runner]
+                                                                  (js/console.log "Runner created, executing replay...")
+                                                                  (-> (.run runner)
+                                                                      (.then (fn []
+                                                                               (js/console.log "Replay completed successfully")
+                                                                               (is true "Replay completed successfully")))
+                                                                      (.catch (fn [err]
+                                                                                (js/console.error "Replay failed:" err)
+                                                                                (is false (str "Replay failed: " (.-message err))))))))
+                                                         (.catch (fn [err]
+                                                                   (js/console.error "Failed to create runner:" err)
+                                                                   (is false (str "Failed to create runner: " (.-message err)))))))
                                                    ;; Process the steps and check for assertions
                                                    (let [steps (-> recording-json (js->clj :keywordize-keys true) :steps)
                                                          assertion-steps (filter #(= (get % :type) "assertElement") steps)]
