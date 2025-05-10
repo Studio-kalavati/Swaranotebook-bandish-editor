@@ -5,17 +5,30 @@
 		"watch": "npx workbox injectManifest workbox-config.js && npx shadow-cljs watch app browser-test karma-test",
 		"test": "npx shadow-cljs compile test && node out/node-tests.js",
 		"release": "npx workbox injectManifest workbox-config.js && npx shadow-cljs release app && clojure -X bhatkhande-editor.sitemap/spit-sitemap",
-		"build-report": "npx shadow-cljs run shadow.cljs.build-report app target/build-report.html"
+		"build-report": "npx shadow-cljs run shadow.cljs.build-report app target/build-report.html",
+		"dev": "npx shadow-cljs watch app",
+		"test:puppeteer": "replay puppeteer_recordings",
+		"dev-and-test": "concurrently \"npm run dev\" \"wait-on http://localhost:8280 && npx run test:puppeteer\""
 	},
 	"dependencies": {
+		"@puppeteer/replay": "^3.1.1",
+		"concurrently": "^8.2.2",
 		"create-react-class": "^15.7.0",
 		"posthog-js": "^1.194.1",
 		"react": "^17.0.2",
 		"react-dom": "^17.0.2",
+		"wait-on": "^7.0.1",
 		"workbox-cli": "^6.5.4"
 	},
 	"devDependencies": {
+		"finalhandler": "^2.1.0",
 		"firebase": "^8.6.4",
-		"shadow-cljs": "2.19.6"
+		"karma": "^6.4.4",
+		"karma-chrome-launcher": "^3.2.0",
+		"karma-cljs-test": "^0.1.0",
+		"karma-puppeteer-launcher": "^1.0.4",
+		"puppeteer": "^24.8.2",
+		"serve-static": "^2.2.0",
+		"shadow-cljs": "^2.28.23"
 	}
 }
