@@ -3,13 +3,13 @@ module.exports = function (config) {
 
   config.set({
     browsers: ['ChromeHeadless'],
-    basePath: 'out',
+    basePath: './',
     files: [
       // Add global polyfill first
-      { pattern: '../test/karma-setup.js', included: true },
-      'puppeteer-tests.js',
+      { pattern: './test/karma-setup.js', included: true },
+      './out/puppeteer-tests.js',
       // Serve the recordings directory
-      { pattern: '../puppeteer_recordings/*.json', included: false, served: true, nocache: true }
+      { pattern: './puppeteer_recordings/*.json', included: false, served: true, nocache: true }
     ],
     proxies: {
       '/puppeteer_recordings/': '/base/../puppeteer_recordings/'
@@ -17,6 +17,7 @@ module.exports = function (config) {
     frameworks: ['cljs-test'],
     plugins: [
         'karma-cljs-test',
+        //'karma-puppeteer-launcher',
         'karma-chrome-launcher'],
     colors: true,
     logLevel: config.LOG_INFO,

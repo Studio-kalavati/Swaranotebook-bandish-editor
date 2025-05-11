@@ -1,0 +1,81 @@
+{
+    "title": "Recording 08/05/2025 at 08:07:04",
+    "steps": [
+        {
+            "type": "setViewport",
+            "width": 782,
+            "height": 972,
+            "deviceScaleFactor": 1,
+            "isMobile": false,
+            "hasTouch": false,
+            "isLandscape": false
+        },
+        {
+            "type": "navigate",
+            "url": "http://localhost:8280/app/index.html",
+            "assertedEvents": [
+                {
+                    "type": "navigation",
+                    "url": "http://localhost:8280/app/index.html",
+                    "title": "Swara Notebook Bandish Editor"
+                }
+            ]
+        },
+        {
+            "type": "click",
+            "target": "main",
+            "selectors": [
+                [
+                    "div:nth-of-type(3) > div:nth-of-type(1) > button"
+                ],
+                [
+                    "xpath///*[@id=\"app\"]/div/div/div[2]/div/div/div/div[2]/div[3]/div[1]/button"
+                ],
+                [
+                    "pierce/div:nth-of-type(3) > div:nth-of-type(1) > button"
+                ]
+            ],
+            "offsetY": 22.546875,
+            "offsetX": 59
+        },
+        {
+            "type": "waitForElement",
+            "target": "main",
+            "selectors": [
+                "div:nth-of-type(2) image",
+                "xpath///*[@id=\"app\"]/div/div/div[1]/div/div/div/div/div[1]/svg/image"
+            ],
+            "count":1 
+        },
+	 {
+            "type": "click",
+            "target": "main",
+            "selectors": [
+                [
+                    "aria/"
+                ],
+                [
+                    "div.last-bar > div:nth-of-type(11) > button"
+                ],
+                [
+                    "xpath///*[@id=\"app\"]/div/div/div[2]/div/div/div/div[2]/div[7]/div[11]/button"
+                ],
+                [
+                    "pierce/div.last-bar > div:nth-of-type(11) > button"
+                ]
+            ],
+            "offsetY": 29.828125,
+            "offsetX": 94
+        },
+        {
+            "type": "waitForElement",
+            "target": "main",
+            "selectors": [
+                "div:nth-of-type(2) image",
+                "xpath///*[@id=\"app\"]/div/div/div[1]/div/div/div/div/div[1]/svg/image"
+            ],
+            "count":0 
+        }
+    ]
+}
+
