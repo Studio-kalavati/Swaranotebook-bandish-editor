@@ -7,12 +7,14 @@
             dispatch]]
    [chronoid.core :as c]
    [bhatkhande-editor.db :as db :refer [pitch-s-list]]
+   [bhatkhande-editor.utils :as utils :refer [json-onload]]
    ["firebase/app" :default firebase]
    ["firebase/auth" :default fbauth]
    ["firebase/storage" :default storage]
    ["firebase/firestore" :as firebase-firestore]
    ["posthog-js" :default posthog]
    [cognitect.transit :as t]
+   [clojure.walk :as walk]
    [clojure.string :as cstring]
    [sargam.talas :refer [taal-def]]))
 
@@ -227,8 +229,9 @@
                   [note-insert :next-note-cursor])]
             res)
          [updated-ns updated-cursor] (noteseq-up-fn (get-in db [:composition :noteseq]))
+         _ (println " updated-ns " updated-ns)
          ndb
-         (-> db 
+         (-> db
              (update-in [:composition :noteseq] (constantly updated-ns))
              (update-in [:composition] db/add-indexes))
          ndb
@@ -545,6 +548,18 @@
      (upload-comp (-> ndb :user :uid) path comp)
      {:dispatch [::set-active-panel :wait-for-save-completion]
       :db ndb})))
+
+(reg-event-db
+ ::import-comp-json
+ (fn [db [_ file]]
+   (let [reader (js/FileReader.)]
+     (set! (.-onload reader)
+           (fn [e]
+             (let [j (-> (.parse js/JSON (-> e .-target .-result))
+                         (js->clj) json-onload)]
+               (dispatch (if (map? j) [::refresh-comp j]
+                             [::set-active-panel :import-error-panel])))))
+     (.readAsText reader file)) db))
 
 (reg-event-fx
  ::delete-comp

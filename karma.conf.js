@@ -1,27 +1,29 @@
+process.env.CHROME_BIN = require('puppeteer').executablePath()
 module.exports = function (config) {
-  var junitOutputDir = process.env.CIRCLE_TEST_REPORTS || "target/junit"
 
   config.set({
     browsers: ['ChromeHeadless'],
-    basePath: 'target',
-    files: ['karma-test.js'],
+    basePath: './',
+    files: [
+      // Add global polyfill first
+      { pattern: './test/karma-setup.js', included: true },
+      './out/puppeteer-tests.js',
+      // Serve the recordings directory
+      { pattern: './puppeteer_recordings/*.json', included: false, served: true, nocache: true }
+    ],
+    proxies: {
+      '/puppeteer_recordings/': '/base/../puppeteer_recordings/'
+    },
     frameworks: ['cljs-test'],
     plugins: [
         'karma-cljs-test',
-        'karma-chrome-launcher',
-        'karma-junit-reporter'
-    ],
+        //'karma-puppeteer-launcher',
+        'karma-chrome-launcher'],
     colors: true,
     logLevel: config.LOG_INFO,
     client: {
       args: ['shadow.test.karma.init']
     },
 
-    // the default configuration
-    junitReporter: {
-      outputDir: junitOutputDir + '/karma', // results will be saved as outputDir/browserName.xml
-      outputFile: undefined, // if included, results will be saved as outputDir/browserName/outputFile
-      suite: '' // suite will become the package name attribute in xml testsuite element
-    }
   })
 }

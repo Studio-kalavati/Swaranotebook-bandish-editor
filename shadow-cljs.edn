@@ -30,7 +30,14 @@
   8290 "target/browser-test"}
 
  :builds
- {:app
+ {
+  :test
+  {:target    :node-test
+   :output-to "out/node-tests.js"
+   :autorun   true
+   :ns-regexp "bhatkhande-editor.*-test"
+   }
+  :app
   {:target     :browser
    :output-dir "resources/public/js/compiled"
    :asset-path "/js/compiled"

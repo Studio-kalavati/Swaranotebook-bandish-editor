@@ -31,3 +31,4 @@ cors-config.json
 fbconf.sh
 *_token.txt
 .cpcache/
+.aider*
