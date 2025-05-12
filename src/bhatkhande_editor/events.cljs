@@ -134,20 +134,21 @@
  (fn[{:keys [db]} [_ _]]
    {:db (update-in db [:props :onscreen-keyboard] (constantly :show))}))
 
+(defn keyboard-conj-svara
+  [{:keys [db]} [_ svara]]
+  (if (-> db :props :onscreen-keyboard (= :show))
+    {:db (update-in db [:props :onscreen-keyboard] (constantly :ask-hw-kbd))}
+    {:dispatch-n
+     (let [mod-svara
+           [(if (#{:- :a} svara)
+              :madhyam
+              (or (-> db :props :note-octave) :madhyam)) svara]]
+       [[::conj-svara {:svara
+                       {:shruti mod-svara}}]
+        [::play-svara mod-svara]])}))
+
 (reg-event-fx
- ::keyboard-conj-svara
- [clear-highlight-interceptor]
- (fn[{:keys [db]} [_ svara]]
-   (if (-> db :props :onscreen-keyboard (= :show))
-     {:db (update-in db [:props :onscreen-keyboard] (constantly :ask-hw-kbd))}
-     {:dispatch-n
-      (let [mod-svara
-            [(if (#{:- :a} svara)
-               :madhyam
-               (or (-> db :props :note-octave) :madhyam)) svara]]
-        [[::conj-svara {:svara
-                        {:shruti mod-svara}}]
-         [::play-svara mod-svara]])})))
+ ::keyboard-conj-svara [clear-highlight-interceptor] keyboard-conj-svara)
 
 (defn move-cursor-forward
   "returns the index of the next note group when cursor is moved forward
@@ -185,10 +186,46 @@
                       prev-index)))]
       res)))
 
-(reg-event-fx
- ::conj-svara
- [log-event]
- (fn [{:keys [db]} [_ {:keys [svara]}]]
+(defn insert-note
+  [{:keys [note-index nsvara]} noteseq]
+  (if (= -1 note-index)
+    ;;insert note before rest of seq cos this is at 0 position
+    (into [{:notes [nsvara]}] noteseq)
+    (into (conj (subvec noteseq 0 (inc note-index)) {:notes [nsvara]})
+          (subvec noteseq (inc note-index)))))
+
+(defn update-noteseq
+  "inserts a note into the noteseq and return a 2-tuple,
+  the updated noteseq and the next note cursor"
+  [{:keys [note-index svara notes-per-beat cpos] :as imap} noteseq]
+  (println " nnf " imap)
+  (let [ith-note (get-in noteseq [note-index])
+         nsvara (assoc svara :npb notes-per-beat)
+        note-insert (insert-note (assoc imap :nsvara nsvara) noteseq)
+         res
+        (if (> notes-per-beat 1)
+          ;;2 states here: either adding the first note of a multi-note
+          ;;if not the same as the last npb
+          (if
+              (and (not= notes-per-beat (-> ith-note :notes count))
+                   (= notes-per-beat (-> ith-note :notes last :npb)))
+            [(update-in noteseq [note-index :notes] conj nsvara)
+             (if (> notes-per-beat (-> ith-note :notes count))
+               ;;if multi-note will be full after this, stay on the same note
+               ;;don't increment the cursor
+               :cur-cursor
+               ;;increment just note-sub-index
+               (zipmap [:row-index :bhaag-index :note-index :nsi]
+                       (mapv (update-in cpos [:nsi] inc)
+                             [:row-index :bhaag-index :note-index :nsi])))]
+            [note-insert :next-note-cursor]
+            ;;otherwise append to multi-note
+            )
+          [note-insert :next-note-cursor])]
+    res))
+
+(defn conj-svara
+  [{:keys [db]} [_ {:keys [svara]}]]
    (let [cpos (get-in db [:props :cursor-pos ] )
          notes-per-beat (-> db :props :notes-per-beat)
          prev-index (get-in db [:composition :index-backward-seq (vals cpos)])
@@ -198,37 +235,10 @@
            (db/get-noteseq-index
             (zipmap [:row-index :bhaag-index :note-index :nsi] prev-index)
             (get-in db [:composition :taal])))
-         ln (get-in db [:composition :noteseq note-index])
-         nsvara (assoc svara :npb notes-per-beat)
-         noteseq-up-fn
-         #(let [note-insert
-                (if (= -1 note-index)
-                  ;;insert note before rest of seq cos this is at 0 position
-                  (into [{:notes [nsvara]}] %)
-                  (into (conj (subvec % 0 (inc note-index)) {:notes [nsvara]})
-                        (subvec % (inc note-index))))
-                res
-                (if (> notes-per-beat 1)
-                  ;;2 states here: either adding the first note of a multi-note
-                  ;;if not the same as the last npb
-                  (if
-                      (and (not= notes-per-beat (-> ln :notes count))
-                           (= notes-per-beat (-> ln :notes last :npb)))
-                    [(update-in % [note-index :notes] conj nsvara)
-                     (if (> notes-per-beat (-> ln :notes count))
-                       ;;if multi-note will be full after this, stay on the same note
-                       ;;don't increment the cursor
-                       :cur-cursor
-                       ;;increment just note-sub-index
-                       (zipmap [:row-index :bhaag-index :note-index :nsi]
-                               (mapv (update-in cpos [:nsi] inc)
-                                     [:row-index :bhaag-index :note-index :nsi])))]
-                    [note-insert :next-note-cursor]
-                    ;;otherwise append to multi-note
-                    )
-                  [note-insert :next-note-cursor])]
-            res)
-         [updated-ns updated-cursor] (noteseq-up-fn (get-in db [:composition :noteseq]))
+         [updated-ns updated-cursor] (update-noteseq
+                                      {:note-index note-index :svara svara :notes-per-beat notes-per-beat
+                                       :cpos cpos }
+                                      (get-in db [:composition :noteseq]))
          _ (println " updated-ns " updated-ns)
          ndb
          (-> db
@@ -245,7 +255,9 @@
                            :else
                            updated-cursor))))]
      {:db ndb
-      :dispatch [::save-to-localstorage]})))
+      :dispatch [::save-to-localstorage]}))
+
+(reg-event-fx ::conj-svara [log-event] conj-svara)
 
 (reg-event-fx
  ::conj-sahitya
