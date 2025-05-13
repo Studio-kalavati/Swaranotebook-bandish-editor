@@ -39,12 +39,6 @@
         [[:bhatkhande-editor.events/conj-svara {:svara {:shruti svara}}]
          [:bhatkhande-editor.events/play-svara [:madhyam :m]]]))))
 
-(let [db {:props {:onscreen-keyboard nil
-                  :note-octave :madhyam}}
-      svara [:madhyam :m]
-      res (ev/conj-svara {:db db} [nil {:svara svara}])]
-  (:dispatch-n res))
-
 (deftest insert-start-note
   (let [nsvara {:shruti [:madhyam :r], :npb 1}]
     (is (= (ev/insert-note{:note-index -1, :nsvara nsvara} [])

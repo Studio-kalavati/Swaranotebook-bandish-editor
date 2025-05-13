@@ -198,7 +198,6 @@
   "inserts a note into the noteseq and return a 2-tuple,
   the updated noteseq and the next note cursor"
   [{:keys [note-index svara notes-per-beat cpos] :as imap} noteseq]
-  (println " nnf " imap)
   (let [ith-note (get-in noteseq [note-index])
          nsvara (assoc svara :npb notes-per-beat)
         note-insert (insert-note (assoc imap :nsvara nsvara) noteseq)
