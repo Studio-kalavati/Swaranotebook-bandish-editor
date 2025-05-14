@@ -150,3 +150,55 @@
     (is (= res (ev/conj-svara {:db arg0} [nil {:svara {:shruti [:madhyam :g]}}])))
     )
   )
+
+
+(deftest conj-sahitya-test
+  (let [noteseq [{:notes [{:shruti [:madhyam :s], :npb 1}]}
+                 {:notes [{:shruti [:madhyam :r], :npb 1}]}
+                 {:notes [{:shruti [:madhyam :g], :npb 1}]}
+                 {:notes [{:shruti [:madhyam :m], :npb 1}]}
+                 ]
+        arg0 {:composition {:taal :teentaal :noteseq noteseq}}
+        res {:db
+             {:composition
+              {:taal :teentaal,
+               :noteseq
+               [{:notes [{:shruti [:madhyam :s], :npb 1}], :lyrics "abcd"}
+                {:notes [{:shruti [:madhyam :r], :npb 1}]}
+                {:notes [{:shruti [:madhyam :g], :npb 1}]}
+                {:notes [{:shruti [:madhyam :m], :npb 1}]}]}}}
+        ]
+    (is (= res (ev/conj-sahitya {:db arg0} [nil {:text-val "abcd" :bhaag-index 0 :row-index 0}])))
+    )
+  )
+
+(deftest next-bhaag-lyrics-popup-test
+  (let [backward {[0 0 1 0] [0 0 0 0], [0 0 2 0] [0 0 1 0], [0 0 3 0] [0 0 2 0], [0 1 0 0] [0 0 3 0]}
+        forward {[0 0 0 0] [0 0 1 0], [0 0 1 0] [0 0 2 0], [0 0 2 0] [0 0 3 0], [0 0 3 0] [0 1 0 0]}
+        arg0 {:props {}
+              :composition {:index-forward-seq forward
+                            :index-backward-seq backward}}
+        res {:row-index 0, :bhaag-index 1}]
+    (-> (ev/next-bhaag-lyrics-popup {:db arg0} [nil {:bhaag-index 0 :row-index 0}])
+        :db
+        :props
+        :show-lyrics-popup
+        (= res)
+        is
+        )
+    ))
+
+(deftest update-highlight-pos-test
+  (let [backward {[0 0 1 0] [0 0 0 0], [0 0 2 0] [0 0 1 0], [0 0 3 0] [0 0 2 0], [0 1 0 0] [0 0 3 0]}
+        forward {[0 0 0 0] [0 0 1 0], [0 0 1 0] [0 0 2 0], [0 0 2 0] [0 0 3 0], [0 0 3 0] [0 1 0 0]}
+        arg0 {:props {:cursor-pos {:row-index 0, :bhaag-index 0, :note-index 2, :nsi 0}}
+              :composition {:index-forward-seq forward
+                            :taal :teentaal
+                            :index-backward-seq backward}}
+        res {:cursor-pos {:row-index 0, :bhaag-index 0, :note-index 3, :nsi 0}, :highlighted-pos '({:row-index 0, :bhaag-index 0, :note-index 2, :nsi 0})}
+        res-left {:cursor-pos {:row-index 0, :bhaag-index 0, :note-index 1, :nsi 0},
+                  :highlighted-pos [{:row-index 0, :bhaag-index 0, :note-index 1, :nsi 0}]}]
+    (-> (ev/update-highlight-pos {:db arg0} [nil :right])
+        :db :props (= res) is)
+    (-> (ev/update-highlight-pos {:db arg0} [nil :left])
+        :db :props (= res-left) is)))

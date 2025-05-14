@@ -257,18 +257,18 @@
 
 (reg-event-fx ::conj-svara [log-event] conj-svara)
 
-(reg-event-fx
- ::conj-sahitya
- [log-event]
- (fn [{:keys [db]} [_ {:keys [text-val bhaag-index row-index]}]]
-   (let [indx (db/get-noteseq-index {:row-index row-index
-                                     :bhaag-index bhaag-index
-                                     :note-index 0}
-                                    (get-in db [:composition :taal]))]
-     {:db (-> db
-              (update-in
-               [:composition :noteseq indx :lyrics]
-               (constantly text-val)))})))
+(defn conj-sahitya
+  [{:keys [db]} [_ {:keys [text-val bhaag-index row-index]}]]
+  (let [indx (db/get-noteseq-index {:row-index row-index
+                                    :bhaag-index bhaag-index
+                                    :note-index 0}
+                                   (get-in db [:composition :taal]))]
+    {:db (-> db
+             (update-in
+              [:composition :noteseq indx :lyrics]
+              (constantly text-val)))}))
+
+(reg-event-fx ::conj-sahitya [log-event] conj-sahitya)
 
 (reg-event-fx
  ::save-to-localstorage
@@ -308,24 +308,25 @@
         (update-in [:props :show-lyrics-popup]
                    (constantly imap)))}))
 
-(reg-event-fx
- ::next-bhaag-lyrics-popup
- (fn [{:keys [db]} [_ {:keys [row-index bhaag-index] :as imap}]]
-   (let [fsmap (get-in db [:composition :index-forward-seq])
-         next-bhaag-note
-         (loop [rb [row-index bhaag-index 0 0]]
-           (let [[r b x y :as next-note-index] (fsmap rb)]
-             (if (or (and (= x 0) (= y 0)) (nil? next-note-index))
-               [r b]
-               (recur next-note-index ))))
-         slpop-value (if (= [nil nil] next-bhaag-note)
-                       false
-                       {:row-index (first next-bhaag-note)
-                        :bhaag-index (second next-bhaag-note)})]
-     {:db
-      (-> db
-          (update-in [:props :show-lyrics-popup]
-                     (constantly slpop-value)))})))
+(defn next-bhaag-lyrics-popup
+  [{:keys [db]} [_ {:keys [row-index bhaag-index] :as imap}]]
+  (let [fsmap (get-in db [:composition :index-forward-seq])
+        next-bhaag-note
+        (loop [rb [row-index bhaag-index 0 0]]
+          (let [[r b x y :as next-note-index] (fsmap rb)]
+            (if (or (and (= x 0) (= y 0)) (nil? next-note-index))
+              [r b]
+              (recur next-note-index ))))
+        slpop-value (if (= [nil nil] next-bhaag-note)
+                      false
+                      {:row-index (first next-bhaag-note)
+                       :bhaag-index (second next-bhaag-note)})]
+    {:db
+     (-> db
+         (update-in [:props :show-lyrics-popup]
+                    (constantly slpop-value)))}))
+
+(reg-event-fx ::next-bhaag-lyrics-popup next-bhaag-lyrics-popup)
 
 (reg-event-fx
  ::hide-lyrics-popup
@@ -359,24 +360,25 @@
             (into [next-cp] highlight-vec)))]
     res))
 
-(reg-event-fx
- ::select
- (fn[{:keys [db]} [_ to]]
-   (let [cursor-pos (get-in db [:props :cursor-pos ] )
-         next-cp (if (= :left to)
-                   (move-cursor-backward db)
-                   (move-cursor-forward db))
-         is-last-note? (nil? (get-in db [:composition :index-forward-seq (vals cursor-pos)]))
-         ndb (update-in db [:props :cursor-pos] (constantly next-cp))]
-     {:db
-      ;;don't add the last - note to the highlight set
-      (if is-last-note?
-        ndb
-        (update-in ndb [:props :highlighted-pos]
-                   (partial update-highlight
-                            (if (= to :left)
-                              next-cp cursor-pos)
-                            to)))})))
+(defn update-highlight-pos
+  [{:keys [db]} [_ to]]
+  (let [cursor-pos (get-in db [:props :cursor-pos ] )
+        next-cp (if (= :left to)
+                  (move-cursor-backward db)
+                  (move-cursor-forward db))
+        is-last-note? (nil? (get-in db [:composition :index-forward-seq (vals cursor-pos)]))
+        ndb (update-in db [:props :cursor-pos] (constantly next-cp))]
+    {:db
+     ;;don't add the last - note to the highlight set
+     (if is-last-note?
+       ndb
+       (update-in ndb [:props :highlighted-pos]
+                  (partial update-highlight
+                           (if (= to :left)
+                             next-cp cursor-pos)
+                           to)))}))
+
+(reg-event-fx ::select update-highlight-pos)
 
 (reg-event-fx
  ::copy-to-clipboard
