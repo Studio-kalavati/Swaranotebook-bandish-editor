@@ -197,8 +197,8 @@
   {:x 5  :under 30
    :x-start 5
    :y-inc 80
-   :x-end (percentage-95 (.-innerWidth js/window))
-   :y-end (* 0.6 (.-innerHeight js/window))
+   :x-end (percentage-95 (try (.-innerWidth js/window) (catch js/Error e 400)))
+   :y-end (* 0.6 (try (.-innerHeight js/window) (catch js/Error e 800)))
    :over 30
    :kan {:kan-raise 10
          :reduce-font-size 5

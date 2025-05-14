@@ -19,7 +19,7 @@
   [breaking-point "0.1.2"]
   [adzerk/env "0.4.0"]
   [binaryage/devtools "1.0.6"]
-  [cider/cider-nrepl "0.28.4"]
+  [cider/cider-nrepl "0.55.7"]
   [org.clojars.betontalpfa/re-pressed "0.4.0"]
 
   ;;[com.google.guava/guava "30.0-jre"]
