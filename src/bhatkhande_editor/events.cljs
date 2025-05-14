@@ -238,7 +238,6 @@
                                       {:note-index note-index :svara svara :notes-per-beat notes-per-beat
                                        :cpos cpos }
                                       (get-in db [:composition :noteseq]))
-         _ (println " updated-ns " updated-ns)
          ndb
          (-> db
              (update-in [:composition :noteseq] (constantly updated-ns))

@@ -89,3 +89,64 @@
           [{:notes [{:shruti [:madhyam :r], :npb 1}]}
            {:notes [{:shruti [:madhyam :g], :npb 2} {:shruti [:madhyam :g], :npb 2}]}])))))
 
+(deftest move-cursor-forward-test
+  (let [arg0 {:props {:cursor-pos {:row-index 0, :bhaag-index 1, :note-index 1, :nsi 0}}
+              :composition {:index-forward-seq
+                            {[0 0 0 0] [0 0 1 0], [0 0 1 0] [0 0 2 0], [0 0 2 0] [0 0 3 0], [0 0 3 0] [0 1 0 0], [0 1 0 0] [0 1 1 0], [0 1 1 0] [0 1 2 0]}}}
+        res1 {:row-index 0, :bhaag-index 1, :note-index 2, :nsi 0}]
+    (is (= res1
+           (ev/move-cursor-forward arg0)))
+    (is (= {:row-index 0, :bhaag-index 1, :note-index 3, :nsi 0}
+           (ev/move-cursor-forward (-> (update-in arg0 [:composition :index-forward-seq]
+                                                  assoc [0 1 2 0] [0 1 3 0])
+                                       (update-in [:props :cursor-pos :note-index] inc)))))))
+
+
+(deftest conj-svara-test
+  (let [backward {[0 0 1 0] [0 0 0 0], [0 0 2 0] [0 0 1 0], [0 0 3 0] [0 0 2 0], [0 1 0 0] [0 0 3 0]}
+        forward {[0 0 0 0] [0 0 1 0], [0 0 1 0] [0 0 2 0], [0 0 2 0] [0 0 3 0], [0 0 3 0] [0 1 0 0]}
+        noteseq [{:notes [{:shruti [:madhyam :s], :npb 1}]}
+                 {:notes [{:shruti [:madhyam :r], :npb 1}]}
+                 {:notes [{:shruti [:madhyam :g], :npb 1}]}
+                 {:notes [{:shruti [:madhyam :m], :npb 1}]}
+                 ]
+        arg0 {:props {:cursor-pos {:row-index 0, :bhaag-index 1, :note-index 0, :nsi 0}
+                      :notes-per-beat 1}
+              :composition {:index-forward-seq forward
+                            :taal :teentaal
+                            :noteseq noteseq
+                            :index-backward-seq backward}}
+        res {:db
+             {:props
+              {:cursor-pos {:row-index 0, :bhaag-index 1, :note-index 0, :nsi 0},
+               :notes-per-beat 1},
+              :composition
+              {:index-forward-seq
+               {[0 0 0 0] [0 0 1 0],
+                [0 0 1 0] [0 0 2 0],
+                [0 0 2 0] [0 0 3 0],
+                [0 0 3 0] [0 1 0 0]},
+               :taal :teentaal,
+               :noteseq
+               [{:notes [{:shruti [:madhyam :s], :npb 1}]}
+                {:notes [{:shruti [:madhyam :r], :npb 1}]}
+                {:notes [{:shruti [:madhyam :g], :npb 1}]}
+                {:notes [{:shruti [:madhyam :m], :npb 1}]}
+                {:notes [{:shruti [:madhyam :g], :npb 1}]}],
+               :index-backward-seq
+               {[0 0 1 0] [0 0 0 0],
+                [0 0 2 0] [0 0 1 0],
+                [0 0 3 0] [0 0 2 0],
+                [0 1 0 0] [0 0 3 0]},
+               :indexed-noteseq
+               [[[{:notes [{:shruti [:madhyam :s], :npb 1}]}
+                  {:notes [{:shruti [:madhyam :r], :npb 1}]}
+                  {:notes [{:shruti [:madhyam :g], :npb 1}]}
+                  {:notes [{:shruti [:madhyam :m], :npb 1}]}]
+                 [{:notes [{:shruti [:madhyam :g], :npb 1}]}]]],
+               :index [[0 0 0 0] [0 0 1 0] [0 0 2 0] [0 0 3 0] [0 1 0 0]]}},
+             :dispatch [:bhatkhande-editor.events/save-to-localstorage]}
+        ]
+    (is (= res (ev/conj-svara {:db arg0} [nil {:svara {:shruti [:madhyam :g]}}])))
+    )
+  )
