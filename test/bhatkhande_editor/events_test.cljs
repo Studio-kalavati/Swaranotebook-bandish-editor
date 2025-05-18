@@ -2,6 +2,7 @@
   (:require [cljs.test :refer (deftest is)]
             [bhatkhande-editor.utils :as ut]
             [bhatkhande-editor.events :as ev]
+            [clojure.data :refer [diff]]
             [clojure.spec.alpha :as s]
             ))
 
@@ -202,3 +203,85 @@
         :db :props (= res) is)
     (-> (ev/update-highlight-pos {:db arg0} [nil :left])
         :db :props (= res-left) is)))
+
+(deftest delete-single-swara-test
+  (let [
+        noteseq [{:notes [{:shruti [:madhyam :s], :npb 1}]}
+                 {:notes [{:shruti [:madhyam :r], :npb 1}]}
+                 {:notes [{:shruti [:madhyam :g], :npb 1}]}
+                 {:notes [{:shruti [:madhyam :m], :npb 1}]}
+                 ]
+        arg0 {:props {:cursor-pos {:row-index 0, :bhaag-index 0, :note-index 3, :nsi 0}}
+              :composition {:taal :teentaal
+                            :noteseq noteseq}}
+        res0 [{:notes [{:shruti [:madhyam :s], :npb 1}]}
+              {:notes [{:shruti [:madhyam :r], :npb 1}]}
+              {:notes [{:shruti [:madhyam :m], :npb 1}]}]
+
+        res1 [{:notes [{:shruti [:madhyam :s], :npb 1}]}
+              {:notes [{:shruti [:madhyam :g], :npb 1}]}
+              {:notes [{:shruti [:madhyam :m], :npb 1}]}]
+        arg1 (update-in arg0 [:props :cursor-pos :note-index] dec)
+        ]
+    (-> (ev/delete-single-swara {:db arg0} []) :db :composition :noteseq (= res0) is)
+    #_(-> (ev/delete-single-swara {:db arg1} []) :db :composition :noteseq (= res1) is)
+    )
+  )
+
+(deftest play-at-time-test
+  (let [res
+        '([:tick 5 0.5]
+          [[:madhyam :s] 5 0.5]
+          [[:madhyam :r] 5.5 0.5]
+          [[:madhyam :g] 6 0.5]
+          [[:madhyam :m] 6.5 0.5]
+          [:tick 7 0.5]
+          [[:madhyam :-] 7 0.5])]
+    (is (= res
+         (ev/get-play-at-time-seq
+          {:composition {:noteseq [
+                                   {:notes [{:shruti [:madhyam :s]}]}
+                                   {:notes [{:shruti [:madhyam :r]}]}
+                                   {:notes [{:shruti [:madhyam :g]}]}
+                                   {:notes [{:shruti [:madhyam :m]}]}
+                                   {:notes [{:shruti [:madhyam :-]}]}],
+                         :taal :teentaal,
+                         :index [[0 0 0 0] [0 0 1 0] [0 0 2 0] [0 0 3 0] [0 1 0 0]],
+                         },
+           :beat-mode :metronome, :bpm 120, :play-head-position 0, :now 5.0})))))
+
+(deftest play-start-test
+  (let [res
+        {:play-state :start,
+         :play-at-time
+         [[:c 10 3 {:gain 0.5}]
+          [:tick 10 0.5]
+          [[:madhyam :s] 10 0.5]
+          [[:madhyam :r] 10.5 0.5]
+          [[:madhyam :g] 11 0.5]
+          [[:madhyam :m] 11.5 0.5]
+          [:tick 12 0.5]
+          [[:madhyam :-] 12 0.5]],
+         :play-note-index 0,
+         :note-interval 0.5,
+         :num-notes 8,
+         :bhaag-index 0,
+         :elem-index [0 1 2 3 4],
+         :play-to-view-map {2 0, 3 1, 4 2, 5 3, 7 4}}]
+    (is (= res
+           (ev/play-start-event-fn
+            {:db (assoc {}
+                        :play-head-position 0
+                        :elem-index (vec (range 5))
+                        :composition
+                        {:noteseq
+                         [{:notes [{:shruti [:madhyam :s]}]} {:notes [{:shruti [:madhyam :r]}]}
+                          {:notes [{:shruti [:madhyam :g]}]} {:notes [{:shruti [:madhyam :m]}]}
+                          {:notes [{:shruti [:madhyam :-]}]}],
+                         :taal :teentaal,
+                         :index [[0 0 0 0] [0 0 1 0] [0 0 2 0] [0 0 3 0] [0 1 0 0]],
+                         }
+                        :props
+                        { :note-index [], :tanpura? true, :mode :play, :note-octave :madhyam, :notes-per-beat 1, :pitch "c" :newline-on-avartan? false, :lang :english, :beat-mode :metronome, :show-lyrics false, :cursor-pos {:row-index 0, :bhaag-index 1, :note-index 0, :nsi 0}, :note-pos {}, :raga :bilawal, :bpm 120, :onscreen-keyboard :show})}
+            10)))))
+

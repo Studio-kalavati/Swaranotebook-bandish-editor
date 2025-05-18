@@ -380,17 +380,17 @@
 
 (reg-event-fx ::select update-highlight-pos)
 
-(reg-event-fx
- ::copy-to-clipboard
- [log-event]
- (fn[{:keys [db]} [_ _]]
-   (let [notes (->>
-                (get-in db [:props :highlighted-pos] )
-                (map #(db/get-noteseq-index
-                       % (get-in db [:composition :taal])))
-                (map #(get-in db [:composition :noteseq %])))]
-     {:db (update-in db [:props :clipboard]
-                     (constantly notes))})))
+(defn copy-to-clipboard
+  [{:keys [db]} [_ _]]
+  (let [notes (->>
+               (get-in db [:props :highlighted-pos] )
+               (map #(db/get-noteseq-index
+                      % (get-in db [:composition :taal])))
+               (map #(get-in db [:composition :noteseq %])))]
+    {:db (update-in db [:props :clipboard]
+                    (constantly notes))}))
+
+(reg-event-fx ::copy-to-clipboard [log-event] copy-to-clipboard)
 
 (reg-event-fx
  ::cut-to-clipboard
@@ -446,30 +446,25 @@
                  [:props :cursor-pos]
                  (constantly new-cursor-pos))})))
 
-(reg-event-fx
- ::delete-single-swara
- [clear-highlight-interceptor]
- (fn [{:keys [db]} [_ _]]
-   (let [note-index (get-ns-index db)
-         cpos (get-in db [:props :cursor-pos ] )
-         index-entry (get-in db [:composition :index-backward-seq (vals cpos)])]
-     #_(println " delete index "[note-index note-sub-index]
-              " cpos " cpos
-              " entry at index " index-entry)
-     ;;need to update cursor position too
-     {:db
-      (-> db
-          (update-in [:composition :noteseq]
-                     #(let [res
-                            (if (= 0 note-index)
-                              ;;dont delete  the first one
-                              %
-                              (into (subvec % 0 (dec note-index)) (subvec % note-index)))]
-                        res))
-          (update-in [:composition] db/add-indexes)
-          (update-in [:props :cursor-pos]
-                     (constantly (move-cursor-backward db))))
-      :dispatch [::save-to-localstorage]})))
+(defn delete-single-swara
+  [{:keys [db]} [_ _]]
+  (let [note-index (get-ns-index db)]
+    ;;need to update cursor position too
+    {:db
+     (-> db
+         (update-in [:composition :noteseq]
+                    #(let [res
+                           (if (= 0 note-index)
+                             ;;dont delete  the first one
+                             %
+                             (into (subvec % 0 (dec note-index)) (subvec % note-index)))]
+                       res))
+         (update-in [:composition] db/add-indexes)
+         (update-in [:props :cursor-pos]
+                    (constantly (move-cursor-backward db))))
+     :dispatch [::save-to-localstorage]}))
+
+(reg-event-fx ::delete-single-swara [clear-highlight-interceptor] delete-single-swara)
 
 (reg-event-fx
  ::set-custom-svaras
@@ -948,6 +943,7 @@
 (defn get-play-at-time-seq
   [{:keys [composition play-head-position now
            bpm beat-mode]
+    :as imap
     :or {play-head-position 0 now 0}}]
   (let [noteseq (:noteseq composition)
         note-interval (/ 60 bpm)
@@ -1028,78 +1024,83 @@
                 (sort-by second))]
     a1))
 
+(defn play-start-event-fn
+  [{:keys [db]} now]
+  (let [bpm (-> db :props :bpm)
+        note-interval (/ 60 bpm)
+        play-head-position (:play-head-position db)
+        ;;play-head-position refers to whole notes (e.g 5 /16)
+        ;;but if the notes have dugun/tigun, we need the number of actual notes.
+        ;;for each if each note is dugun,
+        ;;if play-head-position is 4, then play-head-subnotes-position is 8
+        play-head-subnotes-position (->> db :composition :noteseq (take play-head-position)
+                                         (map (comp count :notes)) (apply + ))
+        a1 (get-play-at-time-seq {:composition (->> db :composition)
+                                  :beat-mode (-> db :props :beat-mode)
+                                  :bpm bpm
+                                  :play-head-position play-head-position
+                                  :now now})
+
+        a1 (if (-> db :props :tanpura?)
+             (let [last-note-time (- (-> a1 last second) now )
+                   sample-len 3
+                   tanpura-pitch (-> db :props :pitch)
+                   ;;length of sample is 4 secs
+                   play-n-times (int (/ last-note-time sample-len))
+                   conj-vec (mapv
+                             #(vector (keyword tanpura-pitch)
+                                      (+ now (* % sample-len)) sample-len {:gain 0.5})
+                             (range (inc play-n-times)))]
+               (vec (sort-by second
+                             (into a1 conj-vec))))
+             a1)
+        ;;a sequence of vectors of the form [svara-index note-index]
+        ;;where svara-index is usually less than note-index because
+        ;;note index also contains beat & tanpura notes
+        svara2note-indexes
+        (->> a1
+             (map vector (range))
+             ;;select only notes encoded as [:mandra :s]
+             (filter (fn[[indx inote]] (vector? (first inote))))
+             (map vector (range))
+             (map (fn[[svara-index [note-index inote]]] [svara-index note-index inote])))
+        ;;a1 contains notes, tanpura, beat sounds.
+        ;;we need another index that translates a note index to the visual index which
+        ;;contains just the notes
+        noteindex-to-svaraindex-map (->> svara2note-indexes
+                                         (map (fn[[svara-index note-index inote]]
+                                                {note-index svara-index}))
+                                         (apply merge))
+        play-note-index 0
+        res {:play-state :start
+         :play-at-time a1
+         :play-note-index play-note-index
+         :note-interval note-interval
+         :num-notes (count a1)
+         :bhaag-index 0
+         :elem-index (if (> play-head-position 0)
+                       (let [r (subvec (:elem-index db) play-head-subnotes-position)]
+                         r)
+                       (:elem-index db))
+         ;;translates the play-note index to the view-note index
+         :play-to-view-map noteindex-to-svaraindex-map}
+
+        ]
+    res))
+
 (reg-event-fx
  ::play
  [log-event]
  (fn [{:keys [db]} [_ _]]
    (if-not (:audio-context db)
      {:dispatch [::init-audio-buffers]}
-     (let [bpm (-> db :props :bpm)
-           note-interval (/ 60 bpm)
-           {:keys [audio-context clock]} db
+     (let [{:keys [audio-context clock]} db
            now (.-currentTime audio-context)
-
-           play-head-position (:play-head-position db)
-           ;;play-head-position refers to whole notes (e.g 5 /16)
-           ;;but if the notes have dugun/tigun, we need the number of actual notes.
-           ;;for each if each note is dugun,
-           ;;if play-head-position is 4, then play-head-subnotes-position is 8
-           play-head-subnotes-position (->> db :composition :noteseq (take play-head-position)
-                                            (map (comp count :notes)) (apply + ))
-           a1 (get-play-at-time-seq {:composition (->> db :composition)
-                                     :beat-mode (-> db :props :beat-mode)
-                                     :bpm bpm
-                                     :play-head-position play-head-position
-                                     :now now})
-
-           a1 (if (-> db :props :tanpura?)
-                (let [last-note-time (- (-> a1 last second) now )
-                      sample-len 3
-                      tanpura-pitch (-> db :props :pitch)
-                      ;;length of sample is 4 secs
-                      play-n-times (int (/ last-note-time sample-len))
-                      conj-vec (mapv
-                                #(vector (keyword tanpura-pitch)
-                                         (+ now (* % sample-len)) sample-len {:gain 0.5})
-                                (range (inc play-n-times)))]
-                  (vec (sort-by second
-                                (into a1 conj-vec))))
-                a1)
-           ;;a sequence of vectors of the form [svara-index note-index]
-           ;;where svara-index is usually less than note-index because
-           ;;note index also contains beat & tanpura notes
-           svara2note-indexes
-           (->> a1
-                (map vector (range))
-                ;;select only notes encoded as [:mandra :s]
-                (filter (fn[[indx inote]] (vector? (first inote))))
-                (map vector (range))
-                (map (fn[[svara-index [note-index inote]]] [svara-index note-index inote])))
-           ;;a1 contains notes, tanpura, beat sounds.
-           ;;we need another index that translates a note index to the visual index which
-           ;;contains just the notes
-           noteindex-to-svaraindex-map (->> svara2note-indexes
-                                            (map (fn[[svara-index note-index inote]]
-                                                   {note-index svara-index}))
-                                            (apply merge))
-           play-note-index 0]
-       {:db (assoc db
-                   :clock clock
-                   :play-state :start
-                   :play-at-time a1
-                   :play-note-index play-note-index
-                   :note-interval note-interval
-                   :num-notes (count a1)
-                   :bhaag-index 0
-                   :elem-index (if (> play-head-position 0)
-                                 (let [r (subvec (:elem-index db) play-head-subnotes-position)]
-                                   r)
-                                 (:elem-index db))
-                   ;;translates the play-note index to the view-note index
-                   :play-to-view-map noteindex-to-svaraindex-map
-                   :timer
-                   (-> (c/set-timeout! clock #(dispatch [::clock-tick-event]) 0)
-                       (c/repeat! 400)))
+           res (play-start-event-fn {:db db} now)]
+       {:db (-> (merge db res)
+                (update-in [:clock] (constantly clock))
+                (update-in [:timer] (constantly (-> (c/set-timeout! clock #(dispatch [::clock-tick-event]) 0)
+                                                        (c/repeat! 400)))))
         :dispatch [::clock-tick-event]}))))
 
 (reg-event-fx
