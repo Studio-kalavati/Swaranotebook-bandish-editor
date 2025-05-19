@@ -106,61 +106,66 @@
      index-forward-seq
      index-backward-seq]))
 
-(def test-comp
-(let [noteseq
-          [
-           {:notes [{:shruti [:mandra :s]}]}
-           {:notes [{:shruti [:mandra :r]}]}
-           {:notes [{:shruti [:mandra :g]}]}
-           {:notes [{:shruti [:mandra :m]}]}
-           {:notes [{:shruti [:mandra :p]}]}
-           {:notes [{:shruti [:mandra :d]}]}
-           {:notes [{:shruti [:mandra :n]}]}
-           {:notes [{:shruti [:madhyam :s]}]}
-           {:notes [{:shruti [:madhyam "-"]}]}
-           {:notes [{:shruti [:madhyam "s"]}]}
-           {:notes [{:shruti [:madhyam :s]} {:shruti [:madhyam :r]} {:shruti [:madhyam :g]}]}
-           {:notes [{:shruti [:madhyam :m]} {:shruti [:madhyam :p]}]}
-           {:notes [{:shruti [:madhyam :d]}]}
-           {:notes [{:shruti [:madhyam :-n]}]}
-           {:notes [{:shruti [:taar :s]}]}
-           {:notes [{:shruti [:taar :r]}]}
-           {:notes [{:shruti [:taar :g]}]}
-           {:notes [{:shruti [:taar :m]}]}
-           {:notes [{:shruti [:taar :p]}]}
-           {:notes [{:shruti [:taar :d]}]}
-           {:notes [{:shruti [:taar :n]}]}
-           {:notes [{:shruti [:madhyam :-]}]}
-           {:notes [{:shruti [:madhyam :-]}]}
-           ]
-          taal-id :teentaal
-          res
-          {:noteseq noteseq
-           :taal taal-id}]
-      res))
+(defn get-forward-backward-map2
+  "returns a vector with 2 maps, the first indicating the next note in the sequence, and the second
+  indicating the previous note in the sequence.
+  Used to pushruti the cursor to the next or previous position while editing.
+  "
+  [index-order]
+  (let [index-forward-seq (zipmap (subvec index-order 0 (count index-order))
+                                  (vec (rest index-order)))
+        index-backward-seq (zipmap (vec (rest index-order))
+                                   (subvec index-order 0 (count index-order)) )]
+    {:index-forward-seq index-forward-seq
+     :index-backward-seq index-backward-seq}))
 
 (def init-comp
     (let [noteseq
           [
-           {:notes [{:shruti [:madhyam :s]}]}
-           {:notes [{:shruti [:madhyam :r]}]}
-           {:notes [{:shruti [:madhyam :g]}]}
-           {:notes [{:shruti [:madhyam :m]}]}
+           {:notes [{:shruti [:madhyam :s]}] :lyrics "a"}
+           {:notes [{:shruti [:madhyam :r]}] :lyrics "b"}
+           {:notes [{:shruti [:madhyam :g]}] :lyrics "c"}
+           {:notes [{:shruti [:madhyam :m]}] :lyrics "d"}
+           {:notes [{:shruti [:madhyam :s]}] :lyrics "a"}
+           {:notes [{:shruti [:madhyam :r]}] :lyrics "b"}
+           {:notes [{:shruti [:madhyam :g]}] :lyrics "c"}
+           {:notes [{:shruti [:madhyam :m]}] :lyrics "d"}
+           {:notes [{:shruti [:madhyam :s]}] :lyrics "a"}
+           {:notes [{:shruti [:madhyam :r]}] :lyrics "b"}
+           {:notes [{:shruti [:madhyam :g]}] :lyrics "c"}
+           {:notes [{:shruti [:madhyam :m]}] :lyrics "d"}
+           {:notes [{:shruti [:madhyam :s]}] :lyrics "a"}
+           {:notes [{:shruti [:madhyam :r]}] :lyrics "b"}
+           {:notes [{:shruti [:madhyam :g]}] :lyrics "c"}
+           {:notes [{:shruti [:madhyam :m]}] :lyrics "d"}
+           {:notes [{:shruti [:madhyam :p]}] :lyrics "e"}
            {:notes [{:shruti [:madhyam :-]}]}
            ]
           taal-id :teentaal
           res
-          {:noteseq noteseq
+          {:score-parts [{:part-num 0 :part-title "sthayi"
+                          :noteseq noteseq}
+                         {:part-num 1 :part-title "antara"
+                          :noteseq (vec (rest noteseq))}
+                         ]
            :taal taal-id}]
       res))
+(=
+ [[[{:notes [{:shruti [:madhyam :s]}]}
+    {:notes [{:shruti [:madhyam :r]}]}
+    {:notes [{:shruti [:madhyam :g]}]}
+    {:notes [{:shruti [:madhyam :m]}]}]
+   [{:notes [{:shruti [:madhyam :-]}]}]]]
+ (split-bhaags (-> init-comp :score-parts first :noteseq) (taal-def :teentaal)))
 
-(defn add-indexes
-  [comp]
-  (let [{:keys [taal noteseq] :as imap} comp
-        cur-taal (taal-def taal)
-        indexed (split-bhaags noteseq cur-taal)
-        [order f b] (get-forward-backward-map indexed)]
-    (assoc imap
+(defn add-part-index
+  [taal {:keys [noteseq] :as imap}]
+  (println " inputs " taal " imap " imap)
+  (let [cur-taal (taal-def taal)
+        indexed (split-bhaags noteseq  cur-taal)
+        [order f b] (get-forward-backward-map indexed)
+        ]
+    (assoc {}
            ;;the same noteseq that is split into groups of rows (one per taal cycle)
            ;;further into bhaags per row (e.g. 4 in teentaal)
            ;;further into notes and sub-notes
@@ -170,6 +175,128 @@
            :index order
            :index-forward-seq f
            :index-backward-seq b)))
+(= {
+    :indexed-noteseq
+    [[[{:notes [{:shruti [:madhyam :s]}]}
+       {:notes [{:shruti [:madhyam :r]}]}
+       {:notes [{:shruti [:madhyam :g]}]}
+       {:notes [{:shruti [:madhyam :m]}]}]
+      [{:notes [{:shruti [:madhyam :-]}]}]]],
+    :index [[0 0 0 0] [0 0 1 0] [0 0 2 0] [0 0 3 0] [0 1 0 0]],
+    :index-forward-seq
+    {[0 0 0 0] [0 0 1 0],
+     [0 0 1 0] [0 0 2 0],
+     [0 0 2 0] [0 0 3 0],
+     [0 0 3 0] [0 1 0 0]},
+    :index-backward-seq
+    {[0 0 1 0] [0 0 0 0],
+     [0 0 2 0] [0 0 1 0],
+     [0 0 3 0] [0 0 2 0],
+     [0 1 0 0] [0 0 3 0]}}
+   (add-part-index :teentaal (first (:score-parts init-comp))))
+
+(defn add-indexes
+  [{:keys [taal score-parts] :as score}]
+  (let [indexes (mapv #(add-part-index taal  %) score-parts)
+        index (->> (map :index indexes)
+                   (map-indexed (fn[indx item] (mapv #(vec (cons indx  %)) item)))
+                   (reduce into))
+        indexed-noteseq (mapv :indexed-noteseq indexes)
+        ]
+    (merge (assoc score :index index :indexed-noteseq indexed-noteseq)
+           (get-forward-backward-map2 index))))
+(add-indexes init-comp)
+(= (add-indexes init-comp)
+{:score-parts
+ [{:part-num 0,
+   :part-title "sthayi",
+   :noteseq
+   [{:notes [{:shruti [:madhyam :s]}]}
+    {:notes [{:shruti [:madhyam :r]}]}
+    {:notes [{:shruti [:madhyam :g]}]}
+    {:notes [{:shruti [:madhyam :m]}]}
+    {:notes [{:shruti [:madhyam :-]}]}]}
+  {:part-num 1,
+   :part-title "antara",
+   :noteseq
+   [{:notes [{:shruti [:madhyam :s]}]}
+    {:notes [{:shruti [:madhyam :r]}]}
+    {:notes [{:shruti [:madhyam :g]}]}
+    {:notes [{:shruti [:madhyam :m]}]}
+    {:notes [{:shruti [:madhyam :-]}]}]}],
+ :taal :teentaal,
+ :index
+ [[0 0 0 0 0]
+  [0 0 0 1 0]
+  [0 0 0 2 0]
+  [0 0 0 3 0]
+  [0 0 1 0 0]
+  [1 0 0 0 0]
+  [1 0 0 1 0]
+  [1 0 0 2 0]
+  [1 0 0 3 0]
+  [1 0 1 0 0]],
+ :indexed-noteseq
+ [[[{:notes [{:shruti [:madhyam :s]}]}
+    {:notes [{:shruti [:madhyam :r]}]}
+    {:notes [{:shruti [:madhyam :g]}]}
+    {:notes [{:shruti [:madhyam :m]}]}]
+   [{:notes [{:shruti [:madhyam :-]}]}]]
+  [[{:notes [{:shruti [:madhyam :s]}]}
+    {:notes [{:shruti [:madhyam :r]}]}
+    {:notes [{:shruti [:madhyam :g]}]}
+    {:notes [{:shruti [:madhyam :m]}]}]
+   [{:notes [{:shruti [:madhyam :-]}]}]]],
+ :index-forward-seq
+ {[0 0 1 0 0] [1 0 0 0 0],
+  [0 0 0 1 0] [0 0 0 2 0],
+  [1 0 0 0 0] [1 0 0 1 0],
+  [0 0 0 2 0] [0 0 0 3 0],
+  [0 0 0 0 0] [0 0 0 1 0],
+  [0 0 0 3 0] [0 0 1 0 0],
+  [1 0 0 2 0] [1 0 0 3 0],
+  [1 0 0 1 0] [1 0 0 2 0],
+  [1 0 0 3 0] [1 0 1 0 0]},
+ :index-backward-seq
+ {[0 0 1 0 0] [0 0 0 3 0],
+  [0 0 0 1 0] [0 0 0 0 0],
+  [1 0 0 0 0] [0 0 1 0 0],
+  [0 0 0 2 0] [0 0 0 1 0],
+  [0 0 0 3 0] [0 0 0 2 0],
+  [1 0 0 2 0] [1 0 0 1 0],
+  [1 0 0 1 0] [1 0 0 0 0],
+  [1 0 1 0 0] [1 0 0 3 0],
+  [1 0 0 3 0] [1 0 0 2 0]}}
+    )
+(let [common-noteseq
+      {:noteseq
+       [{:notes [{:shruti [:madhyam :s]}]}
+        {:notes [{:shruti [:madhyam :r]}]}
+        {:notes [{:shruti [:madhyam :g]}]}
+        {:notes [{:shruti [:madhyam :m]}]}
+        {:notes [{:shruti [:madhyam :-]}]}],
+       :indexed-noteseq
+       [[[{:notes [{:shruti [:madhyam :s]}]}
+          {:notes [{:shruti [:madhyam :r]}]}
+          {:notes [{:shruti [:madhyam :g]}]}
+          {:notes [{:shruti [:madhyam :m]}]}]
+         [{:notes [{:shruti [:madhyam :-]}]}]]],
+       :index [[0 0 0 0] [0 0 1 0] [0 0 2 0] [0 0 3 0] [0 1 0 0]],
+       :index-forward-seq
+       {[0 0 0 0] [0 0 1 0],
+        [0 0 1 0] [0 0 2 0],
+        [0 0 2 0] [0 0 3 0],
+        [0 0 3 0] [0 1 0 0]},
+       :index-backward-seq
+       {[0 0 1 0] [0 0 0 0],
+        [0 0 2 0] [0 0 1 0],
+        [0 0 3 0] [0 0 2 0],
+        [0 1 0 0] [0 0 3 0]}}]
+  (= {:score-parts
+      [(merge common-noteseq {:part-num 0, :part-title "sthayi"})
+       (merge common-noteseq {:part-num 1, :part-title "antara"})],
+      :taal :teentaal}
+     (add-indexes init-comp)))
 
 (def mswaras (subvec us/i-note-seq 0 (- (count us/i-note-seq) 2)))
 
@@ -179,7 +306,7 @@
 
 (defn image-map
   [lang]
-  (-> 
+  (->
    (zipmap (conj (vec (for [i [:mandra :madhyam :taar] j (take 12 us/i-note-seq)]
                         [i j])) [:ati-taar :s])
            (mapv
@@ -239,21 +366,31 @@
 (defn comp-decorator
   [comp0]
   (let [comp (add-indexes comp0)]
+    (println " ;;; " (keys comp))
     {:composition comp
      :props (update-in
              default-props
              [:cursor-pos]
              (constantly
               (let [in (-> comp :index last)]
-                (zipmap [:row-index :bhaag-index :note-index :nsi] in))))}))
+                (zipmap [:score-part-index :row-index :bhaag-index :note-index :nsi] in ))))}))
 
+(=
+ {:score-part-index 1, :row-index 0, :bhaag-index 1, :note-index 0, :nsi 0}
+ (-> (comp-decorator init-comp)
+     :props :cursor-pos))
 
 (def default-db
-  (merge (comp-decorator init-comp)
-         {:init-state {:cursor-color 0}
-          :dispinfo (merge dispinfo m-dispinfo)
-          :m-dispinfo m-dispinfo
-          ;;for storing svara images to light up
-          :elem-index []
-          :play-head-position 0
-          :dim {:editor (mapv dispinfo [:x-end :y-end])}}))
+  (let [idb 
+        (merge (comp-decorator init-comp)
+               {:init-state {:cursor-color 0}
+                :dispinfo (merge dispinfo m-dispinfo)
+                :m-dispinfo m-dispinfo
+                ;;for storing svara images to light up
+                :elem-index []
+                :play-head-position 0
+                :dim {:editor (mapv dispinfo [:x-end :y-end])}})]
+    (println " idb " (-> idb :composition ))
+    idb))
+
+#_[[[{:notes [{:shruti [:madhyam :s]}]} {:notes [{:shruti [:madhyam :r]}]} {:notes [{:shruti [:madhyam :g]}]} {:notes [{:shruti [:madhyam :m]}]}] [{:notes [{:shruti [:madhyam :-]}]}]] [[{:notes [{:shruti [:madhyam :r]}]} {:notes [{:shruti [:madhyam :g]}]} {:notes [{:shruti [:madhyam :m]}]} {:notes [{:shruti [:madhyam :-]}]}]]]

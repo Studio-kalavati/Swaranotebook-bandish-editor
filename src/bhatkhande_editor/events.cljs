@@ -166,7 +166,7 @@
                (= 0 (last n1)) n1
                :else (recur n1))))]
     (if next-index
-      (zipmap [:row-index :bhaag-index :note-index :nsi] next-index)
+      (zipmap [:score-part-index :row-index :bhaag-index :note-index :nsi] next-index)
       cursor-pos)))
 
 (defn move-cursor-backward
@@ -178,7 +178,7 @@
     (let [res
           (if (= 0 note-index)
             cursor-pos
-            (zipmap [:row-index :bhaag-index :note-index :nsi]
+            (zipmap [:score-part-index :row-index :bhaag-index :note-index :nsi]
                     (if (> (last prev-index) 0 )
                       ;;if deleting a multi-note, the ni is > 0
                       ;;instead make it 0
@@ -228,19 +228,25 @@
    (let [cpos (get-in db [:props :cursor-pos ] )
          notes-per-beat (-> db :props :notes-per-beat)
          prev-index (get-in db [:composition :index-backward-seq (vals cpos)])
+         score-part-index (:score-part-index cpos)
          note-index
          (if (nil? prev-index)
            -1
            (db/get-noteseq-index
-            (zipmap [:row-index :bhaag-index :note-index :nsi] prev-index)
+            (zipmap [:score-part-index :row-index :bhaag-index :note-index :nsi] prev-index)
             (get-in db [:composition :taal])))
+
+         _ (println " conj-svara " cpos " prev-index " prev-index " note-index "note-index
+                    " sci " score-part-index)
          [updated-ns updated-cursor] (update-noteseq
                                       {:note-index note-index :svara svara :notes-per-beat notes-per-beat
                                        :cpos cpos }
-                                      (get-in db [:composition :noteseq]))
+                                      (get-in db [:composition :score-parts score-part-index :noteseq]))
+
+         _ (println " conj-svara " [updated-ns updated-cursor])
          ndb
          (-> db
-             (update-in [:composition :noteseq] (constantly updated-ns))
+             (update-in [:composition :score-parts score-part-index :noteseq] (constantly updated-ns))
              (update-in [:composition] db/add-indexes))
          ndb
          (-> ndb

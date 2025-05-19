@@ -1713,6 +1713,13 @@ input[type="search"]
     overflow:hidden;
 }
 
+.score-parts {
+    display: grid;
+    grid-gap: 20px;
+    grid-auto-flow: row;
+    overflow:hidden;
+}
+
 @media print {
     .keyboard {
         display: none;

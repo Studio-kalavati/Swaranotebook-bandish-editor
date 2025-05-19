@@ -906,10 +906,18 @@
                              (name ilang)
                              "english_SrR")))
               draw-bhaag
-              (fn[row-index bhaag-index note-map-seq]
+              (fn[score-part-index
+                  row-index
+                  bhaag-index
+                  note-map-seq]
+                (println " draw-bhaag "[score-part-index
+                                        row-index
+                                        bhaag-index
+                                        note-map-seq])
                 (let [nsindex (db/get-noteseq-index
                                {:row-index row-index
-                                :bhaag-index bhaag-index :note-index 0}
+                                :bhaag-index bhaag-index
+                                :note-index 0}
                                (:taal comp))
                       sahitya (get-in comp [:noteseq nsindex :lyrics])
                       sah-list (when sahitya (clojure.string/split sahitya #","))
@@ -960,7 +968,8 @@
                                               :on-click
                                               (fn[i]
                                                 (reset! cursor-y (.-pageY i))
-                                                (dispatch [::events/set-click-index
+                                                ;;todo - uncomment
+                                                #_(dispatch [::events/set-click-index
                                                            ;;for multi-note, always show on the first
                                                            (assoc note-xy-map
                                                                   :nsi 0)]))
@@ -973,7 +982,8 @@
                                                          :else @font-size)
                                                     :on-click
                                                     (fn[_]
-                                                      (dispatch [::events/set-click-index
+                                                      ;;todo-uncomment
+                                                      #_(dispatch [::events/set-click-index
                                                                  note-xy-map]))}
                                              (name (second shruti))])
                                           r3 (-> acc1
@@ -990,7 +1000,8 @@
                                                           {:width (int (* 0.6 @font-size)) :height @font-size
                                                            :fill "#f83600"
                                                            :fill-opacity 0
-                                                           :ref #(when (identity %)
+                                                           ;;todo-uncomment
+                                                           #_:ref #_(when (identity %)
                                                                    (let [opa "fill-opacity:0"
                                                                          opac (str opa
                                                                                    (if (and
@@ -1003,6 +1014,7 @@
                                                            :x (+ x1 (int (* 0.2 @font-size)))
                                                            :y (int (* 0.2 @font-size))}]))
                                             (let [curpos @(subscribe [::subs/get-click-index])]
+                                              (println " cursor "(vector note-xy-map curpos))
                                               (if (= note-xy-map curpos)
                                                 (update-in r3 [:images1] conj
                                                            [:rect (assoc rect-style
@@ -1042,6 +1054,7 @@
                                       (update-in [:images] into (:images1 r2)))
                                 ;;if more than 1 note in a single beat,
                                 ;;draw the ellipse under the notes
+                                _ (println " r5 " r5)
                                 r6 (if (> (count (:notes note)) 1)
                                      (update-in r5 [:images]
                                                 conj
@@ -1057,6 +1070,7 @@
                                                   :stroke "black"
                                                   :fill "none"}])
                                      r5)
+                                _ (println " r6 " r6)
                                 ;;add sam-khaali
                                 r7 (if (= 0 note-index)
                                      (update-in r6
@@ -1075,14 +1089,19 @@
                                                    (get (-> taal-def t :sam-khaali )
                                                         sk-index))])
                                      r6)
+
+                                _ (println " r7 " r7)
                                 r8 (update-in
                                     r7
                                     [:images] conj)]
+
+                                (println " r8 " r8)
                             r8))
                         {:x 5 :images []}))
 
                       images
-                      (if show-lyrics?
+                      ;;todo-uncomment
+                      (if false ;;show-lyrics?
                         (-> (:images r3)
                             (into (let [tv @(subscribe [::subs/get-sahitya
                                                         [row-index bhaag-index]])]
@@ -1125,37 +1144,61 @@
               ;;returns  list of lists
               ;;each element is one avartan
               ;;each subelement is one bhaag.
-              bfn (fn[[row-index bhaag]]
-                    (->> bhaag
-                         (map vector (range))
-                         (mapv (fn[[indx i]]
-                                 (let [{:keys [images x]} (draw-bhaag row-index indx i )]
-                                   [:div {:class "bhaag-item" :style
-                                          (merge
-                                           {:max-width (+ x (int (* @font-size 0.7))) }
-                                           {:max-height (int (*
-                                                              (if @(subscribe [::subs/show-lyrics?]) 2.5 2)
-                                                              @font-size))}
-                                           )}
-                                    (reduce conj
-                                            [:svg {:xmlns "http://www.w3.org/2000/svg"
-                                                   :width (+ x (int (* @font-size 0.6)))}]
-                                            images)])))
-                         #_(reduce conj [:div {:class "box-row"}])))
-              b1
+              bfn (fn[score-part-index score-part]
+                    (let [score-res 
+                          (->> score-part
+                               (map-indexed
+                                (fn[row-index row]
+                                  (println "spi row-index row "[score-part-index row-index row])
+                                  (let [res0
+                                        (->> (map-indexed
+                                              (fn[bhaag-index bhaag]
+                                                (println "bpi row-index row "[score-part-index row-index bhaag-index bhaag])
+                                                (let [{:keys [images x]}
+                                                      (draw-bhaag score-part-index row-index bhaag-index bhaag)
+                                                      res [:div {:class "bhaag-item" :style
+                                                                 (merge
+                                                                  {:max-width (+ x (int (* @font-size 0.7))) }
+                                                                  {:max-height (int (*
+                                                                                     (if @(subscribe [::subs/show-lyrics?]) 2.5 2)
+                                                                                     @font-size))}
+                                                                  )}
+                                                           (reduce conj
+                                                                   [:svg {:xmlns "http://www.w3.org/2000/svg"
+                                                                          :width (+ x (int (* @font-size 0.6)))}]
+                                                                   images)]]
+                                                  (println " xx123 " res)
+                                                  res))
+                                              row)
+                                             vec
+                                             (reduce conj [:div {:class "box-row"}]))
+                                        res2 res0]
+                                    (println " xxxres2 " res2)
+                                    res2)))
+                               vec)
+                          score-ret (reduce conj [:div {:class "wrapper"} ] score-res)]
+                      (println " score-part ret "score-ret)
+                      score-ret))
+              fin
               (->> comp
                    :indexed-noteseq
-                   (map vector (range))
-                   (mapv bfn))
+                   (map-indexed bfn)
+                   vec
+                   (reduce conj [:div {:class "score-parts"}])
+                   )
 
-              fin
-              (if newline-on-avartan?
+              ;;fin
+              #_(->> b1
+                   (mapv #(reduce conj [:div {:class "box-row"}] %))
+                   (reduce conj [:div {:class "wrapper"}]))
+              #_(if newline-on-avartan?
                 (->> b1
                      (mapv #(reduce conj [:div {:class "box-row"}] %))
                      (reduce conj [:div {:class "box-row"}]))
                 (->> b1
                      (reduce into [:div {:class "box-row"}])
                      (conj [:div {:class "wrapper"}])))]
+           (println " fin " (count fin) " -- "fin)
            fin)]]])))
 
 
