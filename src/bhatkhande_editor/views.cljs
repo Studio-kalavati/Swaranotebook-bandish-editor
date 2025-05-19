@@ -910,7 +910,10 @@
                   row-index
                   bhaag-index
                   note-map-seq]
-                (let [nsindex (db/get-noteseq-index
+                (let [cursor-map {:score-part-index score-part-index
+                                  :row-index row-index
+                                  :bhaag-index bhaag-index}
+                      nsindex (db/get-noteseq-index
                                {:row-index row-index
                                 :bhaag-index bhaag-index
                                 :note-index 0}
@@ -943,10 +946,7 @@
                                   (fn[{:keys [x1 _] :as acc1}
                                       [nsi {:keys [shruti]}]]
                                     ;;create all notes in a single beat.
-                                    (let [note-xy-map {:row-index row-index
-                                                       :bhaag-index bhaag-index
-                                                       :note-index note-index
-                                                       :nsi nsi}
+                                    (let [note-xy-map (assoc cursor-map :nsi nsi :note-index note-index)
                                           ith-note
                                           (if-let [ival (image-map shruti)]
                                             [:image
@@ -1010,7 +1010,9 @@
                                                            :x (+ x1 (int (* 0.2 @font-size)))
                                                            :y (int (* 0.2 @font-size))}]))
                                             (let [curpos @(subscribe [::subs/get-click-index])]
-                                              #_(println " cursor "(vector note-xy-map curpos))
+                                              (if (and (= 1 (:score-part-index curpos))
+                                                       (= 1 (:row-index curpos)))
+                                                (println " cursor match missing " (vector note-xy-map curpos)))
                                               (if (= note-xy-map curpos)
                                                 (update-in r3 [:images1] conj
                                                            [:rect (assoc rect-style
