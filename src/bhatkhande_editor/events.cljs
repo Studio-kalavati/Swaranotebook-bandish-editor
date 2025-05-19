@@ -159,15 +159,17 @@
         ;;returns the next note in the same beat
         ;;so skip forward until the next full note is found.
         next-index (loop [n0 (vals cursor-pos)]
-           (let [n1 (get-in ndb [:composition :index-forward-seq n0])]
-             ;;note sub-index should be 0 for the next whole note
-             (cond
-               (nil? n1) n0 ;;at the end
-               (= 0 (last n1)) n1
-               :else (recur n1))))]
-    (if next-index
-      (zipmap [:score-part-index :row-index :bhaag-index :note-index :nsi] next-index)
-      cursor-pos)))
+                     (let [n1 (get-in ndb [:composition :index-forward-seq n0])]
+                       ;;note sub-index should be 0 for the next whole note
+                       (cond
+                         (nil? n1) n0 ;;at the end
+                         (= 0 (last n1)) n1
+                         :else (recur n1))))
+        res (if next-index
+          (zipmap [:score-part-index :row-index :bhaag-index :note-index :nsi] next-index)
+          cursor-pos)]
+    (println " current pos " cursor-pos " next cursor " res)
+    res))
 
 (defn move-cursor-backward
   "returns the index of the previous note group."
@@ -235,15 +237,12 @@
            (db/get-noteseq-index
             (zipmap [:score-part-index :row-index :bhaag-index :note-index :nsi] prev-index)
             (get-in db [:composition :taal])))
-
-         _ (println " conj-svara " cpos " prev-index " prev-index " note-index "note-index
-                    " sci " score-part-index)
          [updated-ns updated-cursor] (update-noteseq
                                       {:note-index note-index :svara svara :notes-per-beat notes-per-beat
                                        :cpos cpos }
                                       (get-in db [:composition :score-parts score-part-index :noteseq]))
 
-         _ (println " conj-svara " [updated-ns updated-cursor])
+         _ (println " conj-svara new, old " [updated-ns (get-in db [:composition :score-parts score-part-index :noteseq])])
          ndb
          (-> db
              (update-in [:composition :score-parts score-part-index :noteseq] (constantly updated-ns))
@@ -454,11 +453,12 @@
 
 (defn delete-single-swara
   [{:keys [db]} [_ _]]
-  (let [note-index (get-ns-index db)]
+  (let [note-index (get-ns-index db)
+        cursor-pos (get-in db [:props :cursor-pos])]
     ;;need to update cursor position too
     {:db
      (-> db
-         (update-in [:composition :noteseq]
+         (update-in [:composition :score-parts (:score-part-index cursor-pos) :noteseq]
                     #(let [res
                            (if (= 0 note-index)
                              ;;dont delete  the first one
