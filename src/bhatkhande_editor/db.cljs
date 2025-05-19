@@ -146,7 +146,7 @@
           {:score-parts [{:part-num 0 :part-title "sthayi"
                           :noteseq noteseq}
                          {:part-num 1 :part-title "antara"
-                          :noteseq (vec (rest noteseq))}
+                          :noteseq (vec (rest (rest noteseq)))}
                          ]
            :taal taal-id}]
       res))
@@ -160,7 +160,6 @@
 
 (defn add-part-index
   [taal {:keys [noteseq] :as imap}]
-  (println " inputs " taal " imap " imap)
   (let [cur-taal (taal-def taal)
         indexed (split-bhaags noteseq  cur-taal)
         [order f b] (get-forward-backward-map indexed)
@@ -390,7 +389,6 @@
                 :elem-index []
                 :play-head-position 0
                 :dim {:editor (mapv dispinfo [:x-end :y-end])}})]
-    (println " idb " (-> idb :composition ))
     idb))
 
 #_[[[{:notes [{:shruti [:madhyam :s]}]} {:notes [{:shruti [:madhyam :r]}]} {:notes [{:shruti [:madhyam :g]}]} {:notes [{:shruti [:madhyam :m]}]}] [{:notes [{:shruti [:madhyam :-]}]}]] [[{:notes [{:shruti [:madhyam :r]}]} {:notes [{:shruti [:madhyam :g]}]} {:notes [{:shruti [:madhyam :m]}]} {:notes [{:shruti [:madhyam :-]}]}]]]

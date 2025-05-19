@@ -964,22 +964,20 @@
                                               :on-click
                                               (fn[i]
                                                 (reset! cursor-y (.-pageY i))
-                                                ;;todo - uncomment
-                                                #_(dispatch [::events/set-click-index
+                                                (dispatch [::events/set-click-index
                                                            ;;for multi-note, always show on the first
                                                            (assoc note-xy-map
                                                                   :nsi 0)]))
                                               :x x1 :y 5}]
                                             ;;- and S
                                             [:text {:x (+ (int (* 0.3 @font-size)) x1)
-                                                    :y (cond 
+                                                    :y (cond
                                                          (> @font-size 32) 32
                                                          (< @font-size 24) 24
                                                          :else @font-size)
                                                     :on-click
                                                     (fn[_]
-                                                      ;;todo-uncomment
-                                                      #_(dispatch [::events/set-click-index
+                                                      (dispatch [::events/set-click-index
                                                                  note-xy-map]))}
                                              (name (second shruti))])
                                           r3 (-> acc1
