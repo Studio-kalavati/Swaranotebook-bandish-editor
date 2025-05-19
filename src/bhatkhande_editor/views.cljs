@@ -1173,11 +1173,11 @@
                                              vec
                                              (reduce conj [:div {:class "box-row"}]))
                                         res2 res0]
-                                    (println " xxxres2 " res2)
                                     res2)))
                                vec)
-                          score-ret (reduce conj [:div {:class "wrapper"} ] score-res)]
-                      (println " score-part ret "score-ret)
+                          score-ret (reduce conj [:div {:class "wrapper"}
+                                                  [:p (get-in comp [:score-parts score-part-index :part-title])]]
+                                            score-res)]
                       score-ret))
               fin
               (->> comp
@@ -1185,20 +1185,7 @@
                    (map-indexed bfn)
                    vec
                    (reduce conj [:div {:class "score-parts"}])
-                   )
-
-              ;;fin
-              #_(->> b1
-                   (mapv #(reduce conj [:div {:class "box-row"}] %))
-                   (reduce conj [:div {:class "wrapper"}]))
-              #_(if newline-on-avartan?
-                (->> b1
-                     (mapv #(reduce conj [:div {:class "box-row"}] %))
-                     (reduce conj [:div {:class "box-row"}]))
-                (->> b1
-                     (reduce into [:div {:class "box-row"}])
-                     (conj [:div {:class "wrapper"}])))]
-           (println " fin " (count fin) " -- "fin)
+                   )]
            fin)]]])))
 
 
