@@ -910,10 +910,6 @@
                   row-index
                   bhaag-index
                   note-map-seq]
-                (println " draw-bhaag "[score-part-index
-                                        row-index
-                                        bhaag-index
-                                        note-map-seq])
                 (let [nsindex (db/get-noteseq-index
                                {:row-index row-index
                                 :bhaag-index bhaag-index
@@ -1014,7 +1010,7 @@
                                                            :x (+ x1 (int (* 0.2 @font-size)))
                                                            :y (int (* 0.2 @font-size))}]))
                                             (let [curpos @(subscribe [::subs/get-click-index])]
-                                              (println " cursor "(vector note-xy-map curpos))
+                                              #_(println " cursor "(vector note-xy-map curpos))
                                               (if (= note-xy-map curpos)
                                                 (update-in r3 [:images1] conj
                                                            [:rect (assoc rect-style
@@ -1054,7 +1050,6 @@
                                       (update-in [:images] into (:images1 r2)))
                                 ;;if more than 1 note in a single beat,
                                 ;;draw the ellipse under the notes
-                                _ (println " r5 " r5)
                                 r6 (if (> (count (:notes note)) 1)
                                      (update-in r5 [:images]
                                                 conj
@@ -1070,7 +1065,6 @@
                                                   :stroke "black"
                                                   :fill "none"}])
                                      r5)
-                                _ (println " r6 " r6)
                                 ;;add sam-khaali
                                 r7 (if (= 0 note-index)
                                      (update-in r6
@@ -1090,12 +1084,10 @@
                                                         sk-index))])
                                      r6)
 
-                                _ (println " r7 " r7)
                                 r8 (update-in
                                     r7
                                     [:images] conj)]
 
-                                (println " r8 " r8)
                             r8))
                         {:x 5 :images []}))
 
@@ -1145,15 +1137,13 @@
               ;;each element is one avartan
               ;;each subelement is one bhaag.
               bfn (fn[score-part-index score-part]
-                    (let [score-res 
+                    (let [score-res
                           (->> score-part
                                (map-indexed
                                 (fn[row-index row]
-                                  (println "spi row-index row "[score-part-index row-index row])
                                   (let [res0
                                         (->> (map-indexed
                                               (fn[bhaag-index bhaag]
-                                                (println "bpi row-index row "[score-part-index row-index bhaag-index bhaag])
                                                 (let [{:keys [images x]}
                                                       (draw-bhaag score-part-index row-index bhaag-index bhaag)
                                                       res [:div {:class "bhaag-item" :style
@@ -1167,18 +1157,26 @@
                                                                    [:svg {:xmlns "http://www.w3.org/2000/svg"
                                                                           :width (+ x (int (* @font-size 0.6)))}]
                                                                    images)]]
-                                                  (println " xx123 " res)
                                                   res))
                                               row)
-                                             vec
-                                             (reduce conj [:div {:class "box-row"}]))
-                                        res2 res0]
-                                    res2)))
+                                             vec)]
+                                    res0)))
                                vec)
-                          score-ret (reduce conj [:div {:class "wrapper"}
-                                                  [:p (get-in comp [:score-parts score-part-index :part-title])]]
-                                            score-res)]
-                      score-ret))
+                          score-fin
+                          (if newline-on-avartan?
+                            (let [op1 (mapv #(reduce conj [:div {:class "box-row"}] %) score-res)
+                                  score-ret2
+                                  (reduce conj [:div {:class "wrapper"}
+                                                [:p (get-in comp [:score-parts score-part-index :part-title])]]
+                                          op1)]
+                              score-ret2)
+                            (let [op2 (reduce conj [:div {:class "box-row"}] (reduce into score-res))
+                                  score-ret
+                                  [:div {:class "wrapper"}
+                                   [:p (get-in comp [:score-parts score-part-index :part-title])]
+                                   op2]]
+                              score-ret))]
+                      score-fin))
               fin
               (->> comp
                    :indexed-noteseq
