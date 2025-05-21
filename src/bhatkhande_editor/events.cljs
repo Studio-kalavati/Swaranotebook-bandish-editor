@@ -170,23 +170,21 @@
         res (if next-index
           (zipmap [:score-part-index :row-index :bhaag-index :note-index :nsi] next-index)
           cursor-pos)]
-    (println " current pos " cursor-pos " next cursor " res " next-index " next-index)
     res))
 
 (defn move-cursor-backward
   "returns the index of the previous note group."
   [ndb ]
   (let [cursor-pos (get-in ndb [:props :cursor-pos ] )
-        prev-index (get-in ndb [:composition :index-backward-seq (cursor2vec cursor-pos)])
-        note-index (get-ns-index ndb)]
+        prev-index (get-in ndb [:composition :index-backward-seq (cursor2vec cursor-pos)])]
     (let [res
-          (if (= 0 note-index)
-            cursor-pos
+          (if prev-index
             (cursor2map (if (> (last prev-index) 0 )
                           ;;if deleting a multi-note, the ni is > 0
                           ;;instead make it 0
-                          (conj (subvec prev-index 0 3) 0)
-                          prev-index)))]
+                          (conj (subvec prev-index 0 4) 0)
+                          prev-index))
+            cursor-pos)]
       res)))
 
 (defn insert-note
