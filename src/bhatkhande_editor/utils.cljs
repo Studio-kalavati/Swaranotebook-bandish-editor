@@ -52,3 +52,15 @@
         isvalid? (s/valid? :snb/composition kw-json)]
     (if-not isvalid? (println " ex " (s/explain :snb/composition kw-json)))
     (cvt2noteseq kw-json)))
+
+(defn cursor2vec
+  "return a cursor array like [0 1 0 1 0], given a map argument like so:
+  {:score-part-index 0, :row-index 1, :bhaag-index 0, :note-index 2, :nsi 0}"
+  [cursor]
+  (mapv #(% cursor)
+        [:score-part-index :row-index :bhaag-index :note-index :nsi]))
+
+(defn cursor2map
+  "return a cursor map like {:score-part-index 0, :row-index 1, :bhaag-index 0, :note-index 2, :nsi 0}, given a vector argument like so [0 1 0 1 0]"
+  [cursor-vec]
+  (zipmap [:score-part-index :row-index :bhaag-index :note-index :nsi] cursor-vec))

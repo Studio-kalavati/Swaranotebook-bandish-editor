@@ -7,7 +7,7 @@
             dispatch]]
    [chronoid.core :as c]
    [bhatkhande-editor.db :as db :refer [pitch-s-list]]
-   [bhatkhande-editor.utils :as utils :refer [json-onload]]
+   [bhatkhande-editor.utils :as utils :refer [json-onload cursor2vec cursor2map]]
    ["firebase/app" :default firebase]
    ["firebase/auth" :default fbauth]
    ["firebase/storage" :default storage]
@@ -177,18 +177,16 @@
   "returns the index of the previous note group."
   [ndb ]
   (let [cursor-pos (get-in ndb [:props :cursor-pos ] )
-        ;;can't use vals any more - todo
-        prev-index (get-in ndb [:composition :index-backward-seq (vals cursor-pos)])
+        prev-index (get-in ndb [:composition :index-backward-seq (cursor2vec cursor-pos)])
         note-index (get-ns-index ndb)]
     (let [res
           (if (= 0 note-index)
             cursor-pos
-            (zipmap [:score-part-index :row-index :bhaag-index :note-index :nsi]
-                    (if (> (last prev-index) 0 )
-                      ;;if deleting a multi-note, the ni is > 0
-                      ;;instead make it 0
-                      (conj (subvec prev-index 0 3) 0)
-                      prev-index)))]
+            (cursor2map (if (> (last prev-index) 0 )
+                          ;;if deleting a multi-note, the ni is > 0
+                          ;;instead make it 0
+                          (conj (subvec prev-index 0 3) 0)
+                          prev-index)))]
       res)))
 
 (defn insert-note
@@ -228,14 +226,6 @@
           [note-insert :next-note-cursor])]
     res))
 
-(defn cursor2vec
-  [cursor]
-  (mapv #(% cursor)
-        [:score-part-index :row-index :bhaag-index :note-index :nsi]))
-
-(defn cursor2map
-  [cursor-vec]
-  (zipmap [:score-part-index :row-index :bhaag-index :note-index :nsi] cursor-vec))
 
 
 (defn conj-svara
@@ -384,7 +374,7 @@
         next-cp (if (= :left to)
                   (move-cursor-backward db)
                   (move-cursor-forward db))
-        is-last-note? (nil? (get-in db [:composition :index-forward-seq (vals cursor-pos)]))
+        is-last-note? (nil? (get-in db [:composition :index-forward-seq (cursor2vec cursor-pos)]))
         ndb (update-in db [:props :cursor-pos] (constantly next-cp))]
     {:db
      ;;don't add the last - note to the highlight set
