@@ -158,9 +158,11 @@
         ;;when multiple notes in a beat, index-forward-seq's next-index
         ;;returns the next note in the same beat
         ;;so skip forward until the next full note is found.
-        next-index (loop [n0 (vals cursor-pos)]
+        ;;todo-this isn't  returned the  next note
+        next-index (loop [n0 (mapv #(cursor-pos %) [:score-part-index :row-index :bhaag-index :note-index :nsi])]
                      (let [n1 (get-in ndb [:composition :index-forward-seq n0])]
                        ;;note sub-index should be 0 for the next whole note
+                       (println " n0 " n0 " n1 "n1)
                        (cond
                          (nil? n1) n0 ;;at the end
                          (= 0 (last n1)) n1
@@ -168,13 +170,14 @@
         res (if next-index
           (zipmap [:score-part-index :row-index :bhaag-index :note-index :nsi] next-index)
           cursor-pos)]
-    (println " current pos " cursor-pos " next cursor " res)
+    (println " current pos " cursor-pos " next cursor " res " next-index " next-index)
     res))
 
 (defn move-cursor-backward
   "returns the index of the previous note group."
   [ndb ]
   (let [cursor-pos (get-in ndb [:props :cursor-pos ] )
+        ;;can't use vals any more - todo
         prev-index (get-in ndb [:composition :index-backward-seq (vals cursor-pos)])
         note-index (get-ns-index ndb)]
     (let [res
@@ -225,17 +228,27 @@
           [note-insert :next-note-cursor])]
     res))
 
+(defn cursor2vec
+  [cursor]
+  (mapv #(% cursor)
+        [:score-part-index :row-index :bhaag-index :note-index :nsi]))
+
+(defn cursor2map
+  [cursor-vec]
+  (zipmap [:score-part-index :row-index :bhaag-index :note-index :nsi] cursor-vec))
+
+
 (defn conj-svara
   [{:keys [db]} [_ {:keys [svara]}]]
    (let [cpos (get-in db [:props :cursor-pos ] )
          notes-per-beat (-> db :props :notes-per-beat)
-         prev-index (get-in db [:composition :index-backward-seq (vals cpos)])
+         prev-index (get-in db [:composition :index-backward-seq (cursor2vec cpos)])
          score-part-index (:score-part-index cpos)
          note-index
          (if (nil? prev-index)
            -1
            (db/get-noteseq-index
-            (zipmap [:score-part-index :row-index :bhaag-index :note-index :nsi] prev-index)
+            (cursor2map prev-index)
             (get-in db [:composition :taal])))
          [updated-ns updated-cursor] (update-noteseq
                                       {:note-index note-index :svara svara :notes-per-beat notes-per-beat
