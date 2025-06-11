@@ -187,45 +187,62 @@
             cursor-pos)]
       res)))
 
-(defn insert-note
-  [{:keys [note-index nsvara]} noteseq]
-  (if (= -1 note-index)
-    ;;insert note before rest of seq cos this is at 0 position
-    (into [{:notes [nsvara]}] noteseq)
-    (into (conj (subvec noteseq 0 (inc note-index)) {:notes [nsvara]})
-          (subvec noteseq (inc note-index)))))
+(defn full-avartan-notes
+  "return a noteseq of a full avartan, given the taal"
+  [taal]
+  (let [num-beats (:num-beats (taal-def taal))]
+    (vec (repeat num-beats {:notes [{:shruti [:madhyam :_]}]}))))
+
+(defn insert-notes
+  [{:keys [note-index nsvara taal]} noteseq]
+  (let [num-beats (:num-beats (taal-def taal))
+        balance (rem note-index (:num-beats (taal-def taal)))
+        _ (println " noteindex " note-index " balance " balance)
+        noteseq
+        (cond
+          (= -1 note-index)
+          ;;insert note before rest of seq cos this is at 0 position
+          (into [{:notes [nsvara]}] noteseq)
+          ;;before the last note, since note-index is zero-based index
+          (= balance (- num-beats 2))
+          (into (conj (vec (butlast noteseq)) {:notes [nsvara]}) (full-avartan-notes taal))
+          :else
+          (let [nnindex (inc (inc note-index))]
+            (println " from " [0 nnindex] " to ")
+            (into (conj (subvec noteseq 0 (inc note-index)) {:notes [nsvara]})
+                  (subvec noteseq nnindex))))]
+    noteseq))
 
 (defn update-noteseq
   "inserts a note into the noteseq and return a 2-tuple,
   the updated noteseq and the next note cursor"
-  [{:keys [note-index svara notes-per-beat cpos] :as imap} noteseq]
+  [{:keys [note-index svara notes-per-beat cpos taal] :as imap} noteseq]
   (let [ith-note (get-in noteseq [note-index])
-         nsvara (assoc svara :npb notes-per-beat)
-        note-insert (insert-note (assoc imap :nsvara nsvara) noteseq)
-         res
-        (if (> notes-per-beat 1)
+        nsvara (assoc svara :npb notes-per-beat)
+        note-insert (insert-notes (assoc imap :nsvara nsvara) noteseq)
+        res
+        (if (and (> notes-per-beat 1)
+                 (not= notes-per-beat (-> ith-note :notes count))
+                 (= notes-per-beat (-> ith-note :notes last :npb)))
           ;;2 states here: either adding the first note of a multi-note
           ;;if not the same as the last npb
-          (if
-              (and (not= notes-per-beat (-> ith-note :notes count))
-                   (= notes-per-beat (-> ith-note :notes last :npb)))
-            [(update-in noteseq [note-index :notes] conj nsvara)
-             (if (> notes-per-beat (-> ith-note :notes count))
-               ;;if multi-note will be full after this, stay on the same note
-               ;;don't increment the cursor
-               :cur-cursor
-               ;;increment just note-sub-index
-               (zipmap [:row-index :bhaag-index :note-index :nsi]
-                       (mapv (update-in cpos [:nsi] inc)
-                             [:row-index :bhaag-index :note-index :nsi])))]
-            [note-insert :next-note-cursor]
-            ;;otherwise append to multi-note
-            )
+          [(update-in noteseq [note-index :notes] conj nsvara)
+           (if (> notes-per-beat (-> ith-note :notes count))
+             ;;if multi-note will be full after this, stay on the same note
+             ;;don't increment the cursor
+             :cur-cursor
+             ;;increment just note-sub-index
+             (zipmap [:row-index :bhaag-index :note-index :nsi]
+                     (mapv (update-in cpos [:nsi] inc)
+                           [:row-index :bhaag-index :note-index :nsi])))]
           [note-insert :next-note-cursor])]
     res))
 
-
-
+(defn conj-bhaag
+  [noteseq taal]
+  (if (= 0 (rem (count noteseq) (:num-beats (taal-def taal))))
+    (into noteseq (full-avartan-notes taal))
+    noteseq))
 (defn conj-svara
   [{:keys [db]} [_ {:keys [svara]}]]
    (let [cpos (get-in db [:props :cursor-pos ] )
@@ -239,11 +256,13 @@
             (cursor2map prev-index)
             (get-in db [:composition :taal])))
          [updated-ns updated-cursor] (update-noteseq
-                                      {:note-index note-index :svara svara :notes-per-beat notes-per-beat
-                                       :cpos cpos }
+                                      {:note-index note-index :svara svara
+                                       :notes-per-beat notes-per-beat
+                                       :taal (-> db :composition :taal)
+                                       :cpos cpos}
                                       (get-in db [:composition :score-parts score-part-index :noteseq]))
-
-         _ (println " conj-svara new, old " [updated-ns (get-in db [:composition :score-parts score-part-index :noteseq])])
+         ;;updated-ns (conj-bhaag updated-ns (get-in db [:composition :taal]))
+         _ (println " updated-ns " updated-ns)
          ndb
          (-> db
              (update-in [:composition :score-parts score-part-index :noteseq] (constantly updated-ns))
@@ -952,10 +971,14 @@
            bpm beat-mode]
     :as imap
     :or {play-head-position 0 now 0}}]
-  (let [noteseq (:noteseq composition)
-        note-interval (/ 60 bpm)
-        taal (:taal composition )
+  (let [taal (:taal composition )
         num-beats (:num-beats (taal-def taal))
+        noteseq (->> (map :noteseq (-> composition :score-parts))
+                     #_(mapv #(into % (vec (repeat (- (rem (count %) num-beats))
+                                                 {:notes [{:shruti [:madhyam :_]}]}))))
+                     (reduce into))
+        _ (println " noteseq " noteseq)
+        note-interval (/ 60 bpm)
         metronome-on-at (set (->> taal-def taal
                                   :bhaags
                                   (reductions +) ;;[4 8 12 16]
@@ -964,9 +987,11 @@
                                   (into [1])))
         a0 (->>
             noteseq
-               (map vector (range))
-               (drop-while (fn[[note-index _]] (> play-head-position note-index)))
-               (map (fn[at x] (into [at] x))(range 0 (->> noteseq count inc) note-interval)))
+            (map vector (range))
+            (drop-while (fn[[note-index _]] (> play-head-position note-index)))
+            (map (fn[at x] (into [at] x))(range 0 (->> noteseq count inc) note-interval)))
+
+        _ (println " a0 " a0 )
            a1
            (->> a0
                 (map (fn[[at _ {:keys [notes]}]]
@@ -983,6 +1008,7 @@
                 (reduce into []))
            ;;find note indexes where duration should be long if followed by avagraha
            ;;returns a list of 2-tuples, where first is index and second is duration of note
+        _ (println " a1 " a1 )
         avagraha-note-indexes
         (->> a1
              (map vector (range))
@@ -1003,6 +1029,8 @@
               {:indx nil :duracc 0 :acc []})
              :acc
              (map (fn[[a b]] [(dec a) b])))
+
+        _ (println " a0 " a0)
         metro-tick-seq-0-offset
         (->> a0
              (map (fn[[at note-index {:keys [notes] :as ivec}]]
@@ -1029,6 +1057,7 @@
                 (into (if (= beat-mode :tabla)
                         tabla-beat-seq metro-tick-seq))
                 (sort-by second))]
+    (println " a1 " a1)
     a1))
 
 (defn play-start-event-fn
@@ -1129,17 +1158,18 @@
 
 (reg-event-fx
  ::register-elem
- (fn [{:keys [db]} [_ index {:keys [note-index nsi]} elem]]
+ (fn [{:keys [db]} [_ index {:keys [row-index note-index nsi] :as icursor} elem]]
+   ;;(println " register elem " index " cursor " icursor)
    {:db
     (let [ndb
-          (if (and (= 0 index) (= 0 nsi))
-                (-> (update-in db [:elem-index ] (constantly [elem]))
+          (if (every? #(= 0 %) (vals icursor))
+            (-> (update-in db [:elem-index ] (constantly [elem]))
                     (update-in [:bhaag-first-note] (constantly [index])))
                 (let [idb (update-in db [:elem-index ] conj elem)]
                   ;;first notes in a bhaag have note-index 0
                   (if (and (= 0 note-index) (= 0 nsi))
                     (do
-                      #_(println " register index " index " note-xy-map "note-xy-map)
+                      (println " register index " index " icursor " icursor)
                       (update-in idb [:bhaag-first-note] conj index))
                     idb)))]
       ndb)}))

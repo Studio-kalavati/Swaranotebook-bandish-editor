@@ -34,6 +34,18 @@
         res (+ a1 a2 note-index)]
     res))
 
+(defn get-avartan-index
+  "Assume a comp has 4 avartans in Teentaal.
+  Return a seq of 0,16, 32, 48 indicate the note numbers if they were played in succession. "
+  [{:keys [score-part-index row-index bhaag-index note-index] :as inp} score-parts taal]
+  (let [td (taal-def taal)
+        num-beats (:num-beats td)
+        a1 (* row-index num-beats)
+        a2 (mapv #(count (:noteseq %))score-parts)
+       ;; res (+ a1 a2 note-index)
+        ]
+    0))
+
 (defn make-index-seq
   "given a indexed sequence of notes, returns a flat sequence where each element is [row-index bhaag-index note-index note-sub-index],i.e the note indexes that can be used to retrieve a note  "
   [indexed-ns]
@@ -134,12 +146,10 @@
            {:notes [{:shruti [:madhyam :r]}] :lyrics "b"}
            {:notes [{:shruti [:madhyam :g]}] :lyrics "c"}
            {:notes [{:shruti [:madhyam :m]}] :lyrics "d"}
-           {:notes [{:shruti [:madhyam :s]}] :lyrics "a"}
-           {:notes [{:shruti [:madhyam :r]}] :lyrics "b"}
-           {:notes [{:shruti [:madhyam :g]}] :lyrics "c"}
-           {:notes [{:shruti [:madhyam :m]}] :lyrics "d"}
-           {:notes [{:shruti [:madhyam :p]}] :lyrics "e"}
-           {:notes [{:shruti [:madhyam :-]}]}
+           {:notes [{:shruti [:madhyam :_]}]}
+           {:notes [{:shruti [:madhyam :_]}]}
+           {:notes [{:shruti [:madhyam :_]}]}
+           {:notes [{:shruti [:madhyam :_]}]}
            ]
           taal-id :teentaal
           res
@@ -380,7 +390,7 @@
      :props :cursor-pos))
 
 (def default-db
-  (let [idb 
+  (let [idb
         (merge (comp-decorator init-comp)
                {:init-state {:cursor-color 0}
                 :dispinfo (merge dispinfo m-dispinfo)

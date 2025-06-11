@@ -995,7 +995,7 @@
                                                            :fill "#f83600"
                                                            :fill-opacity 0
                                                            ;;todo-uncomment
-                                                           #_:ref #_(when (identity %)
+                                                           :ref #(when (identity %)
                                                                    (let [opa "fill-opacity:0"
                                                                          opac (str opa
                                                                                    (if (and
@@ -1008,22 +1008,20 @@
                                                            :x (+ x1 (int (* 0.2 @font-size)))
                                                            :y (int (* 0.2 @font-size))}]))
                                             (let [curpos @(subscribe [::subs/get-click-index])]
-                                              (if (and (= 1 (:score-part-index curpos))
-                                                       (= 1 (:row-index curpos)))
-                                                (println " cursor match missing " (vector note-xy-map curpos)))
                                               (if (= note-xy-map curpos)
-                                                (update-in r3 [:images1] conj
-                                                           [:rect (assoc rect-style
-                                                                         :x (+ x1 5) :y 5
-                                                                         :height (int (* 1.3 @font-size))
-                                                                         :ref #(when (identity %)
-                                                                                 ;;when moving, don't blink
-                                                                                 ;;after its stationary start blinking
-                                                                                 (js/setTimeout
-                                                                                  (fn[]
-                                                                                    (.add (.-classList %)
-                                                                                          "blinking-cursor"))
-                                                                                  1000)))])
+                                                (do (println " curpos " curpos )
+                                                    (update-in r3 [:images1] conj
+                                                               [:rect (assoc rect-style
+                                                                             :x (+ x1 5) :y 5
+                                                                             :height (int (* 1.3 @font-size))
+                                                                             :ref #(when (identity %)
+                                                                                     ;;when moving, don't blink
+                                                                                     ;;after its stationary start blinking
+                                                                                     (js/setTimeout
+                                                                                      (fn[]
+                                                                                        (.add (.-classList %)
+                                                                                              "blinking-cursor"))
+                                                                                      1000)))]))
                                                 r3)))
                                           r3 (if-let [sah (get sah-list note-index)]
                                                (if (= nsi 0)
