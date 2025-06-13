@@ -187,22 +187,31 @@
             cursor-pos)]
       res)))
 
+(defn space-notes
+  [n]
+  (vec (repeat n {:notes [{:shruti [:madhyam :_]}]})))
+
 (defn full-avartan-notes
   "return a noteseq of a full avartan, given the taal"
   [taal]
   (let [num-beats (:num-beats (taal-def taal))]
-    (vec (repeat num-beats {:notes [{:shruti [:madhyam :_]}]}))))
+    (space-notes num-beats)))
 
 (defn insert-notes
   [{:keys [note-index nsvara taal]} noteseq]
   (let [num-beats (:num-beats (taal-def taal))
         balance (rem note-index (:num-beats (taal-def taal)))
-        _ (println " noteindex " note-index " balance " balance)
+        _ (println " noteindex " note-index " balance " balance " count " (count noteseq))
+        note-rem (rem (count noteseq) num-beats)
+        noteseq (if (= 0 note-rem) noteseq
+                    (into noteseq (space-notes (- num-beats note-rem))))
         noteseq
         (cond
           (= -1 note-index)
           ;;insert note before rest of seq cos this is at 0 position
           (into [{:notes [nsvara]}] noteseq)
+          #_(= 1 (- (count noteseq) note-index))
+          #_(into (conj (vec (butlast noteseq)) {:notes [nsvara]}) (full-avartan-notes taal))
           ;;before the last note, since note-index is zero-based index
           (= balance (- num-beats 2))
           (into (conj (vec (butlast noteseq)) {:notes [nsvara]}) (full-avartan-notes taal))
