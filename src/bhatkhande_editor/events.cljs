@@ -1167,19 +1167,18 @@
 
 (reg-event-fx
  ::register-elem
- (fn [{:keys [db]} [_ index {:keys [row-index note-index nsi] :as icursor} elem]]
-   ;;(println " register elem " index " cursor " icursor)
+ (fn [{:keys [db]} [_ index {:keys [row-index note-index nsi bhaag-index] :as icursor} elem]]
    {:db
     (let [ndb
           (if (every? #(= 0 %) (vals icursor))
-            (-> (update-in db [:elem-index ] (constantly [elem]))
-                    (update-in [:bhaag-first-note] (constantly [index])))
-                (let [idb (update-in db [:elem-index ] conj elem)]
+            (do
+              (-> (update-in db [:elem-index ] (constantly [elem]))
+                  (update-in [:avartan-first-note] (constantly [icursor]))))
+            (let [idb (update-in db [:elem-index ] conj elem)]
                   ;;first notes in a bhaag have note-index 0
-                  (if (and (= 0 note-index) (= 0 nsi))
+                  (if (and (= 0 note-index) (= 0 nsi) (= 0 bhaag-index))
                     (do
-                      (println " register index " index " icursor " icursor)
-                      (update-in idb [:bhaag-first-note] conj index))
+                      (update-in idb [:avartan-first-note] conj icursor))
                     idb)))]
       ndb)}))
 
@@ -1188,11 +1187,11 @@
 (reg-event-fx
  ::set-play-position
  [log-event]
- (fn [{:keys [db]} [_ nth-bhaag-to-play-from]]
-   (let [a1 ((:bhaag-first-note db) nth-bhaag-to-play-from)]
+ (fn [{:keys [db]} [_ nth-avartan-to-play-from]]
+   (let [a1 ((:avartan-first-note db) nth-avartan-to-play-from)]
      {:db
       (->
-       (update-in db [:nth-bhaag-to-play-from] (constantly nth-bhaag-to-play-from))
+       (update-in db [:nth-avartan-to-play-from] (constantly nth-avartan-to-play-from))
        (update-in [:play-head-position] (constantly a1)))})))
 
 (reg-event-fx

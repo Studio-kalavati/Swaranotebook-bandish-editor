@@ -206,9 +206,9 @@
    (:my-bandishes db)))
 
 (reg-sub
- ::bhaag-to-play-from
+ ::avartan-to-play-from
  (fn [db [_ _]]
-   (:nth-bhaag-to-play-from db)))
+   (:nth-avartan-to-play-from db)))
 
 (reg-sub
  ::play-head-position
@@ -217,6 +217,6 @@
 
 ;;number of bhaags to play in play mode
 (reg-sub
- ::max-num-bhaags
+ ::max-num-avartans
  (fn [db [_ _]]
-   (count (:bhaag-first-note db))))
+   (count (:avartan-first-note db))))

@@ -933,9 +933,7 @@
                                 ;;which can have multiple notes in it.
                                 nseq-index
                                 (db/get-noteseq-index
-                                 {:row-index row-index
-                                  :bhaag-index bhaag-index
-                                  :note-index note-index}
+                                 cursor-map
                                  (:taal comp))
                                 r2
                                 (->>
@@ -988,25 +986,28 @@
                                           ;;if play mode, add all rects
                                           r3
                                           (if play-mode?
-                                            (update-in r3 [:images1] conj
-                                                       (let [phi @(subscribe [::subs/play-head-position])]
-                                                         [:rect
-                                                          {:width (int (* 0.6 @font-size)) :height @font-size
-                                                           :fill "#f83600"
-                                                           :fill-opacity 0
-                                                           ;;todo-uncomment
-                                                           :ref #(when (identity %)
-                                                                   (let [opa "fill-opacity:0"
-                                                                         opac (str opa
-                                                                                   (if (and
-                                                                                        (= phi nseq-index)
-                                                                                        (= 0 nsi))
-                                                                                     ".5" ""))]
-                                                                     (set! (.-style %) opac)
-                                                                     (dispatch [::events/register-elem
-                                                                                nseq-index note-xy-map %])))
-                                                           :x (+ x1 (int (* 0.2 @font-size)))
-                                                           :y (int (* 0.2 @font-size))}]))
+                                            (update-in
+                                             r3 [:images1] conj
+                                             (let [phi @(subscribe [::subs/play-head-position])]
+                                               [:rect
+                                                {:width (int (* 0.6 @font-size)) :height @font-size
+                                                 :fill "#f83600"
+                                                 :fill-opacity 0
+                                                 ;;todo-uncomment
+                                                 :ref
+                                                 #(when (identity %)
+                                                    (let [opa "fill-opacity:0"
+                                                          opac (str opa
+                                                                    (if (= phi
+                                                                           (assoc cursor-map
+                                                                                  :note-index note-index
+                                                                                  :nsi nsi))
+                                                                      ".5" ""))]
+                                                      (set! (.-style %) opac)
+                                                      (dispatch [::events/register-elem
+                                                                 nseq-index note-xy-map %])))
+                                                 :x (+ x1 (int (* 0.2 @font-size)))
+                                                 :y (int (* 0.2 @font-size))}]))
                                             (let [curpos @(subscribe [::subs/get-click-index])]
                                               (if (= note-xy-map curpos)
                                                 (do (println " curpos " curpos )
@@ -1271,8 +1272,8 @@
                                           (zmdi-butn2 "zmdi zmdi-settings zmdi-hc-2x"
                                                       #(do (reset! show-settings? true)))])
               mobile? @(subscribe[::bp/mobile?])
-              slider-play-head [slider :model (or @(subscribe [::subs/bhaag-to-play-from]) 0)
-                                :max (dec @(subscribe [::subs/max-num-bhaags]))
+              slider-play-head [slider :model (or @(subscribe [::subs/avartan-to-play-from]) 0)
+                                :max (dec @(subscribe [::subs/max-num-avartans]))
                                 :style {:align-self :center :height (if mobile? "3vh" "")}
                                 :width (if mobile? "80vw" "max(25vw,150px)")
                                 :on-change #(do
