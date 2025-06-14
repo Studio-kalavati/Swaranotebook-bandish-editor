@@ -975,7 +975,8 @@
   [{:keys [composition play-head-position now
            bpm beat-mode]
     :as imap
-    :or {play-head-position 0 now 0}}]
+    :or {play-head-position (zipmap cursor-index-keys [0 0 0 0 0])
+         now 0}}]
   (let [taal (:taal composition )
         num-beats (:num-beats (taal-def taal))
         noteseq (->> (map :noteseq (-> composition :score-parts))
@@ -1064,6 +1065,7 @@
   [{:keys [db]} now]
   (let [bpm (-> db :props :bpm)
         note-interval (/ 60 bpm)
+        _ (println "php "(:play-head-position db))
         play-head-position
         (->> db :composition :index
              (keep-indexed

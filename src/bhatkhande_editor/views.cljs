@@ -330,8 +330,10 @@
                            :state (constantly false)})
             play-btn (zmdi-box-button
                       "zmdi zmdi-hc-lg zmdi-play-circle"
-                      {:disp-fn #(do (dispatch [::events/set-mode :play])
-                                     (reset-keydown-rules))
+                      {:disp-fn
+                       #(let []
+                          (dispatch [::events/set-mode :play])
+                          (reset-keydown-rules))
                        :state (constantly false)})
             swaras-3oct (swar36 @(subscribe [::subs/raga]))]
         [:div
@@ -1277,7 +1279,7 @@
                                 :style {:align-self :center :height (if mobile? "3vh" "")}
                                 :width (if mobile? "80vw" "max(25vw,150px)")
                                 :on-change #(do
-                                              (println " bi " %)
+                                              (println " sph " (or % 0))
                                               (dispatch [::events/set-play-position (or % 0)]))]]
           [v-box :children
            [(when-not @(subscribe [::subs/playing?])
