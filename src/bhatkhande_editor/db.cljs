@@ -371,6 +371,8 @@
 (def pitch-options-list
   (mapv #(assoc {} :id %1 :label %2 :sample %3) (range 0 12) pitch-sharps-list
         pitch-s-list))
+(def cursor-index-keys
+  [:score-part-index :row-index :bhaag-index :note-index :nsi])
 
 (defn comp-decorator
   [comp0]
@@ -382,7 +384,7 @@
              [:cursor-pos]
              (constantly
               (let [in (-> comp :index last)]
-                (zipmap [:score-part-index :row-index :bhaag-index :note-index :nsi] in ))))}))
+                (zipmap cursor-index-keys in ))))}))
 
 (=
  {:score-part-index 1, :row-index 0, :bhaag-index 1, :note-index 0, :nsi 0}

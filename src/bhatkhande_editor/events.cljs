@@ -6,7 +6,7 @@
     :refer [reg-event-db reg-event-fx
             dispatch]]
    [chronoid.core :as c]
-   [bhatkhande-editor.db :as db :refer [pitch-s-list]]
+   [bhatkhande-editor.db :as db :refer [pitch-s-list cursor-index-keys]]
    [bhatkhande-editor.utils :as utils :refer [json-onload cursor2vec cursor2map]]
    ["firebase/app" :default firebase]
    ["firebase/auth" :default fbauth]
@@ -159,16 +159,15 @@
         ;;returns the next note in the same beat
         ;;so skip forward until the next full note is found.
         ;;todo-this isn't  returned the  next note
-        next-index (loop [n0 (mapv #(cursor-pos %) [:score-part-index :row-index :bhaag-index :note-index :nsi])]
+        next-index (loop [n0 (mapv #(cursor-pos %) cursor-index-keys)]
                      (let [n1 (get-in ndb [:composition :index-forward-seq n0])]
                        ;;note sub-index should be 0 for the next whole note
-                       (println " n0 " n0 " n1 "n1)
                        (cond
                          (nil? n1) n0 ;;at the end
                          (= 0 (last n1)) n1
                          :else (recur n1))))
         res (if next-index
-          (zipmap [:score-part-index :row-index :bhaag-index :note-index :nsi] next-index)
+          (zipmap cursor-index-keys next-index)
           cursor-pos)]
     res))
 
@@ -201,7 +200,6 @@
   [{:keys [note-index nsvara taal]} noteseq]
   (let [num-beats (:num-beats (taal-def taal))
         balance (rem note-index (:num-beats (taal-def taal)))
-        _ (println " noteindex " note-index " balance " balance " count " (count noteseq))
         note-rem (rem (count noteseq) num-beats)
         noteseq (if (= 0 note-rem) noteseq
                     (into noteseq (space-notes (- num-beats note-rem))))
@@ -217,7 +215,6 @@
           (into (conj (vec (butlast noteseq)) {:notes [nsvara]}) (full-avartan-notes taal))
           :else
           (let [nnindex (inc (inc note-index))]
-            (println " from " [0 nnindex] " to ")
             (into (conj (subvec noteseq 0 (inc note-index)) {:notes [nsvara]})
                   (subvec noteseq nnindex))))]
     noteseq))
@@ -271,7 +268,6 @@
                                        :cpos cpos}
                                       (get-in db [:composition :score-parts score-part-index :noteseq]))
          ;;updated-ns (conj-bhaag updated-ns (get-in db [:composition :taal]))
-         _ (println " updated-ns " updated-ns)
          ndb
          (-> db
              (update-in [:composition :score-parts score-part-index :noteseq] (constantly updated-ns))
@@ -984,9 +980,8 @@
         num-beats (:num-beats (taal-def taal))
         noteseq (->> (map :noteseq (-> composition :score-parts))
                      #_(mapv #(into % (vec (repeat (- (rem (count %) num-beats))
-                                                 {:notes [{:shruti [:madhyam :_]}]}))))
+                                                   {:notes [{:shruti [:madhyam :_]}]}))))
                      (reduce into))
-        _ (println " noteseq " noteseq)
         note-interval (/ 60 bpm)
         metronome-on-at (set (->> taal-def taal
                                   :bhaags
@@ -1000,24 +995,22 @@
             (drop-while (fn[[note-index _]] (> play-head-position note-index)))
             (map (fn[at x] (into [at] x))(range 0 (->> noteseq count inc) note-interval)))
 
-        _ (println " a0 " a0 )
-           a1
-           (->> a0
-                (map (fn[[at _ {:keys [notes]}]]
-                       ;;make 0 based to 1 based index
-                       (let [notseq
-                             (if (= 1 (count notes))
-                               [[(-> notes first :shruti) (+ now at) note-interval]]
-                               ;;if many notes in one beat, schedule them to play at equal intervals
-                               (let [sub-note-intervals (/ note-interval (-> notes count))]
-                                 (mapv (fn[a b] [a (+ now b) sub-note-intervals])
-                                       (map :shruti notes)
-                                       (range at (+ at note-interval) sub-note-intervals))))]
-                         notseq)))
-                (reduce into []))
-           ;;find note indexes where duration should be long if followed by avagraha
-           ;;returns a list of 2-tuples, where first is index and second is duration of note
-        _ (println " a1 " a1 )
+        a1
+        (->> a0
+             (map (fn[[at _ {:keys [notes]}]]
+                    ;;make 0 based to 1 based index
+                    (let [notseq
+                          (if (= 1 (count notes))
+                            [[(-> notes first :shruti) (+ now at) note-interval]]
+                            ;;if many notes in one beat, schedule them to play at equal intervals
+                            (let [sub-note-intervals (/ note-interval (-> notes count))]
+                              (mapv (fn[a b] [a (+ now b) sub-note-intervals])
+                                    (map :shruti notes)
+                                    (range at (+ at note-interval) sub-note-intervals))))]
+                      notseq)))
+             (reduce into []))
+        ;;find note indexes where duration should be long if followed by avagraha
+        ;;returns a list of 2-tuples, where first is index and second is duration of note
         avagraha-note-indexes
         (->> a1
              (map vector (range))
@@ -1039,7 +1032,6 @@
              :acc
              (map (fn[[a b]] [(dec a) b])))
 
-        _ (println " a0 " a0)
         metro-tick-seq-0-offset
         (->> a0
              (map (fn[[at note-index {:keys [notes] :as ivec}]]
@@ -1066,20 +1058,24 @@
                 (into (if (= beat-mode :tabla)
                         tabla-beat-seq metro-tick-seq))
                 (sort-by second))]
-    (println " a1 " a1)
     a1))
 
 (defn play-start-event-fn
   [{:keys [db]} now]
   (let [bpm (-> db :props :bpm)
         note-interval (/ 60 bpm)
-        play-head-position (:play-head-position db)
+        play-head-position
+        (->> db :composition :index
+             (keep-indexed
+              (fn[indx i]
+                (let [cursor-vals (mapv (:play-head-position db) cursor-index-keys)]
+                  (when (= i cursor-vals) indx))))
+             first)
         ;;play-head-position refers to whole notes (e.g 5 /16)
         ;;but if the notes have dugun/tigun, we need the number of actual notes.
         ;;for each if each note is dugun,
         ;;if play-head-position is 4, then play-head-subnotes-position is 8
-        play-head-subnotes-position (->> db :composition :noteseq (take play-head-position)
-                                         (map (comp count :notes)) (apply + ))
+        ;;play-head-subnotes-position (->> db :composition :noteseq (take play-head-position) (map (comp count :notes)) (apply + ))
         a1 (get-play-at-time-seq {:composition (->> db :composition)
                                   :beat-mode (-> db :props :beat-mode)
                                   :bpm bpm
@@ -1124,7 +1120,7 @@
          :num-notes (count a1)
          :bhaag-index 0
          :elem-index (if (> play-head-position 0)
-                       (let [r (subvec (:elem-index db) play-head-subnotes-position)]
+                       (let [r (subvec (:elem-index db) play-head-position)]
                          r)
                        (:elem-index db))
          ;;translates the play-note index to the view-note index
