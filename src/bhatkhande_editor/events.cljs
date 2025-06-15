@@ -6,7 +6,7 @@
     :refer [reg-event-db reg-event-fx
             dispatch]]
    [chronoid.core :as c]
-   [bhatkhande-editor.db :as db :refer [pitch-s-list cursor-index-keys]]
+   [bhatkhande-editor.db :as db :refer [pitch-s-list cursor-index-keys space-notes]]
    [bhatkhande-editor.utils :as utils :refer [json-onload cursor2vec cursor2map]]
    ["firebase/app" :default firebase]
    ["firebase/auth" :default fbauth]
@@ -185,10 +185,6 @@
                           prev-index))
             cursor-pos)]
       res)))
-
-(defn space-notes
-  [n]
-  (vec (repeat n {:notes [{:shruti [:madhyam :_]}]})))
 
 (defn full-avartan-notes
   "return a noteseq of a full avartan, given the taal"

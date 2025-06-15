@@ -131,33 +131,33 @@
     {:index-forward-seq index-forward-seq
      :index-backward-seq index-backward-seq}))
 
+(defn space-notes
+  [n]
+  (vec (repeat n {:notes [{:shruti [:madhyam :_]}]})))
+
 (def init-comp
-    (let [noteseq
+    (let [inoteseq
           [
            {:notes [{:shruti [:madhyam :s]}] :lyrics "a"}
            {:notes [{:shruti [:madhyam :r]}] :lyrics "b"}
            {:notes [{:shruti [:madhyam :g]}] :lyrics "c"}
            {:notes [{:shruti [:madhyam :m]}] :lyrics "d"}
-           {:notes [{:shruti [:madhyam :s]}] :lyrics "a"}
-           {:notes [{:shruti [:madhyam :r]}] :lyrics "b"}
-           {:notes [{:shruti [:madhyam :g]}] :lyrics "c"}
-           {:notes [{:shruti [:madhyam :m]}] :lyrics "d"}
-           {:notes [{:shruti [:madhyam :s]}] :lyrics "a"}
-           {:notes [{:shruti [:madhyam :r]}] :lyrics "b"}
-           {:notes [{:shruti [:madhyam :g]}] :lyrics "c"}
-           {:notes [{:shruti [:madhyam :m]}] :lyrics "d"}
-           {:notes [{:shruti [:madhyam :_]}]}
-           {:notes [{:shruti [:madhyam :_]}]}
-           {:notes [{:shruti [:madhyam :_]}]}
-           {:notes [{:shruti [:madhyam :_]}]}
+           {:notes [{:shruti [:madhyam :p]}] :lyrics "a"}
+           {:notes [{:shruti [:madhyam :d]}] :lyrics "b"}
+           {:notes [{:shruti [:madhyam :n]}] :lyrics "c"}
+           {:notes [{:shruti [:taar :s]}] :lyrics "d"}
            ]
           taal-id :teentaal
+          noteseq
+          (into inoteseq (space-notes (- (:num-beats (taal-def taal-id))
+                                         (count inoteseq))))
           res
           {:score-parts [{:part-num 0 :part-title "sthayi"
                           :noteseq noteseq}
                          {:part-num 1 :part-title "antara"
-                          :noteseq (vec (rest (rest noteseq)))}
-                         ]
+                          :noteseq (into (vec (reverse inoteseq) )
+                                         (space-notes (- (:num-beats (taal-def taal-id))
+                                                         (count inoteseq))))}]
            :taal taal-id}]
       res))
 (=
@@ -377,13 +377,13 @@
 (defn comp-decorator
   [comp0]
   (let [comp (add-indexes comp0)]
-    (println " ;;; " (keys comp))
+    (println " ;;; " (->> comp :index (drop 8) first))
     {:composition comp
      :props (update-in
              default-props
              [:cursor-pos]
              (constantly
-              (let [in (-> comp :index last)]
+              (let [in (->> comp :index (drop 8) first)]
                 (zipmap cursor-index-keys in ))))}))
 
 (=
