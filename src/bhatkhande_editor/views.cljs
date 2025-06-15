@@ -915,21 +915,15 @@
                 (let [cursor-map {:score-part-index score-part-index
                                   :row-index row-index
                                   :bhaag-index bhaag-index}
-                      nsindex (db/get-noteseq-index
-                               {:row-index row-index
-                                :bhaag-index bhaag-index
-                                :note-index 0}
-                               (:taal comp))
-                      sahitya (get-in comp [:noteseq nsindex :lyrics])
-                      sah-list (when sahitya (clojure.string/split sahitya #","))
+                      sahitya (->> (get-in comp [:indexed-noteseq score-part-index row-index bhaag-index]))
+                      sah-list (when sahitya (mapv :lyrics sahitya))
                       r3
                       (->>
                        note-map-seq
                        (map vector (range))
                        (reduce
                         (fn[{:keys [x _] :as acc} [note-index note]]
-                          (let [
-                                ;;this is the flat noteseq index.
+                          (let [;;this is the flat noteseq index.
                                 ;;example: at position 11, we find
                                 ;;11  --  {:notes [{:svara [:madhyam :m+], :npb 3} {:svara [:madhyam :g], :npb 3} {:svara [:madhyam :r], :npb 3}]}
                                 ;;which can have multiple notes in it.
