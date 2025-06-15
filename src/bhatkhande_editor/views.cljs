@@ -56,7 +56,7 @@
   (let [com (if (= :custom raga-id)
               @(subscribe [::subs/custom-svaras])
               (remove (varjit-svaras raga-id) mswaras))
-        fnx (fn[saptak] (mapv #(assoc {} :shruti (vector saptak %)) com))
+        fnx (fn[saptak] (mapv #(assoc {} :svara (vector saptak %)) com))
         res [(fnx :mandra) (fnx :madhyam) (fnx :taar)]]
     res))
 
@@ -86,13 +86,13 @@
 
 (defn mk-button
   ([swaralem] (mk-button {} swaralem))
-  ([style {:keys [shruti] :as sh}]
+  ([style {:keys [svara] :as sh}]
    (let [msmap @(subscribe [::subs/swaramap])
-         m2 (msmap (second shruti))]
+         m2 (msmap (second svara))]
      (butn2 m2
             #(do
                ;;since on IOS it needs a button press to start the audio context
-               (dispatch-sync [::events/play-svara shruti])
+               (dispatch-sync [::events/play-svara svara])
                (dispatch [::events/conj-svara {:svara sh}]))
             {:style (merge style {:width "100%"})}))))
 
@@ -141,8 +141,8 @@
   (let [nseq (:noteseq compdata)
         res {:score {:part {:noteseq
                         (mapv (fn[{:keys [notes lyrics]}]
-                                (let [iret {:notes (mapv (fn[{:keys [shruti]}]
-                                                           {:svara shruti}) notes)}]
+                                (let [iret {:notes (mapv (fn[{:keys [svara]}]
+                                                           {:svara svara}) notes)}]
                                   (if lyrics
                                     (assoc iret :lyrics lyrics)
                                     iret)))
@@ -861,8 +861,8 @@
                                              :style {:flex-flow "row wrap"}
                                              :class "last-bar"
                                              :children [menu-btn file-btn save-btn
-                                                        (mk-button {:shruti [:madhyam :-]})
-                                                        (mk-button {:shruti [:madhyam :a]})
+                                                        (mk-button {:svara [:madhyam :-]})
+                                                        (mk-button {:svara [:madhyam :a]})
                                                         (zmdi-butn2 "zmdi zmdi-tag-close zmdi-hc-lg"
                                                                     #(dispatch [::events/delete-single-swara]))]]])]]])]]]))))
 
@@ -931,7 +931,7 @@
                           (let [
                                 ;;this is the flat noteseq index.
                                 ;;example: at position 11, we find
-                                ;;11  --  {:notes [{:shruti [:madhyam :m+], :npb 3} {:shruti [:madhyam :g], :npb 3} {:shruti [:madhyam :r], :npb 3}]}
+                                ;;11  --  {:notes [{:svara [:madhyam :m+], :npb 3} {:svara [:madhyam :g], :npb 3} {:svara [:madhyam :r], :npb 3}]}
                                 ;;which can have multiple notes in it.
                                 nseq-index
                                 (db/get-noteseq-index
@@ -944,11 +944,11 @@
                                  (map vector (range))
                                  (reduce
                                   (fn[{:keys [x1 _] :as acc1}
-                                      [nsi {:keys [shruti]}]]
+                                      [nsi {:keys [svara]}]]
                                     ;;create all notes in a single beat.
                                     (let [note-xy-map (assoc cursor-map :nsi nsi :note-index note-index)
                                           ith-note
-                                          (if-let [ival (image-map shruti)]
+                                          (if-let [ival (image-map svara)]
                                             [:image
                                              {:height @font-size :width @font-size
                                               :href ival
@@ -979,7 +979,7 @@
                                                     (fn[_]
                                                       (dispatch [::events/set-click-index
                                                                  note-xy-map]))}
-                                             (name (second shruti))])
+                                             (name (second svara))])
                                           r3 (-> acc1
                                                  (update-in [:images1] conj ith-note)
                                                  (update-in [:x1] + (int (* 0.7 @font-size))))

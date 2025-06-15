@@ -110,10 +110,10 @@
 
 (reg-event-fx
  ::play-svara
- (fn [{:keys [db]} [_ shruti]]
+ (fn [{:keys [db]} [_ svara]]
    (if (:audio-context db)
      (let [audctx (:audio-context db)
-           buf (@(:note-buffers db) shruti)
+           buf (@(:note-buffers db) svara)
            absn (new js/AudioBufferSourceNode audctx
                      #js {"buffer" buf})]
        (if audctx
@@ -144,7 +144,7 @@
               :madhyam
               (or (-> db :props :note-octave) :madhyam)) svara]]
        [[::conj-svara {:svara
-                       {:shruti mod-svara}}]
+                       {:svara mod-svara}}]
         [::play-svara mod-svara]])}))
 
 (reg-event-fx
@@ -976,8 +976,6 @@
   (let [taal (:taal composition )
         num-beats (:num-beats (taal-def taal))
         noteseq (->> (map :noteseq (-> composition :score-parts))
-                     #_(mapv #(into % (vec (repeat (- (rem (count %) num-beats))
-                                                   {:notes [{:shruti [:madhyam :_]}]}))))
                      (reduce into))
         note-interval (/ 60 bpm)
         metronome-on-at (set (->> taal-def taal
@@ -998,11 +996,11 @@
                     ;;make 0 based to 1 based index
                     (let [notseq
                           (if (= 1 (count notes))
-                            [[(-> notes first :shruti) (+ now at) note-interval]]
+                            [[(-> notes first :svara) (+ now at) note-interval]]
                             ;;if many notes in one beat, schedule them to play at equal intervals
                             (let [sub-note-intervals (/ note-interval (-> notes count))]
                               (mapv (fn[a b] [a (+ now b) sub-note-intervals])
-                                    (map :shruti notes)
+                                    (map :svara notes)
                                     (range at (+ at note-interval) sub-note-intervals))))]
                       notseq)))
              (reduce into []))
