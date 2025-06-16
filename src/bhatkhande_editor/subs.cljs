@@ -121,12 +121,8 @@
 
 (reg-sub
  ::get-sahitya
- (fn [db [_ [row-index bhaag-index]]]
-   (let [indx (db/get-noteseq-index {:row-index row-index
-                                     :bhaag-index bhaag-index
-                                     :note-index 0}
-                                    (get-in db [:composition :taal]))]
-     (-> db (get-in [:composition :noteseq indx :lyrics])))))
+ (fn [db [_ cmap]]
+   (db/get-sahitya (-> db :composition) cmap)))
 
 (reg-sub
  ::get-note-pos

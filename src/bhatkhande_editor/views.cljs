@@ -30,7 +30,7 @@
    [clojure.string :as cstring]
    [bhatkhande-editor.events :as events]
    [bhatkhande-editor.routes :as routes]
-   [bhatkhande-editor.db :as db :refer [mswaras pitch-options-list]]
+   [bhatkhande-editor.db :as db :refer [mswaras pitch-options-list get-sahitya]]
    [bhatkhande-editor.subs :as subs]))
 
 (def editor-height (reagent/atom 0))
@@ -254,22 +254,22 @@
                                 ;;all shuddha svaras true
                                 default-custom-svaras)
         menu-btn [box
-         :size "auto"
-         :align-self :stretch
-         :style {:flex "1 1 0px" }
-         :child [:button
-                 {:style {:width "100%"
-                          ;; :background-color "coral"
-                          }
-                  :class "btn btn-lg"
-                  :on-click
-                  #(do
-                     (dispatch [::events/set-active-panel :menu-panel]))}
-                 [:i {:class "zmdi zmdi-menu zmdi-hc-2x"}]]]
+                  :size "auto"
+                  :align-self :stretch
+                  :style {:flex "1 1 0px" }
+                  :child [:button
+                          {:style {:width "100%"
+                                   ;; :background-color "coral"
+                                   }
+                           :class "btn btn-lg"
+                           :on-click
+                           #(do
+                              (dispatch [::events/set-active-panel :menu-panel]))}
+                          [:i {:class "zmdi zmdi-menu zmdi-hc-2x"}]]]
         transparent-style {:background-color :transparent}
         file-btn (zmdi-butn2 transparent-style
                              "zmdi zmdi-file-text zmdi-hc-lg"
-                    #(reset! show-file-popup? true))]
+                             #(reset! show-file-popup? true))]
     (set-keydown-rules)
     (fn []
       (let [speed-switch-fn (fn[i] {:disp-fn #(dispatch [::events/notes-per-beat i])
@@ -282,11 +282,11 @@
             save-btn
             (if @(subscribe [::subs/save-possible?])
               (zmdi-butn2 transparent-style "zmdi zmdi-floppy zmdi-hc-lg"
-               #(dispatch [::events/upsert-comp]))
+                          #(dispatch [::events/upsert-comp]))
               (zmdi-butn2 transparent-style "zmdi zmdi-cloud-upload zmdi-hc-lg"
-               #(if logged-in?
-                  (reset! show-title-popup? true)
-                  (reset! show-login-popup? true))))
+                          #(if logged-in?
+                             (reset! show-title-popup? true)
+                             (reset! show-login-popup? true))))
             lang-btn
             (box-button
              rag-box-style
@@ -373,45 +373,45 @@
                           :style {:style {:min-width "min(80vw,600px)"}}
                           :child
                           [v-box
-                            :gap      "0.5vh"
-                            :class "body"
+                           :gap      "0.5vh"
+                           :class "body"
                            :style {:max-height "90vh"
                                    :overflow-y :scroll}
-                            :children
-                            [(asjc-hbox {:width "550px"}
-                                        [[box :style {:width "250px"}
-                                          :child [:b "To type"]]
-                                         [box :style {:width "250px"}
-                                          :child [:b "Use keystroke"]]])
-                             (bfn "Shuddha Svaras" "s, r, g, m, p, d, n")
-                             (bfn "Komal Svaras" "Shift+r, Shift+g, Shift+d, Shift+n")
-                             (bfn "Tivra Madhyam" "Shift+m")
-                             (bfn "Avagraha (S)" "a")
-                             (bfn "Vishram" "-")
-                             (bfn "(Shift to) higher octave" "u/U")
-                             (bfn "(Shift to) lower octave" "l/L")
-                             (bfn "1 note per beat" "1")
-                             (bfn "2 notes per beat (dugun)" "2")
-                             (bfn "3 notes per beat (tigun)" "3")
-                             (bfn "4 notes per beat (chaugun)" "4")
-                             (bfn "Move cursor left" "<- (left)")
-                             (bfn "Move cursor right" "-> (right)")
-                             (bfn "Delete backward" "Backspace")
-                             (bfn "Select (to copy)" "Shift + ->, Shift + <-")
-                             (bfn "Copy" "Ctrl + c")
-                             (bfn "Paste" "Ctrl + v")
-                             (bfn "Cut" "Ctrl + x")
-                             (bfn "Deselect" "Esc")
-                             [gap :size "2vh"]
-                             [box
-                              :align :center
-                              :child
-                              [button
-                               :label "  OK  "
-                               :style {:width "100px"}
-                               :class "btn-hc-lg btn-primary "
-                               :on-click #(do (reset! show-keyboard-help? false))]]
-                             [gap :size "2vh"]]]
+                           :children
+                           [(asjc-hbox {:width "550px"}
+                                       [[box :style {:width "250px"}
+                                         :child [:b "To type"]]
+                                        [box :style {:width "250px"}
+                                         :child [:b "Use keystroke"]]])
+                            (bfn "Shuddha Svaras" "s, r, g, m, p, d, n")
+                            (bfn "Komal Svaras" "Shift+r, Shift+g, Shift+d, Shift+n")
+                            (bfn "Tivra Madhyam" "Shift+m")
+                            (bfn "Avagraha (S)" "a")
+                            (bfn "Vishram" "-")
+                            (bfn "(Shift to) higher octave" "u/U")
+                            (bfn "(Shift to) lower octave" "l/L")
+                            (bfn "1 note per beat" "1")
+                            (bfn "2 notes per beat (dugun)" "2")
+                            (bfn "3 notes per beat (tigun)" "3")
+                            (bfn "4 notes per beat (chaugun)" "4")
+                            (bfn "Move cursor left" "<- (left)")
+                            (bfn "Move cursor right" "-> (right)")
+                            (bfn "Delete backward" "Backspace")
+                            (bfn "Select (to copy)" "Shift + ->, Shift + <-")
+                            (bfn "Copy" "Ctrl + c")
+                            (bfn "Paste" "Ctrl + v")
+                            (bfn "Cut" "Ctrl + x")
+                            (bfn "Deselect" "Esc")
+                            [gap :size "2vh"]
+                            [box
+                             :align :center
+                             :child
+                             [button
+                              :label "  OK  "
+                              :style {:width "100px"}
+                              :class "btn-hc-lg btn-primary "
+                              :on-click #(do (reset! show-keyboard-help? false))]]
+                            [gap :size "2vh"]]]
                           ]))
                      (when @show-file-popup?
                        [modal-panel
@@ -437,7 +437,7 @@
                                    pitch @(subscribe [::subs/pitch])
                                    ctitle @(subscribe [::subs/comp-title])]
                                [:button {:class "btn btn-lg" :download "something.json"
-                                    :on-click #(download-link comp (or ctitle "composition"))}
+                                         :on-click #(download-link comp (or ctitle "composition"))}
                                 [:i {:class "zmdi zmdi-download zmdi-hc-lg"}]])])
                            [gap :size "4vh"]
                            (asjc-hbox
@@ -744,11 +744,10 @@
                                          (reset! show-raga-popup
                                                  (not @show-raga-popup)))
                                       :class "btn btn-default"]]]]]]))
-                     (when-let [{:keys [row-index bhaag-index]}
+                     (when-let [{:keys [score-part-index avartan-index bhaag-index] :as cmap}
                                 @(subscribe [::subs/show-lyrics-popup])]
                        (let [text-val
-                             @(subscribe [::subs/get-sahitya
-                                          [row-index bhaag-index]])
+                             @(subscribe [::subs/get-sahitya cmap])
                              tval (reagent/atom text-val)]
                          [modal-panel
                           :backdrop-on-click #(dispatch [::events/hide-lyrics-popup])
@@ -781,9 +780,7 @@
                                        :on-click
                                        #(do
                                           (dispatch [::events/conj-sahitya
-                                                     {:text-val @tval
-                                                      :bhaag-index bhaag-index
-                                                      :row-index row-index}])
+                                                     (assoc cmap :text-val @tval)])
                                           (dispatch [::events/hide-lyrics-popup]))]
                                       [gap :size "2vh"]
                                       [button :label " Next "
@@ -793,9 +790,9 @@
                                           (dispatch [::events/conj-sahitya
                                                      {:text-val @tval
                                                       :bhaag-index bhaag-index
-                                                      :row-index row-index}])
+                                                      :avartan-index avartan-index}])
                                           (dispatch [::events/next-bhaag-lyrics-popup
-                                                     {:row-index row-index
+                                                     {:avartan-index avartan-index
                                                       :bhaag-index bhaag-index}]))]]]]]]]))
                      (if (= :hide @(subscribe [::subs/onscreen-keyboard]))
                        [v-box
@@ -909,14 +906,15 @@
                              "english_SrR")))
               draw-bhaag
               (fn[score-part-index
-                  row-index
+                  avartan-index
                   bhaag-index
                   note-map-seq]
                 (let [cursor-map {:score-part-index score-part-index
-                                  :row-index row-index
+                                  :avartan-index avartan-index
                                   :bhaag-index bhaag-index}
-                      sahitya (->> (get-in comp [:indexed-noteseq score-part-index row-index bhaag-index]))
-                      sah-list (when sahitya (mapv :lyrics sahitya))
+
+                      sahitya (->> (get-in comp [:indexed-noteseq score-part-index avartan-index bhaag-index]))
+                      sah-list (get-sahitya comp cursor-map)
                       r3
                       (->>
                        note-map-seq
@@ -1085,13 +1083,11 @@
 
                             r8))
                         {:x 5 :images []}))
-
                       images
-                      ;;todo-uncomment
-                      (if false ;;show-lyrics?
+                      (if show-lyrics?
                         (-> (:images r3)
                             (into (let [tv @(subscribe [::subs/get-sahitya
-                                                        [row-index bhaag-index]])]
+                                                        [avartan-index bhaag-index]])]
                                     [[:defs
                                       [:linearGradient {:id "sahitya-fill"}
                                        [:stop {:offset "0%" :stop-color "gray"}]
@@ -1109,9 +1105,8 @@
                                        :on-click
                                        (fn[_]
                                          (dispatch [::events/show-lyrics-popup
-                                                    {:row-index row-index
-                                                     :text-val (if tv tv "")
-                                                     :bhaag-index bhaag-index}]))}]])))
+                                                    (assoc cursor-map
+                                                     :text-val (if tv tv ""))]))}]])))
                         (:images r3))
                       x-end (:x r3)]
                   ;;add vertical bars for bhaag
@@ -1135,12 +1130,12 @@
                     (let [score-res
                           (->> score-part
                                (map-indexed
-                                (fn[row-index row]
+                                (fn[avartan-index row]
                                   (let [res0
                                         (->> (map-indexed
                                               (fn[bhaag-index bhaag]
                                                 (let [{:keys [images x]}
-                                                      (draw-bhaag score-part-index row-index bhaag-index bhaag)
+                                                      (draw-bhaag score-part-index avartan-index bhaag-index bhaag)
                                                       res [:div {:class "bhaag-item" :style
                                                                  (merge
                                                                   {:max-width (+ x (int (* @font-size 0.7))) }

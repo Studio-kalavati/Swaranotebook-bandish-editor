@@ -26,10 +26,10 @@
 (defn get-noteseq-index
   "given a multi-index of row,bhaag and note,
   returns the index of the note in noteseq.  "
-  [{:keys [row-index bhaag-index note-index] :as inp} taal]
+  [{:keys [avartan-index bhaag-index note-index] :as inp} taal]
   (let [td (taal-def taal)
         num-beats (:num-beats td)
-        a1 (* row-index num-beats)
+        a1 (* avartan-index num-beats)
         a2 (apply + (take bhaag-index (:bhaags td)))
         res (+ a1 a2 note-index)]
     res))
@@ -37,20 +37,20 @@
 (defn get-avartan-index
   "Assume a comp has 4 avartans in Teentaal.
   Return a seq of 0,16, 32, 48 indicate the note numbers if they were played in succession. "
-  [{:keys [score-part-index row-index bhaag-index note-index] :as inp} score-parts taal]
+  [{:keys [score-part-index avartan-index bhaag-index note-index] :as inp} score-parts taal]
   (let [td (taal-def taal)
         num-beats (:num-beats td)
-        a1 (* row-index num-beats)
+        a1 (* avartan-index num-beats)
         a2 (mapv #(count (:noteseq %))score-parts)
        ;; res (+ a1 a2 note-index)
         ]
     0))
 
 (defn make-index-seq
-  "given a indexed sequence of notes, returns a flat sequence where each element is [row-index bhaag-index note-index note-sub-index],i.e the note indexes that can be used to retrieve a note  "
+  "given a indexed sequence of notes, returns a flat sequence where each element is [avartan-index bhaag-index note-index note-sub-index],i.e the note indexes that can be used to retrieve a note  "
   [indexed-ns]
   (let [bi
-        (fn[row-index bhaag-index note-map-seq]
+        (fn[avartan-index bhaag-index note-map-seq]
           (->>
            note-map-seq
            (map vector (range))
@@ -63,18 +63,18 @@
                          (reduce
                           (fn[acc1 [ni _]]
                             ;;create all notes in a single beat.
-                            (let [note-xy-map [row-index
+                            (let [note-xy-map [avartan-index
                                                bhaag-index
                                                note-index
                                                ni]]
                               (conj acc1 note-xy-map)))
                           []))))
             [])))
-        bfn (fn[acci [row-index bhaag]]
+        bfn (fn[acci [avartan-index bhaag]]
               (into acci (->> bhaag
                               (map vector (range))
                               (reduce (fn[ acc [indx i]]
-                                        (let [indexes (bi row-index indx i )]
+                                        (let [indexes (bi avartan-index indx i )]
                                           (into acc indexes))) []))))
         b1
         (->> indexed-ns
@@ -84,7 +84,7 @@
 
 (defn split-bhaags
   "given a flat sequence of notes, returns a sequence where a specific note can be retrieved with
-  (get-in iseq [row-index bhaag-index note-index note-sub-index])"
+  (get-in iseq [avartan-index bhaag-index note-index note-sub-index])"
   [noteseq taal-def]
   (->> noteseq
        (partition-all (-> taal-def :num-beats))
@@ -134,6 +134,14 @@
 (defn space-notes
   [n]
   (vec (repeat n {:notes [{:svara [:madhyam :_]}]})))
+
+(defn get-sahitya
+  [comp {:keys [score-part-index avartan-index bhaag-index]}]
+  (let [sahitya (->> (get-in comp [:indexed-noteseq
+                                   score-part-index avartan-index bhaag-index]))
+        sah-list (when sahitya (mapv :lyrics sahitya))]
+    sah-list))
+
 
 (def init-comp
     (let [inoteseq
@@ -372,12 +380,11 @@
   (mapv #(assoc {} :id %1 :label %2 :sample %3) (range 0 12) pitch-sharps-list
         pitch-s-list))
 (def cursor-index-keys
-  [:score-part-index :row-index :bhaag-index :note-index :nsi])
+  [:score-part-index :avartan-index :bhaag-index :note-index :nsi])
 
 (defn comp-decorator
   [comp0]
   (let [comp (add-indexes comp0)]
-    (println " ;;; " (->> comp :index (drop 8) first))
     {:composition comp
      :props (update-in
              default-props
@@ -387,7 +394,7 @@
                 (zipmap cursor-index-keys in ))))}))
 
 #_(=
- {:score-part-index 1, :row-index 0, :bhaag-index 1, :note-index 0, :nsi 0}
+ {:score-part-index 1, :avartan-index 0, :bhaag-index 1, :note-index 0, :nsi 0}
  (-> (comp-decorator init-comp)
      :props :cursor-pos))
 

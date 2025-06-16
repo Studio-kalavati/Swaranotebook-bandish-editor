@@ -234,9 +234,9 @@
              ;;don't increment the cursor
              :cur-cursor
              ;;increment just note-sub-index
-             (zipmap [:row-index :bhaag-index :note-index :nsi]
+             (zipmap [:avartan-index :bhaag-index :note-index :nsi]
                      (mapv (update-in cpos [:nsi] inc)
-                           [:row-index :bhaag-index :note-index :nsi])))]
+                           [:avartan-index :bhaag-index :note-index :nsi])))]
           [note-insert :next-note-cursor])]
     res))
 
@@ -245,6 +245,7 @@
   (if (= 0 (rem (count noteseq) (:num-beats (taal-def taal))))
     (into noteseq (full-avartan-notes taal))
     noteseq))
+
 (defn conj-svara
   [{:keys [db]} [_ {:keys [svara]}]]
    (let [cpos (get-in db [:props :cursor-pos ] )
@@ -284,14 +285,15 @@
 (reg-event-fx ::conj-svara [log-event] conj-svara)
 
 (defn conj-sahitya
-  [{:keys [db]} [_ {:keys [text-val bhaag-index row-index]}]]
-  (let [indx (db/get-noteseq-index {:row-index row-index
+  [{:keys [db]} [_ {:keys [score-part-index text-val bhaag-index avartan-index]}]]
+  (let [indx
+        (db/get-noteseq-index {:avartan-index avartan-index
                                     :bhaag-index bhaag-index
                                     :note-index 0}
                                    (get-in db [:composition :taal]))]
     {:db (-> db
              (update-in
-              [:composition :noteseq indx :lyrics]
+              [:composition :score-parts score-part-index :noteseq indx :lyrics]
               (constantly text-val)))}))
 
 (reg-event-fx ::conj-sahitya [log-event] conj-sahitya)
@@ -335,17 +337,17 @@
                    (constantly imap)))}))
 
 (defn next-bhaag-lyrics-popup
-  [{:keys [db]} [_ {:keys [row-index bhaag-index] :as imap}]]
+  [{:keys [db]} [_ {:keys [avartan-index bhaag-index] :as imap}]]
   (let [fsmap (get-in db [:composition :index-forward-seq])
         next-bhaag-note
-        (loop [rb [row-index bhaag-index 0 0]]
+        (loop [rb [avartan-index bhaag-index 0 0]]
           (let [[r b x y :as next-note-index] (fsmap rb)]
             (if (or (and (= x 0) (= y 0)) (nil? next-note-index))
               [r b]
               (recur next-note-index ))))
         slpop-value (if (= [nil nil] next-bhaag-note)
                       false
-                      {:row-index (first next-bhaag-note)
+                      {:avartan-index (first next-bhaag-note)
                        :bhaag-index (second next-bhaag-note)})]
     {:db
      (-> db
@@ -904,7 +906,7 @@
                  (update-in [:props :cursor-pos]
                             (constantly
                              (let [in (-> comp :index last)]
-                               (zipmap [:row-index :bhaag-index :note-index :nsi] in)))))]
+                               (zipmap [:avartan-index :bhaag-index :note-index :nsi] in)))))]
      {:db ndb
       :dispatch [::set-active-panel :home-panel]})))
 
@@ -1159,7 +1161,7 @@
 
 (reg-event-fx
  ::register-elem
- (fn [{:keys [db]} [_ index {:keys [row-index note-index nsi bhaag-index] :as icursor} elem]]
+ (fn [{:keys [db]} [_ index {:keys [avartan-index note-index nsi bhaag-index] :as icursor} elem]]
    {:db
     (let [ndb
           (if (every? #(= 0 %) (vals icursor))
