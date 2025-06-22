@@ -898,6 +898,8 @@
         [:div {:class "com-edit"}
          (let
              [comp @(subscribe [::subs/composition])
+              _ (println "first 10 notes " (take 10 (get-in comp [:score-parts 0 :noteseq])))
+              editing @(subscribe [::subs/currently-editing])
               rect-style {:width 2 :height @font-size :y (int (* 0.3 @font-size))}
               image-map (db/image-map
                          (let [ilang @(subscribe [::subs/lang])]
@@ -914,7 +916,6 @@
                                   :bhaag-index bhaag-index}
 
                       sahitya (->> (get-in comp [:indexed-noteseq score-part-index avartan-index bhaag-index]))
-                      sah-list (get-sahitya comp cursor-map)
                       r3
                       (->>
                        note-map-seq
@@ -956,6 +957,7 @@
                                               :on-click
                                               (fn[i]
                                                 (reset! cursor-y (.-pageY i))
+                                                (dispatch [::events/currently-editing :svaras])
                                                 (dispatch [::events/set-click-index
                                                            ;;for multi-note, always show on the first
                                                            (assoc note-xy-map
@@ -969,6 +971,7 @@
                                                          :else @font-size)
                                                     :on-click
                                                     (fn[_]
+                                                      (dispatch [::events/currently-editing :svaras])
                                                       (dispatch [::events/set-click-index
                                                                  note-xy-map]))}
                                              (name (second svara))])
@@ -1005,20 +1008,23 @@
                                             (let [curpos @(subscribe [::subs/get-click-index])]
                                               (if (= note-xy-map curpos)
                                                 (do (println " curpos " curpos )
-                                                    (update-in r3 [:images1] conj
-                                                               [:rect (assoc rect-style
-                                                                             :x (+ x1 5) :y 5
-                                                                             :height (int (* 1.3 @font-size))
-                                                                             :ref #(when (identity %)
-                                                                                     ;;when moving, don't blink
-                                                                                     ;;after its stationary start blinking
-                                                                                     (js/setTimeout
-                                                                                      (fn[]
-                                                                                        (.add (.-classList %)
-                                                                                              "blinking-cursor"))
-                                                                                      1000)))]))
+                                                    (update-in
+                                                     r3 [:images1] conj
+                                                     [:rect
+                                                      (assoc rect-style
+                                                             :x (+ x1 5)
+                                                             :y (if (= editing :sahitya) 25 5)
+                                                             :height (int (* 1.3 @font-size))
+                                                             :ref #(when (identity %)
+                                                                           ;;when moving, don't blink
+                                                                           ;;after its stationary start blinking
+                                                                           (js/setTimeout
+                                                                            (fn[]
+                                                                              (.add (.-classList %)
+                                                                                    "blinking-cursor"))
+                                                                            1000)))]))
                                                 r3)))
-                                          r3 (if-let [sah (get sah-list note-index)]
+                                          #_r3 #_(if-let [sah (get sah-list note-index)]
                                                (if (= nsi 0)
                                                  (let [r4
                                                        (update-in r3
@@ -1027,7 +1033,14 @@
                                                         [:text
                                                          {:x (+ x1 (int (* 0.3 @font-size)))
                                                           :y (int (* 1.7 @font-size))
-                                                          :style {:font-size (* 0.5 @font-size)}} sah])]
+                                                          :style {:font-size (* 0.5 @font-size)}
+                                                          :on-click
+                                                          (fn[i]
+                                                            (reset! cursor-y (.-pageY i))
+                                                            (dispatch [::events/currently-editing :sahitya])
+                                                            (dispatch [::events/set-click-index
+                                                                       (assoc note-xy-map :nsi 0)]))}
+                                                         sah])]
                                                    (if (> 2 (count sah))
                                                      r4
                                                      (-> r4
@@ -1084,7 +1097,8 @@
                             r8))
                         {:x 5 :images []}))
                       images
-                      (if show-lyrics?
+                      (:images r3)
+                      #_(if show-lyrics?
                         (-> (:images r3)
                             (into (let [tv @(subscribe [::subs/get-sahitya
                                                         [avartan-index bhaag-index]])]
@@ -1104,9 +1118,7 @@
                                                   {:fill "url(#sahitya-fill)"})))
                                        :on-click
                                        (fn[_]
-                                         (dispatch [::events/show-lyrics-popup
-                                                    (assoc cursor-map
-                                                     :text-val (if tv tv ""))]))}]])))
+                                         (dispatch [::events/currently-editing :lyrics]))}]])))
                         (:images r3))
                       x-end (:x r3)]
                   ;;add vertical bars for bhaag
@@ -1136,17 +1148,32 @@
                                               (fn[bhaag-index bhaag]
                                                 (let [{:keys [images x]}
                                                       (draw-bhaag score-part-index avartan-index bhaag-index bhaag)
+                                                      cursor-map {:score-part-index score-part-index
+                                                                  :avartan-index avartan-index
+                                                                  :bhaag-index bhaag-index}
+                                                      sah-list (clojure.string/join ","
+                                                                                    (get-sahitya comp cursor-map))
+
                                                       res [:div {:class "bhaag-item" :style
                                                                  (merge
                                                                   {:max-width (+ x (int (* @font-size 0.7))) }
-                                                                  {:max-height (int (*
-                                                                                     (if @(subscribe [::subs/show-lyrics?]) 2.5 2)
-                                                                                     @font-size))}
-                                                                  )}
+                                                                  {:max-height
+                                                                   (int (* (if @(subscribe [::subs/show-lyrics?]) 2.5 2)
+                                                                           @font-size))})}
                                                            (reduce conj
                                                                    [:svg {:xmlns "http://www.w3.org/2000/svg"
                                                                           :width (+ x (int (* @font-size 0.6)))}]
-                                                                   images)]]
+                                                                   images)
+                                                           (let [ topsize (str (* 1.1 @font-size) "px")]
+                                                             [input-text :model sah-list
+                                                              :width "50px"
+                                                              :class "overlay-text"
+                                                              :style {:top topsize :font-size (* 0.8 @font-size)}
+                                                              :on-change (fn[x]
+                                                                           (let [new-sahitya
+                                                                                 (clojure.string/split x #",")]
+                                                                             (dispatch [::events/conj-sahitya
+                                                                                        (assoc cursor-map :text-val new-sahitya)])))])]]
                                                   res))
                                               row)
                                              vec)]

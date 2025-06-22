@@ -197,6 +197,12 @@
    (:tanpura? props)))
 
 (reg-sub
+ ::currently-editing
+ :<- [::props]
+ (fn [props [_ _]]
+   (:currently-editing props)))
+
+(reg-sub
  ::my-bandishes
  (fn [db [_ _]]
    (:my-bandishes db)))

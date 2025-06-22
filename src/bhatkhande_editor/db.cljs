@@ -218,8 +218,7 @@
         index (->> (map :index indexes)
                    (map-indexed (fn[indx item] (mapv #(vec (cons indx  %)) item)))
                    (reduce into))
-        indexed-noteseq (mapv :indexed-noteseq indexes)
-        ]
+        indexed-noteseq (mapv :indexed-noteseq indexes)]
     (merge (assoc score :index index :indexed-noteseq indexed-noteseq)
            (get-forward-backward-map2 index))))
 (add-indexes init-comp)
@@ -360,6 +359,7 @@
 (def default-props {:raga :bilawal
                     :note-pos {}
                     :mode :edit
+                    :currently-editing :svaras
                     :lang :english
                     :newline-on-avartan? false
                     :show-lyrics false

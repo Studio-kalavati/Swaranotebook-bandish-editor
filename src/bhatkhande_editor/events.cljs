@@ -204,15 +204,12 @@
           (= -1 note-index)
           ;;insert note before rest of seq cos this is at 0 position
           (into [{:notes [nsvara]}] noteseq)
-          #_(= 1 (- (count noteseq) note-index))
-          #_(into (conj (vec (butlast noteseq)) {:notes [nsvara]}) (full-avartan-notes taal))
           ;;before the last note, since note-index is zero-based index
           (= balance (- num-beats 2))
-          (into (conj (vec (butlast noteseq)) {:notes [nsvara]}) (full-avartan-notes taal))
+          (into (update-in noteseq [(inc note-index) :notes] (constantly [nsvara]))
+                (full-avartan-notes taal))
           :else
-          (let [nnindex (inc (inc note-index))]
-            (into (conj (subvec noteseq 0 (inc note-index)) {:notes [nsvara]})
-                  (subvec noteseq nnindex))))]
+          (update-in noteseq [(inc note-index) :notes] (constantly [nsvara])))]
     noteseq))
 
 (defn update-noteseq
@@ -264,7 +261,6 @@
                                        :taal (-> db :composition :taal)
                                        :cpos cpos}
                                       (get-in db [:composition :score-parts score-part-index :noteseq]))
-         ;;updated-ns (conj-bhaag updated-ns (get-in db [:composition :taal]))
          ndb
          (-> db
              (update-in [:composition :score-parts score-part-index :noteseq] (constantly updated-ns))
@@ -286,15 +282,20 @@
 
 (defn conj-sahitya
   [{:keys [db]} [_ {:keys [score-part-index text-val bhaag-index avartan-index]}]]
-  (let [indx
-        (db/get-noteseq-index {:avartan-index avartan-index
-                                    :bhaag-index bhaag-index
-                                    :note-index 0}
-                                   (get-in db [:composition :taal]))]
-    {:db (-> db
-             (update-in
-              [:composition :score-parts score-part-index :noteseq indx :lyrics]
-              (constantly text-val)))}))
+  (let [indx (->> db :composition :index
+                  (map-indexed (fn[indx i] (when
+                                               (= i [score-part-index avartan-index bhaag-index 0 0])
+                                             indx)))
+                  (filter identity)
+                  first)
+        indexes (range indx (+ indx (count text-val)))
+        comp (reduce (fn[acc [sahitya index]]
+                      (update-in
+                       acc
+                       [:score-parts score-part-index :noteseq index :lyrics]
+                       (constantly sahitya))) (:composition db)
+                    (map vector text-val indexes))]
+    {:db (assoc db :composition (db/add-indexes comp))}))
 
 (reg-event-fx ::conj-sahitya [log-event] conj-sahitya)
 
@@ -1286,6 +1287,12 @@
  ::set-font-size
  (fn [{:keys [db]} [_ font-size]]
    {:db (update-in db [:dispinfo :font-size] (constantly font-size))}))
+
+;;change the mode if we're editing svaras or lyrics
+(reg-event-fx
+ ::currently-editing
+ (fn [{:keys [db]} [_ editing]]
+   {:db (update-in db [:props :currently-editing] (constantly editing))}))
 
 #_(reg-event-fx
  ::pitch-shift
