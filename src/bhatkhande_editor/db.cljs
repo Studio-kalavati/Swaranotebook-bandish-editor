@@ -409,4 +409,3 @@
                 :play-head-position (zipmap cursor-index-keys [0 0 0 0 0])
                 :dim {:editor (mapv dispinfo [:x-end :y-end])}})]
     idb))
-

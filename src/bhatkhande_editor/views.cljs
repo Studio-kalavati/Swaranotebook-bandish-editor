@@ -898,7 +898,6 @@
         [:div {:class "com-edit"}
          (let
              [comp @(subscribe [::subs/composition])
-              _ (println "first 10 notes " (take 10 (get-in comp [:score-parts 0 :noteseq])))
               editing @(subscribe [::subs/currently-editing])
               rect-style {:width 2 :height @font-size :y (int (* 0.3 @font-size))}
               image-map (db/image-map
@@ -1138,7 +1137,7 @@
               ;;returns  list of lists
               ;;each element is one avartan
               ;;each subelement is one bhaag.
-              bfn (fn[score-part-index score-part]
+              disp-score-part (fn[score-part-index score-part]
                     (let [score-res
                           (->> score-part
                                (map-indexed
@@ -1197,10 +1196,9 @@
               fin
               (->> comp
                    :indexed-noteseq
-                   (map-indexed bfn)
+                   (map-indexed disp-score-part)
                    vec
-                   (reduce conj [:div {:class "score-parts"}])
-                   )]
+                   (reduce conj [:div {:class "score-parts"}]))]
            fin)]]])))
 
 

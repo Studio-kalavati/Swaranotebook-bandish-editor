@@ -192,49 +192,22 @@
   (let [num-beats (:num-beats (taal-def taal))]
     (space-notes num-beats)))
 
-(defn insert-notes
-  [{:keys [note-index nsvara taal]} noteseq]
-  (let [num-beats (:num-beats (taal-def taal))
-        balance (rem note-index (:num-beats (taal-def taal)))
-        note-rem (rem (count noteseq) num-beats)
-        noteseq (if (= 0 note-rem) noteseq
-                    (into noteseq (space-notes (- num-beats note-rem))))
-        noteseq
-        (cond
-          (= -1 note-index)
-          ;;insert note before rest of seq cos this is at 0 position
-          (into [{:notes [nsvara]}] noteseq)
-          ;;before the last note, since note-index is zero-based index
-          (= balance (- num-beats 2))
-          (into (update-in noteseq [(inc note-index) :notes] (constantly [nsvara]))
-                (full-avartan-notes taal))
-          :else
-          (update-in noteseq [(inc note-index) :notes] (constantly [nsvara])))]
-    noteseq))
-
 (defn update-noteseq
   "inserts a note into the noteseq and return a 2-tuple,
   the updated noteseq and the next note cursor"
-  [{:keys [note-index svara notes-per-beat cpos taal] :as imap} noteseq]
-  (let [ith-note (get-in noteseq [note-index])
-        nsvara (assoc svara :npb notes-per-beat)
-        note-insert (insert-notes (assoc imap :nsvara nsvara) noteseq)
-        res
-        (if (and (> notes-per-beat 1)
-                 (not= notes-per-beat (-> ith-note :notes count))
-                 (= notes-per-beat (-> ith-note :notes last :npb)))
-          ;;2 states here: either adding the first note of a multi-note
-          ;;if not the same as the last npb
-          [(update-in noteseq [note-index :notes] conj nsvara)
-           (if (> notes-per-beat (-> ith-note :notes count))
-             ;;if multi-note will be full after this, stay on the same note
-             ;;don't increment the cursor
-             :cur-cursor
-             ;;increment just note-sub-index
-             (zipmap [:avartan-index :bhaag-index :note-index :nsi]
-                     (mapv (update-in cpos [:nsi] inc)
-                           [:avartan-index :bhaag-index :note-index :nsi])))]
-          [note-insert :next-note-cursor])]
+  [{:keys [svara notes-per-beat cpos] :as imap} indexed-noteseq]
+  (let [cursor-vec (conj (vec (butlast (cursor2vec cpos))) :notes)
+        note-insert-indexed
+        (update-in indexed-noteseq cursor-vec
+                   (fn[noteseq-at-i]
+                     (if (= noteseq-at-i [{:svara [:madhyam :_]}])
+                       (into [svara](vec (repeat (dec notes-per-beat) {:svara [:madhyam :_]})))
+                       (update-in noteseq-at-i [(:nsi cpos)] (constantly svara)))))
+        note-insert (vec (flatten (note-insert-indexed (:score-part-index cpos))))
+        next-cursor (if (= notes-per-beat (inc (:nsi cpos)))
+                      :next-note-cursor
+                      (update-in cpos [:nsi] inc))
+        res [note-insert next-cursor]]
     res))
 
 (defn conj-bhaag
@@ -247,20 +220,12 @@
   [{:keys [db]} [_ {:keys [svara]}]]
    (let [cpos (get-in db [:props :cursor-pos ] )
          notes-per-beat (-> db :props :notes-per-beat)
-         prev-index (get-in db [:composition :index-backward-seq (cursor2vec cpos)])
          score-part-index (:score-part-index cpos)
-         note-index
-         (if (nil? prev-index)
-           -1
-           (db/get-noteseq-index
-            (cursor2map prev-index)
-            (get-in db [:composition :taal])))
          [updated-ns updated-cursor] (update-noteseq
-                                      {:note-index note-index :svara svara
+                                      {:svara svara
                                        :notes-per-beat notes-per-beat
-                                       :taal (-> db :composition :taal)
                                        :cpos cpos}
-                                      (get-in db [:composition :score-parts score-part-index :noteseq]))
+                                      (get-in db [:composition :indexed-noteseq]))
          ndb
          (-> db
              (update-in [:composition :score-parts score-part-index :noteseq] (constantly updated-ns))
@@ -269,12 +234,13 @@
          (-> ndb
              (update-in [:props :cursor-pos]
                         (constantly
-                         (cond
-                           (= updated-cursor :next-note-cursor)
-                           (move-cursor-forward ndb)
-                           (= updated-cursor :cur-cursor) cpos
-                           :else
-                           updated-cursor))))]
+                         (let [upc (cond
+                                     (= updated-cursor :next-note-cursor)
+                                     (move-cursor-forward ndb)
+                                     (= updated-cursor :cur-cursor) cpos
+                                     :else
+                                     updated-cursor)]
+                           upc))))]
      {:db ndb
       :dispatch [::save-to-localstorage]}))
 
@@ -480,18 +446,17 @@
   (let [note-index (get-ns-index db)
         cursor-pos (get-in db [:props :cursor-pos])]
     ;;need to update cursor position too
+    (println " note-index " note-index " curpos " cursor-pos)
     {:db
      (-> db
-         (update-in [:composition :score-parts (:score-part-index cursor-pos) :noteseq]
-                    #(let [res
-                           (if (= 0 note-index)
-                             ;;dont delete  the first one
-                             %
-                             (into (subvec % 0 (dec note-index)) (subvec % note-index)))]
-                       res))
+         (update-in [:composition :score-parts (:score-part-index cursor-pos)
+                     :noteseq (if (= 0 note-index) 0 (dec note-index)) :notes ]
+                    (constantly [{:svara [:madhyam :_]}]))
          (update-in [:composition] db/add-indexes)
          (update-in [:props :cursor-pos]
-                    (constantly (move-cursor-backward db))))
+                    (constantly (let [cp (move-cursor-backward db)]
+                                  (println " updating cursor to " cp)
+                                  cp))))
      :dispatch [::save-to-localstorage]}))
 
 (reg-event-fx ::delete-single-swara [clear-highlight-interceptor] delete-single-swara)
