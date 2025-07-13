@@ -443,21 +443,28 @@
 
 (defn delete-single-swara
   [{:keys [db]} [_ _]]
-  (let [note-index (get-ns-index db)
-        cursor-pos (get-in db [:props :cursor-pos])]
-    ;;need to update cursor position too
-    (println " note-index " note-index " curpos " cursor-pos)
-    {:db
-     (-> db
-         (update-in [:composition :score-parts (:score-part-index cursor-pos)
-                     :noteseq (if (= 0 note-index) 0 (dec note-index)) :notes ]
-                    (constantly [{:svara [:madhyam :_]}]))
-         (update-in [:composition] db/add-indexes)
-         (update-in [:props :cursor-pos]
-                    (constantly (let [cp (move-cursor-backward db)]
-                                  (println " updating cursor to " cp)
-                                  cp))))
-     :dispatch [::save-to-localstorage]}))
+  (let [cursor-pos (get-in db [:props :cursor-pos])
+        prev-cursor ((-> db :composition :index-backward-seq ) (cursor2vec cursor-pos))]
+    (if prev-cursor
+      (let [        cursor-vec (conj (vec (butlast prev-cursor)) :notes)
+            score-part-index (first prev-cursor)
+            indexed-noteseq (get-in db [:composition :indexed-noteseq])
+            nindexed-noteseq
+            (update-in indexed-noteseq cursor-vec
+                       (constantly [{:svara [:madhyam :_]}]))
+            _ (println " count " (count nindexed-noteseq))
+            nindexed-noteseq (vec (flatten (nindexed-noteseq score-part-index)))]
+        {:db
+         (-> db
+             (update-in [:composition :score-parts score-part-index :noteseq]
+                        (constantly nindexed-noteseq))
+             (update-in [:composition] db/add-indexes)
+             (update-in [:props :cursor-pos]
+                        (constantly (let [cp (move-cursor-backward db)]
+                                      #_(println " updating cursor to " cp)
+                                      cp))))
+         :dispatch [::save-to-localstorage]})
+      {:db db})))
 
 (reg-event-fx ::delete-single-swara [clear-highlight-interceptor] delete-single-swara)
 
