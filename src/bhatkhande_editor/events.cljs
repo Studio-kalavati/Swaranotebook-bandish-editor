@@ -7,7 +7,8 @@
             dispatch]]
    [chronoid.core :as c]
    [bhatkhande-editor.db :as db :refer [pitch-s-list cursor-index-keys space-notes]]
-   [bhatkhande-editor.utils :as utils :refer [json-onload cursor2vec cursor2map]]
+   [bhatkhande-editor.utils :as utils :refer [json-onload cursor2vec cursor2map
+                                              get-noteseq-key]]
    ["firebase/app" :default firebase]
    ["firebase/auth" :default fbauth]
    ["firebase/storage" :default storage]
@@ -18,13 +19,22 @@
    [clojure.string :as cstring]
    [sargam.talas :refer [taal-def]]))
 
+(defn running-on-localhost? []
+     (let [hostname (.. js/window -location -hostname)]
+       (or (= hostname "localhost")
+           (= hostname "127.0.0.1")
+           (= hostname "[::1]"))))
+
+
+
 (def log-event
   (re-frame.core/->interceptor
    :id      :log-event
    :after  (fn [context]
              (let [[k v] (-> context :coeffects :event) ]
-                (.capture (-> context :coeffects :db :posthog) (name k)
-                          (if (map? v) (clj->js v)(clj->js {(name k) v})))
+               (if-not (running-on-localhost?)
+                 (.capture (-> context :coeffects :db :posthog) (name k)
+                           (if (map? v) (clj->js v)(clj->js {(name k) v}))))
                 context))))
 
 (def clear-highlight-interceptor
@@ -192,29 +202,36 @@
   (let [num-beats (:num-beats (taal-def taal))]
     (space-notes num-beats)))
 
+(defn conj-bhaag
+  [noteseq taal]
+  (if (-> noteseq last :notes (= [{:svara [:madhyam :_]}]))
+    noteseq
+    (into noteseq (full-avartan-notes taal))))
+
 (defn update-noteseq
   "inserts a note into the noteseq and return a 2-tuple,
   the updated noteseq and the next note cursor"
-  [{:keys [svara notes-per-beat cpos] :as imap} indexed-noteseq]
+  [{:keys [svara notes-per-beat cpos taal] :as imap} indexed-noteseq]
   (let [cursor-vec (conj (vec (butlast (cursor2vec cpos))) :notes)
         note-insert-indexed
         (update-in indexed-noteseq cursor-vec
                    (fn[noteseq-at-i]
+                     (println " ns at i " noteseq-at-i)
                      (if (= noteseq-at-i [{:svara [:madhyam :_]}])
                        (into [svara](vec (repeat (dec notes-per-beat) {:svara [:madhyam :_]})))
                        (update-in noteseq-at-i [(:nsi cpos)] (constantly svara)))))
-        note-insert (vec (flatten (note-insert-indexed (:score-part-index cpos))))
+        note-insert (-> (:score-part-index cpos)
+                        note-insert-indexed
+                        flatten
+                        vec
+                        (conj-bhaag taal))
         next-cursor (if (= notes-per-beat (inc (:nsi cpos)))
                       :next-note-cursor
                       (update-in cpos [:nsi] inc))
         res [note-insert next-cursor]]
     res))
 
-(defn conj-bhaag
-  [noteseq taal]
-  (if (= 0 (rem (count noteseq) (:num-beats (taal-def taal))))
-    (into noteseq (full-avartan-notes taal))
-    noteseq))
+
 
 (defn conj-svara
   [{:keys [db]} [_ {:keys [svara]}]]
@@ -224,6 +241,7 @@
          [updated-ns updated-cursor] (update-noteseq
                                       {:svara svara
                                        :notes-per-beat notes-per-beat
+                                       :taal (get-in db [:composition :taal])
                                        :cpos cpos}
                                       (get-in db [:composition :indexed-noteseq]))
          ndb
@@ -377,11 +395,13 @@
 
 (defn copy-to-clipboard
   [{:keys [db]} [_ _]]
-  (let [notes (->>
+  (let [
+        noteseq-key (get-noteseq-key db)
+        notes (->>
                (get-in db [:props :highlighted-pos] )
                (map #(db/get-noteseq-index
                       % (get-in db [:composition :taal])))
-               (map #(get-in db [:composition :noteseq %])))]
+               (map #(get-in db (conj noteseq-key %))))]
     {:db (update-in db [:props :clipboard]
                     (constantly notes))}))
 
@@ -393,17 +413,19 @@
    (let [highlighted (get-in db [:props :highlighted-pos] )
          note-indexes (map #(db/get-noteseq-index
                              % (get-in db [:composition :taal])) highlighted)
-         noteseq (get-in db [:composition :noteseq])
+
+         noteseq-key (get-noteseq-key db)
+         noteseq (get-in db noteseq-key)
          notes (->>
                 note-indexes
-                (map #(get-in db [:composition :noteseq %])))
+                (map #(get-in db (conj noteseq-key %))))
          noteseq-wo-highlight (vec (keep-indexed
                                     (fn [indx item]
                                       (when-not ((set note-indexes) indx) item))
                                     noteseq))]
      {:db
       (-> db
-          (update-in [:composition :noteseq]
+          (update-in noteseq-key
                      (constantly noteseq-wo-highlight))
           (update-in [:props :cursor-pos] (constantly (first highlighted)))
           (update-in [:props :clipboard]
@@ -416,16 +438,17 @@
  ;;[log-event]
  (fn[{:keys [db]} [_ _]]
    (let [selected-notes (get-in db [:props :clipboard])
+         noteseq-key (get-noteseq-key db)
          note-index
          (db/get-noteseq-index
           (get-in db [:props :cursor-pos])
           (get-in db [:composition :taal]))
-         noteseq (get-in db [:composition :noteseq])
+         noteseq (get-in db noteseq-key)
          prefix (subvec noteseq 0 note-index)
          postfix (subvec noteseq note-index)]
      {:db
       (-> db
-          (update-in [:composition :noteseq]
+          (update-in noteseq-key
                      (constantly (into (into prefix selected-notes) postfix)))
           (update-in [:composition] db/add-indexes))})))
 
@@ -441,23 +464,35 @@
                  [:props :cursor-pos]
                  (constantly new-cursor-pos))})))
 
+
+
 (defn delete-single-swara
   [{:keys [db]} [_ _]]
   (let [cursor-pos (get-in db [:props :cursor-pos])
         prev-cursor ((-> db :composition :index-backward-seq ) (cursor2vec cursor-pos))]
     (if prev-cursor
-      (let [        cursor-vec (conj (vec (butlast prev-cursor)) :notes)
+      (let [cursor-vec (conj (vec (butlast prev-cursor)) :notes)
             score-part-index (first prev-cursor)
             indexed-noteseq (get-in db [:composition :indexed-noteseq])
+
+            taal (get-in db [:composition :taal])
+            num-beats (:num-beats (taal-def taal))
             nindexed-noteseq
             (update-in indexed-noteseq cursor-vec
                        (constantly [{:svara [:madhyam :_]}]))
-            _ (println " count " (count nindexed-noteseq))
-            nindexed-noteseq (vec (flatten (nindexed-noteseq score-part-index)))]
+            flat-noteseq (vec (flatten (nindexed-noteseq score-part-index)))
+            empty-notes (->> flat-noteseq reverse
+                             (take-while #(= % {:notes [{:svara [:madhyam :_]}]})))
+            _ (println " conditions "
+                       (vector (inc num-beats) (count empty-notes)))
+            flat-noteseq
+            (if (= (inc num-beats) (count empty-notes))
+              (subvec flat-noteseq 0 (- (count flat-noteseq) num-beats))
+              flat-noteseq)]
         {:db
          (-> db
              (update-in [:composition :score-parts score-part-index :noteseq]
-                        (constantly nindexed-noteseq))
+                        (constantly flat-noteseq))
              (update-in [:composition] db/add-indexes)
              (update-in [:props :cursor-pos]
                         (constantly (let [cp (move-cursor-backward db)]
