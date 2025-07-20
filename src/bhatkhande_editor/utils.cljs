@@ -72,8 +72,8 @@
         score-part-index (:score-part-index cursor-pos)]
     [:composition :score-parts score-part-index :noteseq]))
 
-(defn remove-empty-notes
-  "remove empty notes from a flat noteseq"
+(defn remove-empty-avartan
+  "remove empty avartan from the end of a flat noteseq"
   [flat-noteseq num-beats]
   (let [empty-notes (->> flat-noteseq reverse
                          (take-while #(= % {:notes [{:svara [:madhyam :_]}]})))]

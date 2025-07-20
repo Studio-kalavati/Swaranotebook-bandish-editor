@@ -8,7 +8,7 @@
    [chronoid.core :as c]
    [bhatkhande-editor.db :as db :refer [pitch-s-list cursor-index-keys space-notes]]
    [bhatkhande-editor.utils :as utils :refer [json-onload cursor2vec cursor2map
-                                              remove-empty-notes
+                                              remove-empty-avartan
                                               get-noteseq-key]]
    ["firebase/app" :default firebase]
    ["firebase/auth" :default fbauth]
@@ -458,7 +458,7 @@
                         (println " unfilled " unfilled-count " count "(count ins))
                         (if (= 0 unfilled-count)
                           ins
-                          (remove-empty-notes
+                          (remove-empty-avartan
                            (into ins (vec (repeat unfilled-count {:notes [{:svara [:madhyam :_]}]})))
                            num-beats)))))
           (update-in [:composition] db/add-indexes))})))
