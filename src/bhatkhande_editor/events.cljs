@@ -491,7 +491,7 @@
                        (constantly [{:svara [:madhyam :_]}]))
             flat-noteseq (-> (nindexed-noteseq score-part-index)
                              flatten vec
-                             (remove-empty-notes num-beats))]
+                             (remove-empty-avartan num-beats))]
         {:db
          (-> db
              (update-in [:composition :score-parts score-part-index :noteseq]
@@ -499,7 +499,6 @@
              (update-in [:composition] db/add-indexes)
              (update-in [:props :cursor-pos]
                         (constantly (let [cp (move-cursor-backward db)]
-                                      #_(println " updating cursor to " cp)
                                       cp))))
          :dispatch [::save-to-localstorage]})
       {:db db})))
