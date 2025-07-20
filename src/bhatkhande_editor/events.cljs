@@ -8,6 +8,7 @@
    [chronoid.core :as c]
    [bhatkhande-editor.db :as db :refer [pitch-s-list cursor-index-keys space-notes]]
    [bhatkhande-editor.utils :as utils :refer [json-onload cursor2vec cursor2map
+                                              remove-empty-notes
                                               get-noteseq-key]]
    ["firebase/app" :default firebase]
    ["firebase/auth" :default fbauth]
@@ -202,7 +203,7 @@
   (let [num-beats (:num-beats (taal-def taal))]
     (space-notes num-beats)))
 
-(defn conj-bhaag
+(defn conj-avartan
   [noteseq taal]
   (if (-> noteseq last :notes (= [{:svara [:madhyam :_]}]))
     noteseq
@@ -224,7 +225,7 @@
                         note-insert-indexed
                         flatten
                         vec
-                        (conj-bhaag taal))
+                        (conj-avartan taal))
         next-cursor (if (= notes-per-beat (inc (:nsi cpos)))
                       :next-note-cursor
                       (update-in cpos [:nsi] inc))
@@ -439,6 +440,7 @@
  (fn[{:keys [db]} [_ _]]
    (let [selected-notes (get-in db [:props :clipboard])
          noteseq-key (get-noteseq-key db)
+         taal (get-in db [:composition :taal])
          note-index
          (db/get-noteseq-index
           (get-in db [:props :cursor-pos])
@@ -449,7 +451,16 @@
      {:db
       (-> db
           (update-in noteseq-key
-                     (constantly (into (into prefix selected-notes) postfix)))
+                     (constantly
+                      (let [ins (into (into prefix selected-notes) postfix)
+                            num-beats (:num-beats (taal-def taal))
+                            unfilled-count (- num-beats (rem (count ins) num-beats))]
+                        (println " unfilled " unfilled-count " count "(count ins))
+                        (if (= 0 unfilled-count)
+                          ins
+                          (remove-empty-notes
+                           (into ins (vec (repeat unfilled-count {:notes [{:svara [:madhyam :_]}]})))
+                           num-beats)))))
           (update-in [:composition] db/add-indexes))})))
 
 (reg-event-fx
@@ -463,8 +474,6 @@
       (update-in db
                  [:props :cursor-pos]
                  (constantly new-cursor-pos))})))
-
-
 
 (defn delete-single-swara
   [{:keys [db]} [_ _]]
@@ -480,15 +489,9 @@
             nindexed-noteseq
             (update-in indexed-noteseq cursor-vec
                        (constantly [{:svara [:madhyam :_]}]))
-            flat-noteseq (vec (flatten (nindexed-noteseq score-part-index)))
-            empty-notes (->> flat-noteseq reverse
-                             (take-while #(= % {:notes [{:svara [:madhyam :_]}]})))
-            _ (println " conditions "
-                       (vector (inc num-beats) (count empty-notes)))
-            flat-noteseq
-            (if (= (inc num-beats) (count empty-notes))
-              (subvec flat-noteseq 0 (- (count flat-noteseq) num-beats))
-              flat-noteseq)]
+            flat-noteseq (-> (nindexed-noteseq score-part-index)
+                             flatten vec
+                             (remove-empty-notes num-beats))]
         {:db
          (-> db
              (update-in [:composition :score-parts score-part-index :noteseq]

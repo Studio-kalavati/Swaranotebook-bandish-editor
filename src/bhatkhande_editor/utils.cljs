@@ -64,3 +64,21 @@
   "return a cursor map like {:score-part-index 0, :row-index 1, :bhaag-index 0, :note-index 2, :nsi 0}, given a vector argument like so [0 1 0 1 0]"
   [cursor-vec]
   (zipmap [:score-part-index :avartan-index :bhaag-index :note-index :nsi] cursor-vec))
+
+(defn get-noteseq-key
+  "return the key for a noteseq, by fetching the score-part-index from the cursor"
+  [db]
+  (let [cursor-pos (get-in db [:props :cursor-pos])
+        score-part-index (:score-part-index cursor-pos)]
+    [:composition :score-parts score-part-index :noteseq]))
+
+(defn remove-empty-notes
+  "remove empty notes from a flat noteseq"
+  [flat-noteseq num-beats]
+  (let [empty-notes (->> flat-noteseq reverse
+                         (take-while #(= % {:notes [{:svara [:madhyam :_]}]})))]
+    ;;remove it if more than last avartan plus 1 beat is empty, with no lyrics written
+    (if (>= (count empty-notes) (inc num-beats) )
+      (subvec flat-noteseq 0 (- (count flat-noteseq) num-beats))
+      flat-noteseq))
+  )
