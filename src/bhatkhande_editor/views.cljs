@@ -1178,20 +1178,40 @@
                                              vec)]
                                     res0)))
                                vec)
+                          part-header
+                          [h-box
+                           :style {:justify-content "space-between"}
+                           :children
+                           [[h-box
+                             :gap "1vw"
+                             :align :center :justify :center
+                             :children
+                             [
+                              [gap :size "1vw"]
+                              [title :level :level3 :label (get-in comp [:score-parts score-part-index :part-title])]
+                              [md-icon-button :md-icon-name "zmdi zmdi-edit"
+                               :on-click (fn[] (println " x "))]]]
+                            [h-box
+                             :gap "1vw"
+                             :align :center :justify :center
+                             :children
+                             [[md-icon-button :md-icon-name "zmdi zmdi-chevron-up zmdi-hc-lg"
+                               :on-click (fn[] (println " x "))]
+                              [md-icon-button :md-icon-name "zmdi zmdi-delete zmdi-hc-lg"
+                               :on-click (fn[] (println " x "))]
+                              [gap :size "0.5vw"]]]]]
+                          part-footer
+                          [v-box :align :center :children
+                           [[md-icon-button :md-icon-name "zmdi zmdi-plus-circle-o"
+                             :on-click (fn[] (dispatch [::events/insert-empty-part "abcd"]))]]]
                           score-fin
-                          (if newline-on-avartan?
-                            (let [op1 (mapv #(reduce conj [:div {:class "box-row"}] %) score-res)
-                                  score-ret2
-                                  (reduce conj [:div {:class "wrapper"}
-                                                [:p (get-in comp [:score-parts score-part-index :part-title])]]
-                                          op1)]
-                              score-ret2)
-                            (let [op2 (reduce conj [:div {:class "box-row"}] (reduce into score-res))
-                                  score-ret
-                                  [:div {:class "wrapper"}
-                                   [:p (get-in comp [:score-parts score-part-index :part-title])]
-                                   op2]]
-                              score-ret))]
+                          (let [rows (if newline-on-avartan?
+                                       (mapv #(reduce conj [:div {:class "box-row"}] %) score-res)
+                                       (reduce conj [:div {:class "box-row"}] (reduce into score-res)))
+                                score-ret
+                                [:div {:class "part-wrapper part-border"}
+                                 part-header rows [gap :size "1vh"]]]
+                            [:div {:class "wrapper"} score-ret part-footer])]
                       score-fin))
               fin
               (->> comp

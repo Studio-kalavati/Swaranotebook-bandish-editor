@@ -142,6 +142,17 @@
         sah-list (when sahitya (mapv :lyrics sahitya))]
     sah-list))
 
+(defn init-part
+  [num-beats ptitle]
+  (let [inoteseq
+          [
+           {:notes [{:svara [:madhyam :s]}] }
+           {:notes [{:svara [:madhyam :r]}] }
+           {:notes [{:svara [:madhyam :g]}] }
+           {:notes [{:svara [:madhyam :m]}] }]
+          noteseq (into inoteseq (space-notes (- num-beats (count inoteseq))))]
+      {:part-num 3 :part-title ptitle
+       :noteseq noteseq}))
 
 (def init-comp
     (let [inoteseq

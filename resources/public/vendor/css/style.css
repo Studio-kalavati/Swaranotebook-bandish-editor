@@ -1716,18 +1716,22 @@ input[type="search"]
     align-content: flex-start;
 }
 
-.wrapper {
+
+.wrapper, .part-wrapper {
     display: grid;
     grid-gap: 10px;
     grid-auto-flow: row;
     overflow:hidden;
-    border: 2px solid #cda1a1;
     border-radius: 12px;
+}
+
+.part-border{
+    border: 2px solid #cda1a1;
 }
 
 .score-parts {
     display: grid;
-    grid-gap: 20px;
+    grid-gap: 1vh;
     grid-auto-flow: row;
     overflow:hidden;
 }

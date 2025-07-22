@@ -6,7 +6,8 @@
     :refer [reg-event-db reg-event-fx
             dispatch]]
    [chronoid.core :as c]
-   [bhatkhande-editor.db :as db :refer [pitch-s-list cursor-index-keys space-notes]]
+   [bhatkhande-editor.db :as db :refer [pitch-s-list cursor-index-keys space-notes
+                                        init-part]]
    [bhatkhande-editor.utils :as utils :refer [json-onload cursor2vec cursor2map
                                               remove-empty-avartan
                                               get-noteseq-key]]
@@ -503,6 +504,17 @@
          :dispatch [::save-to-localstorage]})
       {:db db})))
 
+(defn insert-empty-part
+  [{:keys [db]} [_ ptitle]]
+  (let [taal (get-in db [:composition :taal])
+        num-beats (:num-beats (taal-def taal))
+        res (-> db
+                (update-in [:composition :score-parts]
+                           (fn[i] (conj i (init-part num-beats ptitle))))
+                (update-in [:composition] db/add-indexes))]
+    {:db res}))
+
+(reg-event-fx ::insert-empty-part insert-empty-part)
 (reg-event-fx ::delete-single-swara [clear-highlight-interceptor] delete-single-swara)
 
 (reg-event-fx
