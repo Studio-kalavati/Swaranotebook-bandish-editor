@@ -515,6 +515,21 @@
     {:db res}))
 
 (reg-event-fx ::insert-empty-part insert-empty-part)
+
+(defn delete-part
+  [{:keys [db]} [_ part-index]]
+  (let [res (-> db
+                (update-in [:composition :score-parts]
+                           (fn[i]
+                             (let [res (->> (map-indexed (fn[indx part] [(not= part-index indx) part]) i)
+                                            (filter (fn[[a _]] a))
+                                            (mapv second))]
+                               (println " prev " (count i) " after " (count res))
+                               res)))
+                (update-in [:composition] db/add-indexes))]
+    {:db res}))
+
+(reg-event-fx ::delete-part delete-part)
 (reg-event-fx ::delete-single-swara [clear-highlight-interceptor] delete-single-swara)
 
 (reg-event-fx

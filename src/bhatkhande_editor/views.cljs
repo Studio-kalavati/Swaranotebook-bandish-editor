@@ -1137,7 +1137,8 @@
               ;;returns  list of lists
               ;;each element is one avartan
               ;;each subelement is one bhaag.
-              disp-score-part (fn[score-part-index score-part]
+              disp-score-part
+              (fn[score-part-index score-part]
                     (let [score-res
                           (->> score-part
                                (map-indexed
@@ -1198,7 +1199,7 @@
                              [[md-icon-button :md-icon-name "zmdi zmdi-chevron-up zmdi-hc-lg"
                                :on-click (fn[] (println " x "))]
                               [md-icon-button :md-icon-name "zmdi zmdi-delete zmdi-hc-lg"
-                               :on-click (fn[] (println " x "))]
+                               :on-click (fn[] (dispatch [::events/delete-part score-part-index]))]
                               [gap :size "0.5vw"]]]]]
                           part-footer
                           [v-box :align :center :children
