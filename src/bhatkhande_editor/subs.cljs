@@ -179,6 +179,12 @@
    (= :start (:play-state db))))
 
 (reg-sub
+ ::hidden-parts
+ :<- [::props]
+ (fn [props [_ _]]
+   (:hidden-parts props)))
+
+(reg-sub
  ::bpm
  :<- [::props]
  (fn [props [_ _]]

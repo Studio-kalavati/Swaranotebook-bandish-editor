@@ -533,6 +533,18 @@
 (reg-event-fx ::delete-single-swara [clear-highlight-interceptor] delete-single-swara)
 
 (reg-event-fx
+ ::hide-part
+ (fn [{:keys [db]} [_ part-index]]
+   {:db
+    (-> (update-in db [:props :hidden-parts] conj part-index))}))
+
+(reg-event-fx
+ ::unhide-part
+ (fn [{:keys [db]} [_ part-index]]
+   {:db
+    (-> (update-in db [:props :hidden-parts] disj part-index))}))
+
+(reg-event-fx
  ::set-custom-svaras
  [log-event]
  (fn [{:keys [db]} [_ svaras]]

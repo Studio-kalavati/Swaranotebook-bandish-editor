@@ -872,6 +872,7 @@
           show-lyrics? @(subscribe [::subs/show-lyrics?])
           font-size (reagent/atom @(subscribe [::subs/font-size]))
           newline-on-avartan? @(subscribe [::subs/newline-on-avartan?])
+          hidden-parts @(subscribe [::subs/hidden-parts])
           play-mode? (= :play @(subscribe [::subs/mode]))
           _ @(subscribe [::subs/onscreen-keyboard])]
       [:div
@@ -1189,15 +1190,19 @@
                              :children
                              [
                               [gap :size "1vw"]
-                              [title :level :level3 :label (get-in comp [:score-parts score-part-index :part-title])]
+                              [title :level :level3
+                               :label (get-in comp [:score-parts score-part-index :part-title])]
                               [md-icon-button :md-icon-name "zmdi zmdi-edit"
                                :on-click (fn[] (println " x "))]]]
                             [h-box
                              :gap "1vw"
                              :align :center :justify :center
                              :children
-                             [[md-icon-button :md-icon-name "zmdi zmdi-chevron-up zmdi-hc-lg"
-                               :on-click (fn[] (println " x "))]
+                             [(if (hidden-parts score-part-index)
+                                [md-icon-button :md-icon-name "zmdi zmdi-chevron-down zmdi-hc-lg"
+                                 :on-click (fn[] (dispatch [::events/unhide-part score-part-index]))]
+                                [md-icon-button :md-icon-name "zmdi zmdi-chevron-up zmdi-hc-lg"
+                                 :on-click (fn[] (dispatch [::events/hide-part score-part-index]))])
                               [md-icon-button :md-icon-name "zmdi zmdi-delete zmdi-hc-lg"
                                :on-click (fn[] (dispatch [::events/delete-part score-part-index]))]
                               [gap :size "0.5vw"]]]]]
@@ -1211,7 +1216,9 @@
                                        (reduce conj [:div {:class "box-row"}] (reduce into score-res)))
                                 score-ret
                                 [:div {:class "part-wrapper part-border"}
-                                 part-header rows [gap :size "1vh"]]]
+                                 part-header
+                                 (when-not (hidden-parts score-part-index) rows)
+                                 [gap :size "1vh"]]]
                             [:div {:class "wrapper"} score-ret part-footer])]
                       score-fin))
               fin

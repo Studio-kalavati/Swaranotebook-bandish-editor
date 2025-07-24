@@ -382,6 +382,7 @@
                     :pitch "c"
                     :tanpura? true
                     :notes-per-beat 1
+                    :hidden-parts #{}
                     :note-index []})
 
 (def pitch-sharps-list ["C" "C#" "D" "D#" "E" "F" "F#" "G" "G#" "A" "A#" "B"])
