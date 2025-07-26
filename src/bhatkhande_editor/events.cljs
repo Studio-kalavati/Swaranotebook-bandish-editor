@@ -533,6 +533,13 @@
 (reg-event-fx ::delete-single-swara [clear-highlight-interceptor] delete-single-swara)
 
 (reg-event-fx
+ ::update-part-title
+ (fn [{:keys [db]} [_ part-index part-title]]
+   {:db
+    (-> (update-in db [:composition :score-parts part-index :part-title ]
+                   (constantly part-title)))}))
+
+(reg-event-fx
  ::hide-part
  (fn [{:keys [db]} [_ part-index]]
    {:db
