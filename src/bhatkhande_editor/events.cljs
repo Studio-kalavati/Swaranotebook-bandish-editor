@@ -540,6 +540,13 @@
                    (constantly part-title)))}))
 
 (reg-event-fx
+ ::update-comp-title
+ (fn [{:keys [db]} [_ comp-title]]
+   {:db
+    (-> (update-in db [:composition :title ]
+                   (constantly comp-title)))}))
+
+(reg-event-fx
  ::hide-part
  (fn [{:keys [db]} [_ part-index]]
    {:db

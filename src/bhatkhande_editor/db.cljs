@@ -177,6 +177,7 @@
                           :noteseq (into (vec (reverse inoteseq) )
                                          (space-notes (- (:num-beats (taal-def taal-id))
                                                          (count inoteseq))))}]
+           :title "Bandish name"
            :taal taal-id}]
       res))
 (=
@@ -232,6 +233,7 @@
         indexed-noteseq (mapv :indexed-noteseq indexes)]
     (merge (assoc score :index index :indexed-noteseq indexed-noteseq)
            (get-forward-backward-map2 index))))
+
 (add-indexes init-comp)
 (= (add-indexes init-comp)
 {:score-parts

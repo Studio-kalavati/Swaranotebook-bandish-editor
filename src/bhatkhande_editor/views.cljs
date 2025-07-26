@@ -865,7 +865,9 @@
 
 (defn swara-display-area
   []
-  (let [edit-part-index (reagent/atom nil)
+  (let [
+        edit-part-index (reagent/atom nil)
+        edit-comp-title (reagent/atom nil)
         delete-confirm (reagent/atom false)]
     (fn []
       (let [winhgt (.-innerHeight js/window)
@@ -1163,6 +1165,25 @@
                                 [:line (assoc line-style :x1 (pfn 0.1) :x2 (pfn 0.1))]])
                          (conj images [:line (assoc line-style :x1 1 :x2 1)])))
                      :x x-end}))
+                comp-title
+                [v-box :align :center :children
+                 [[h-box
+                   :align :center
+                   :justify :center
+                   :children
+                   (if @edit-comp-title
+                     [[gap :size "1vw"]
+                      [input-text
+                       :style {:font-size "x-large"}
+                       :model edit-comp-title
+                       :on-change (fn[x] (reset! edit-comp-title x))]
+                      [md-icon-button :md-icon-name "zmdi zmdi-check-circle"
+                       :on-click (fn[] (do
+                                         (dispatch [::events/update-comp-title @edit-comp-title])
+                                         (reset! edit-comp-title nil)))]]
+                     [[title :label :level3 :label (-> comp :title)]
+                      [md-icon-button :md-icon-name "zmdi zmdi-edit"
+                       :on-click (fn[] (reset! edit-comp-title (-> comp :title)))]])]]]
                 ;;returns  list of lists
                 ;;each element is one avartan
                 ;;each subelement is one bhaag.
@@ -1212,33 +1233,27 @@
                         [h-box
                          :style {:justify-content "space-between"}
                          :children
-                         [
-                          (let [edited-part-name (reagent/atom
+                         [(let [edited-part-name (reagent/atom
                                                   (get-in comp [:score-parts score-part-index :part-title]))]
-                            (if (= @edit-part-index score-part-index)
-                              [h-box
-                               :gap "1vw"
-                               :align :center :justify :center
-                               :children
-                               [
-                                [gap :size "1vw"]
+                            [h-box
+                             :gap "1vw"
+                             :align :center :justify :center
+                             :children
+                             (if (= @edit-part-index score-part-index)
+                               [[gap :size "1vw"]
                                 [input-text :model edited-part-name
+                                 :style {:font-size "large"}
                                  :on-change (fn[x] (reset! edited-part-name x))]
                                 [md-icon-button :md-icon-name "zmdi zmdi-check-circle"
                                  :on-click (fn[] (do
                                                    (dispatch [::events/update-part-title score-part-index
-                                                                @edited-part-name])
-                                                   (reset! edit-part-index nil)))]]]
-                              [h-box
-                               :gap "1vw"
-                               :align :center :justify :center
-                               :children
-                               [
-                                [gap :size "1vw"]
+                                                              @edited-part-name])
+                                                   (reset! edit-part-index nil)))]]
+                               [[gap :size "1vw"]
                                 [title :level :level3
                                  :label (get-in comp [:score-parts score-part-index :part-title])]
                                 [md-icon-button :md-icon-name "zmdi zmdi-edit"
-                                 :on-click (fn[] (reset! edit-part-index score-part-index))]]]))
+                                 :on-click (fn[] (reset! edit-part-index score-part-index))]])])
                           [h-box
                            :gap "1vw"
                            :align :center :justify :center
@@ -1272,7 +1287,7 @@
                      :indexed-noteseq
                      (map-indexed disp-score-part)
                      vec
-                     (reduce conj [:div {:class "score-parts"}]))]
+                     (reduce conj [:div {:class "score-parts"} comp-title]))]
              fin)]]]))))
 
 
