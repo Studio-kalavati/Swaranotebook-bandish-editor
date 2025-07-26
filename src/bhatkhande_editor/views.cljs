@@ -1171,7 +1171,7 @@
                    :align :center
                    :justify :center
                    :children
-                   (if @edit-comp-title
+                   (if (and (not play-mode?) @edit-comp-title)
                      [[gap :size "1vw"]
                       [input-text
                        :style {:font-size "x-large"}
@@ -1182,8 +1182,9 @@
                                          (dispatch [::events/update-comp-title @edit-comp-title])
                                          (reset! edit-comp-title nil)))]]
                      [[title :label :level3 :label (-> comp :title)]
-                      [md-icon-button :md-icon-name "zmdi zmdi-edit"
-                       :on-click (fn[] (reset! edit-comp-title (-> comp :title)))]])]]]
+                      (when-not play-mode?
+                        [md-icon-button :md-icon-name "zmdi zmdi-edit"
+                         :on-click (fn[] (reset! edit-comp-title (-> comp :title)))])])]]]
                 ;;returns  list of lists
                 ;;each element is one avartan
                 ;;each subelement is one bhaag.
@@ -1239,7 +1240,7 @@
                              :gap "1vw"
                              :align :center :justify :center
                              :children
-                             (if (= @edit-part-index score-part-index)
+                             (if (and (not play-mode?) (= @edit-part-index score-part-index))
                                [[gap :size "1vw"]
                                 [input-text :model edited-part-name
                                  :style {:font-size "large"}
@@ -1252,21 +1253,23 @@
                                [[gap :size "1vw"]
                                 [title :level :level3
                                  :label (get-in comp [:score-parts score-part-index :part-title])]
-                                [md-icon-button :md-icon-name "zmdi zmdi-edit"
-                                 :on-click (fn[] (reset! edit-part-index score-part-index))]])])
-                          [h-box
-                           :gap "1vw"
-                           :align :center :justify :center
-                           :children
-                           [(if (hidden-parts score-part-index)
-                              [md-icon-button :md-icon-name "zmdi zmdi-chevron-down zmdi-hc-lg"
-                               :on-click (fn[] (dispatch [::events/unhide-part score-part-index]))]
-                              [md-icon-button :md-icon-name "zmdi zmdi-chevron-up zmdi-hc-lg"
-                               :on-click (fn[] (dispatch [::events/hide-part score-part-index]))])
-                            [md-icon-button :md-icon-name "zmdi zmdi-delete zmdi-hc-lg"
-                             :on-click (fn[]
-                                         (reset! delete-confirm score-part-index))]
-                            [gap :size "0.5vw"]]]]]
+                                (when-not play-mode?
+                                  [md-icon-button :md-icon-name "zmdi zmdi-edit"
+                                   :on-click (fn[] (reset! edit-part-index score-part-index))])])])
+                          (when-not play-mode?
+                            [h-box
+                             :gap "1vw"
+                             :align :center :justify :center
+                             :children
+                             [(if (hidden-parts score-part-index)
+                                [md-icon-button :md-icon-name "zmdi zmdi-chevron-down zmdi-hc-lg"
+                                 :on-click (fn[] (dispatch [::events/unhide-part score-part-index]))]
+                                [md-icon-button :md-icon-name "zmdi zmdi-chevron-up zmdi-hc-lg"
+                                 :on-click (fn[] (dispatch [::events/hide-part score-part-index]))])
+                              [md-icon-button :md-icon-name "zmdi zmdi-delete zmdi-hc-lg"
+                               :on-click (fn[]
+                                           (reset! delete-confirm score-part-index))]
+                              [gap :size "0.5vw"]]])]]
                         part-footer
                         [v-box :align :center :children
                          [[md-icon-button :md-icon-name "zmdi zmdi-plus-circle-o"
@@ -1280,7 +1283,8 @@
                                part-header
                                (when-not (hidden-parts score-part-index) rows)
                                [gap :size "1vh"]]]
-                          [:div {:class "wrapper"} score-ret part-footer])]
+                          [:div {:class "wrapper"} score-ret
+                           (when-not play-mode? part-footer)])]
                     score-fin))
                 fin
                 (->> comp
