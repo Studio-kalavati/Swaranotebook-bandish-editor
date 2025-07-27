@@ -148,6 +148,7 @@
 
 (defn keyboard-conj-svara
   [{:keys [db]} [_ svara]]
+  (println " kcv " svara)
   (if (-> db :props :onscreen-keyboard (= :show))
     {:db (update-in db [:props :onscreen-keyboard] (constantly :ask-hw-kbd))}
     {:dispatch-n
@@ -233,10 +234,9 @@
         res [note-insert next-cursor]]
     res))
 
-
-
 (defn conj-svara
   [{:keys [db]} [_ {:keys [svara]}]]
+  (println " svara " svara)
    (let [cpos (get-in db [:props :cursor-pos ] )
          notes-per-beat (-> db :props :notes-per-beat)
          score-part-index (:score-part-index cpos)
@@ -267,11 +267,11 @@
 (reg-event-fx ::conj-svara [log-event] conj-svara)
 
 (defn conj-sahitya
-  [{:keys [db]} [_ {:keys [score-part-index text-val bhaag-index avartan-index]}]]
+  [{:keys [db]} [_ {:keys [score-part-index text-val bhaag-index avartan-index] :as imap}]]
+  (println " conj-sahitya " imap)
   (let [indx (->> db :composition :index
-                  (map-indexed (fn[indx i] (when
-                                               (= i [score-part-index avartan-index bhaag-index 0 0])
-                                             indx)))
+                  (map-indexed
+                   (fn[indx i] (when (= i [score-part-index avartan-index bhaag-index 0 0]) indx)))
                   (filter identity)
                   first)
         indexes (range indx (+ indx (count text-val)))
@@ -476,7 +476,7 @@
                  [:props :cursor-pos]
                  (constantly new-cursor-pos))})))
 
-(defn delete-single-swara
+(defn delete-single-svara
   [{:keys [db]} [_ _]]
   (let [cursor-pos (get-in db [:props :cursor-pos])
         prev-cursor ((-> db :composition :index-backward-seq ) (cursor2vec cursor-pos))]
@@ -530,7 +530,7 @@
     {:db res}))
 
 (reg-event-fx ::delete-part delete-part)
-(reg-event-fx ::delete-single-swara [clear-highlight-interceptor] delete-single-swara)
+(reg-event-fx ::delete-single-svara [clear-highlight-interceptor] delete-single-svara)
 
 (reg-event-fx
  ::update-part-title
@@ -716,6 +716,7 @@
  ::google-sign-in-fx
  [log-event]
  (fn [{:keys [db]} [_ _]]
+   (println " g fx ")
    ;;set a local storage because
    ;;when the auth redirect is sent back to the page,
    ;;the local DB atom will not remember and will load its
@@ -772,7 +773,8 @@
  ::set-user
  [log-event]
  (fn [{:keys [db]}[_ user]]
-   (try 
+   (println " set-uset " user)
+   (try
      (if (and user (:email user))
        (let [storage (.-sessionStorage js/window)
              newsletter-signup?
@@ -1120,11 +1122,12 @@
                 (sort-by second))]
     a1))
 
+
 (defn play-start-event-fn
   [{:keys [db]} now]
+  (println " psef " (dissoc db :sample-buffers) " now " now)
   (let [bpm (-> db :props :bpm)
         note-interval (/ 60 bpm)
-        _ (println "php "(:play-head-position db))
         play-head-position
         (->> db :composition :index
              (keep-indexed
@@ -1174,7 +1177,8 @@
                                                 {note-index svara-index}))
                                          (apply merge))
         play-note-index 0
-        res {:play-state :start
+        res
+        {:play-state :start
          :play-at-time a1
          :play-note-index play-note-index
          :note-interval note-interval
@@ -1185,9 +1189,7 @@
                          r)
                        (:elem-index db))
          ;;translates the play-note index to the view-note index
-         :play-to-view-map noteindex-to-svaraindex-map}
-
-        ]
+         :play-to-view-map noteindex-to-svaraindex-map}]
     res))
 
 (reg-event-fx

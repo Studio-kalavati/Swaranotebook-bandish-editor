@@ -213,7 +213,7 @@
                     [[::events/move-cursor :left] [{:keyCode 37}]];;<-
                     [[::events/move-cursor :right] [{:keyCode 39}]];;<-
 
-                    [[::events/delete-single-swara] [{:keyCode 8}]] ;;backspace
+                    [[::events/delete-single-svara] [{:keyCode 8}]] ;;backspace
                     ]
        }]))
 
@@ -861,7 +861,7 @@
                                                         (mk-button {:svara [:madhyam :-]})
                                                         (mk-button {:svara [:madhyam :a]})
                                                         (zmdi-butn2 "zmdi zmdi-tag-close zmdi-hc-lg"
-                                                                    #(dispatch [::events/delete-single-swara]))]]])]]])]]]))))
+                                                                    #(dispatch [::events/delete-single-svara]))]]])]]])]]]))))
 
 (defn swara-display-area
   []

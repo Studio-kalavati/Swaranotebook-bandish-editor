@@ -55,7 +55,7 @@
 
 (defn cursor2vec
   "return a cursor array like [0 1 0 1 0], given a map argument like so:
-  {:score-part-index 0, :row-index 1, :bhaag-index 0, :note-index 2, :nsi 0}"
+  {:score-part-index 0, :avartan-index 1, :bhaag-index 0, :note-index 2, :nsi 0}"
   [cursor]
   (mapv #(% cursor)
         [:score-part-index :avartan-index :bhaag-index :note-index :nsi]))

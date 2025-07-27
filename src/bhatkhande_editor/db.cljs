@@ -154,18 +154,18 @@
       {:part-num 3 :part-title ptitle
        :noteseq noteseq}))
 
+(def part-noteseq [
+                   {:notes [{:svara [:madhyam :s]}] :lyrics "a"}
+                   {:notes [{:svara [:madhyam :r]}] :lyrics "b"}
+                   {:notes [{:svara [:madhyam :g]}] :lyrics "c"}
+                   {:notes [{:svara [:madhyam :m]}] :lyrics "d"}
+                   {:notes [{:svara [:madhyam :p]}] :lyrics "a"}
+                   {:notes [{:svara [:madhyam :d]}] :lyrics "b"}
+                   {:notes [{:svara [:madhyam :n]}] :lyrics "c"}
+                   {:notes [{:svara [:taar :s]}] :lyrics "d"}
+                   ])
 (def init-comp
-    (let [inoteseq
-          [
-           {:notes [{:svara [:madhyam :s]}] :lyrics "a"}
-           {:notes [{:svara [:madhyam :r]}] :lyrics "b"}
-           {:notes [{:svara [:madhyam :g]}] :lyrics "c"}
-           {:notes [{:svara [:madhyam :m]}] :lyrics "d"}
-           {:notes [{:svara [:madhyam :p]}] :lyrics "a"}
-           {:notes [{:svara [:madhyam :d]}] :lyrics "b"}
-           {:notes [{:svara [:madhyam :n]}] :lyrics "c"}
-           {:notes [{:svara [:taar :s]}] :lyrics "d"}
-           ]
+    (let [inoteseq part-noteseq
           taal-id :teentaal
           noteseq
           (into inoteseq (space-notes (- (:num-beats (taal-def taal-id))
@@ -180,13 +180,6 @@
            :title "Bandish name"
            :taal taal-id}]
       res))
-(=
- [[[{:notes [{:svara [:madhyam :s]}]}
-    {:notes [{:svara [:madhyam :r]}]}
-    {:notes [{:svara [:madhyam :g]}]}
-    {:notes [{:svara [:madhyam :m]}]}]
-   [{:notes [{:svara [:madhyam :-]}]}]]]
- (split-bhaags (-> init-comp :score-parts first :noteseq) (taal-def :teentaal)))
 
 (defn add-part-index
   [taal {:keys [noteseq] :as imap}]
@@ -204,25 +197,6 @@
            :index order
            :index-forward-seq f
            :index-backward-seq b)))
-(= {
-    :indexed-noteseq
-    [[[{:notes [{:svara [:madhyam :s]}]}
-       {:notes [{:svara [:madhyam :r]}]}
-       {:notes [{:svara [:madhyam :g]}]}
-       {:notes [{:svara [:madhyam :m]}]}]
-      [{:notes [{:svara [:madhyam :-]}]}]]],
-    :index [[0 0 0 0] [0 0 1 0] [0 0 2 0] [0 0 3 0] [0 1 0 0]],
-    :index-forward-seq
-    {[0 0 0 0] [0 0 1 0],
-     [0 0 1 0] [0 0 2 0],
-     [0 0 2 0] [0 0 3 0],
-     [0 0 3 0] [0 1 0 0]},
-    :index-backward-seq
-    {[0 0 1 0] [0 0 0 0],
-     [0 0 2 0] [0 0 1 0],
-     [0 0 3 0] [0 0 2 0],
-     [0 1 0 0] [0 0 3 0]}}
-   (add-part-index :teentaal (first (:score-parts init-comp))))
 
 (defn add-indexes
   [{:keys [taal score-parts] :as score}]
@@ -233,99 +207,6 @@
         indexed-noteseq (mapv :indexed-noteseq indexes)]
     (merge (assoc score :index index :indexed-noteseq indexed-noteseq)
            (get-forward-backward-map2 index))))
-
-(add-indexes init-comp)
-(= (add-indexes init-comp)
-{:score-parts
- [{:part-num 0,
-   :part-title "sthayi",
-   :noteseq
-   [{:notes [{:svara [:madhyam :s]}]}
-    {:notes [{:svara [:madhyam :r]}]}
-    {:notes [{:svara [:madhyam :g]}]}
-    {:notes [{:svara [:madhyam :m]}]}
-    {:notes [{:svara [:madhyam :-]}]}]}
-  {:part-num 1,
-   :part-title "antara",
-   :noteseq
-   [{:notes [{:svara [:madhyam :s]}]}
-    {:notes [{:svara [:madhyam :r]}]}
-    {:notes [{:svara [:madhyam :g]}]}
-    {:notes [{:svara [:madhyam :m]}]}
-    {:notes [{:svara [:madhyam :-]}]}]}],
- :taal :teentaal,
- :index
- [[0 0 0 0 0]
-  [0 0 0 1 0]
-  [0 0 0 2 0]
-  [0 0 0 3 0]
-  [0 0 1 0 0]
-  [1 0 0 0 0]
-  [1 0 0 1 0]
-  [1 0 0 2 0]
-  [1 0 0 3 0]
-  [1 0 1 0 0]],
- :indexed-noteseq
- [[[{:notes [{:svara [:madhyam :s]}]}
-    {:notes [{:svara [:madhyam :r]}]}
-    {:notes [{:svara [:madhyam :g]}]}
-    {:notes [{:svara [:madhyam :m]}]}]
-   [{:notes [{:svara [:madhyam :-]}]}]]
-  [[{:notes [{:svara [:madhyam :s]}]}
-    {:notes [{:svara [:madhyam :r]}]}
-    {:notes [{:svara [:madhyam :g]}]}
-    {:notes [{:svara [:madhyam :m]}]}]
-   [{:notes [{:svara [:madhyam :-]}]}]]],
- :index-forward-seq
- {[0 0 1 0 0] [1 0 0 0 0],
-  [0 0 0 1 0] [0 0 0 2 0],
-  [1 0 0 0 0] [1 0 0 1 0],
-  [0 0 0 2 0] [0 0 0 3 0],
-  [0 0 0 0 0] [0 0 0 1 0],
-  [0 0 0 3 0] [0 0 1 0 0],
-  [1 0 0 2 0] [1 0 0 3 0],
-  [1 0 0 1 0] [1 0 0 2 0],
-  [1 0 0 3 0] [1 0 1 0 0]},
- :index-backward-seq
- {[0 0 1 0 0] [0 0 0 3 0],
-  [0 0 0 1 0] [0 0 0 0 0],
-  [1 0 0 0 0] [0 0 1 0 0],
-  [0 0 0 2 0] [0 0 0 1 0],
-  [0 0 0 3 0] [0 0 0 2 0],
-  [1 0 0 2 0] [1 0 0 1 0],
-  [1 0 0 1 0] [1 0 0 0 0],
-  [1 0 1 0 0] [1 0 0 3 0],
-  [1 0 0 3 0] [1 0 0 2 0]}}
-    )
-(let [common-noteseq
-      {:noteseq
-       [{:notes [{:svara [:madhyam :s]}]}
-        {:notes [{:svara [:madhyam :r]}]}
-        {:notes [{:svara [:madhyam :g]}]}
-        {:notes [{:svara [:madhyam :m]}]}
-        {:notes [{:svara [:madhyam :-]}]}],
-       :indexed-noteseq
-       [[[{:notes [{:svara [:madhyam :s]}]}
-          {:notes [{:svara [:madhyam :r]}]}
-          {:notes [{:svara [:madhyam :g]}]}
-          {:notes [{:svara [:madhyam :m]}]}]
-         [{:notes [{:svara [:madhyam :-]}]}]]],
-       :index [[0 0 0 0] [0 0 1 0] [0 0 2 0] [0 0 3 0] [0 1 0 0]],
-       :index-forward-seq
-       {[0 0 0 0] [0 0 1 0],
-        [0 0 1 0] [0 0 2 0],
-        [0 0 2 0] [0 0 3 0],
-        [0 0 3 0] [0 1 0 0]},
-       :index-backward-seq
-       {[0 0 1 0] [0 0 0 0],
-        [0 0 2 0] [0 0 1 0],
-        [0 0 3 0] [0 0 2 0],
-        [0 1 0 0] [0 0 3 0]}}]
-  (= {:score-parts
-      [(merge common-noteseq {:part-num 0, :part-title "sthayi"})
-       (merge common-noteseq {:part-num 1, :part-title "antara"})],
-      :taal :teentaal}
-     (add-indexes init-comp)))
 
 (def mswaras (subvec us/i-note-seq 0 (- (count us/i-note-seq) 2)))
 
@@ -406,11 +287,6 @@
              (constantly
               (let [in (->> comp :index (drop 8) first)]
                 (zipmap cursor-index-keys in ))))}))
-
-#_(=
- {:score-part-index 1, :avartan-index 0, :bhaag-index 1, :note-index 0, :nsi 0}
- (-> (comp-decorator init-comp)
-     :props :cursor-pos))
 
 (def default-db
   (let [idb
