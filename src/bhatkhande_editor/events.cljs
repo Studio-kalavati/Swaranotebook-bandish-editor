@@ -6,6 +6,7 @@
     :refer [reg-event-db reg-event-fx
             dispatch]]
    [chronoid.core :as c]
+
    [bhatkhande-editor.db :as db :refer [pitch-s-list cursor-index-keys space-notes
                                         init-part]]
    [bhatkhande-editor.utils :as utils :refer [json-onload cursor2vec cursor2map
@@ -27,14 +28,12 @@
            (= hostname "127.0.0.1")
            (= hostname "[::1]"))))
 
-
-
 (def log-event
   (re-frame.core/->interceptor
    :id      :log-event
    :after  (fn [context]
              (let [[k v] (-> context :coeffects :event) ]
-               (if-not (running-on-localhost?)
+               #_(when-not (running-on-localhost?)
                  (.capture (-> context :coeffects :db :posthog) (name k)
                            (if (map? v) (clj->js v)(clj->js {(name k) v}))))
                 context))))
@@ -148,7 +147,6 @@
 
 (defn keyboard-conj-svara
   [{:keys [db]} [_ svara]]
-  (println " kcv " svara)
   (if (-> db :props :onscreen-keyboard (= :show))
     {:db (update-in db [:props :onscreen-keyboard] (constantly :ask-hw-kbd))}
     {:dispatch-n
@@ -219,7 +217,6 @@
         note-insert-indexed
         (update-in indexed-noteseq cursor-vec
                    (fn[noteseq-at-i]
-                     (println " ns at i " noteseq-at-i)
                      (if (= noteseq-at-i [{:svara [:madhyam :_]}])
                        (into [svara](vec (repeat (dec notes-per-beat) {:svara [:madhyam :_]})))
                        (update-in noteseq-at-i [(:nsi cpos)] (constantly svara)))))
@@ -236,7 +233,6 @@
 
 (defn conj-svara
   [{:keys [db]} [_ {:keys [svara]}]]
-  (println " svara " svara)
    (let [cpos (get-in db [:props :cursor-pos ] )
          notes-per-beat (-> db :props :notes-per-beat)
          score-part-index (:score-part-index cpos)
@@ -845,7 +841,7 @@
           #js {"method" "get"})
          (.then (fn[i] (.text i)))
          (.then (fn[i]
-                  (let [imap (js->clj (t/read tr i))]
+                  (let [imap (db/cvt-format (js->clj (t/read tr i)))]
                     (dispatch [::set-url-path urlparams])
                     (dispatch [::refresh-comp imap]))))
          (.catch (fn[i] (println " error " i ))))
@@ -964,10 +960,11 @@
  ::refresh-comp
  (fn [{:keys [db]} [_ inp]]
    (let [comp (db/add-indexes inp)
-         lyrics? (> (->> comp :noteseq (map :lyrics) (filter identity) count) 0)
+         ;;TODO add lyrics back
+         ;;lyrics? (> (->> comp :noteseq (map :lyrics) (filter identity) count) 0)
          ndb (-> db
                  (update-in [:composition] (constantly comp))
-                 (update-in [:props :show-lyrics] (constantly lyrics?))
+                 ;;(update-in [:props :show-lyrics] (constantly lyrics?))
                  (update-in [:props :cursor-pos]
                             (constantly
                              (let [in (-> comp :index last)]

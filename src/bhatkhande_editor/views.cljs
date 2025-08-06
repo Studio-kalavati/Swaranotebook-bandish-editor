@@ -929,6 +929,7 @@
           [:div {:class "com-edit"}
            (let
                [comp @(subscribe [::subs/composition])
+                _ (println " comp " comp)
                 editing @(subscribe [::subs/currently-editing])
                 rect-style {:width 2 :height @font-size :y (int (* 0.3 @font-size))}
                 image-map (db/image-map

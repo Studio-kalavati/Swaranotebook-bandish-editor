@@ -142,6 +142,43 @@
         sah-list (when sahitya (mapv :lyrics sahitya))]
     sah-list))
 
+(def test-comp
+  {:noteseq
+   [{:notes [{:shruti [:madhyam :a], :npb 1}], :lyrics "ae,ri,aa,li"}
+    {:notes [{:shruti [:madhyam :s]}]}
+    {:notes [{:shruti [:madhyam :r]}]}
+    {:notes [{:shruti [:madhyam :g]}]}
+    {:notes [{:shruti [:madhyam :m]}], :lyrics "pi,ya,bi,na"}
+    {:notes [{:shruti [:madhyam :s], :npb 1}]}
+    {:notes [{:shruti [:madhyam :s], :npb 1}]}
+    {:notes [{:shruti [:madhyam :s], :npb 1}]}
+    {:notes [{:shruti [:madhyam :s], :npb 1}]}
+    {:notes [{:shruti [:madhyam :s], :npb 1}]}
+    {:notes [{:shruti [:madhyam :r], :npb 1}]}
+    {:notes [{:shruti [:madhyam :g], :npb 1}]}
+    {:notes [{:shruti [:madhyam :m], :npb 1}]}
+    {:notes [{:shruti [:taar :s], :npb 1}]}
+    {:notes [{:shruti [:taar :r], :npb 1}]}
+    {:notes [{:shruti [:taar :g], :npb 1}]}
+    {:notes [{:shruti [:mandra :s], :npb 2} {:shruti [:mandra :r], :npb 2}]}
+    {:notes [{:shruti [:mandra :g], :npb 2} {:shruti [:mandra :m], :npb 2}]}
+    {:notes
+     [{:shruti [:mandra :r], :npb 3}
+      {:shruti [:mandra :g], :npb 3}
+      {:shruti [:mandra :m], :npb 3}]}
+    {:notes
+     [{:shruti [:mandra :g], :npb 3}
+      {:shruti [:mandra :m], :npb 3}
+      {:shruti [:mandra :p], :npb 3}]}
+    {:notes
+     [{:shruti [:mandra :g], :npb 4}
+      {:shruti [:mandra :m], :npb 4}
+      {:shruti [:mandra :p], :npb 4}
+      {:shruti [:mandra :d], :npb 4}]}
+    {:notes [{:shruti [:mandra :s], :npb 1}]}
+    {:notes [{:shruti [:madhyam :-]}]}],
+   :taal :teentaal})
+
 (defn init-part
   [num-beats ptitle]
   (let [inoteseq
@@ -162,8 +199,49 @@
                    {:notes [{:svara [:madhyam :p]}] :lyrics "a"}
                    {:notes [{:svara [:madhyam :d]}] :lyrics "b"}
                    {:notes [{:svara [:madhyam :n]}] :lyrics "c"}
-                   {:notes [{:svara [:taar :s]}] :lyrics "d"}
-                   ])
+                   {:notes [{:svara [:taar :s]}] :lyrics "d"}])
+
+(defn cvt-format
+  [input-format]
+  (let [resp
+        (cond
+          (:noteseq input-format)
+          {:title "Bandish"
+           :score-parts
+           [{:part-title "sthayi"
+             :noteseq
+             (let [inoteseq
+                   (->> input-format
+                        :noteseq
+                        (reduce
+                         (fn[{:keys [lyr-acc] :as iacc}
+                             {:keys [notes lyrics]:as imap}]
+                           (let [lyr (if lyrics (.split lyrics #",") lyr-acc)]
+                             (println " lyr " lyr " notes " notes)
+                             (-> iacc
+                                 (update-in
+                                  [:noteseq]
+                                  conj
+                                  (let [in0
+                                        (assoc {}
+                                               :notes
+                                               (mapv (fn[n]
+                                                       (dissoc (clojure.set/rename-keys n {:shruti :svara})
+                                                               :npb)) notes))]
+                                    (if (first lyr)
+                                      (assoc in0 :lyrics (first lyr))
+                                      in0)))
+                                 (update-in [:lyr-acc] (constantly (rest lyr))))))
+                         {:noteseq [] :lyr-acc []})
+                        :noteseq)]
+               (into inoteseq (space-notes (- (:num-beats (taal-def (:taal input-format)))
+                                              (count inoteseq)))))}]
+            :taal (:taal input-format)}
+          (:score-parts input-format) input-format
+          :else "invalid format")]
+    (println " resp " resp)
+    resp))
+
 (def init-comp
     (let [inoteseq part-noteseq
           taal-id :teentaal
@@ -171,9 +249,9 @@
           (into inoteseq (space-notes (- (:num-beats (taal-def taal-id))
                                          (count inoteseq))))
           res
-          {:score-parts [{:part-num 0 :part-title "sthayi"
+          {:score-parts [{:part-title "sthayi"
                           :noteseq noteseq}
-                         {:part-num 1 :part-title "antara"
+                         {:part-title "antara"
                           :noteseq (into (vec (reverse inoteseq) )
                                          (space-notes (- (:num-beats (taal-def taal-id))
                                                          (count inoteseq))))}]
@@ -201,6 +279,7 @@
 (defn add-indexes
   [{:keys [taal score-parts] :as score}]
   (let [indexes (mapv #(add-part-index taal  %) score-parts)
+        _ (println " indexes " indexes)
         index (->> (map :index indexes)
                    (map-indexed (fn[indx item] (mapv #(vec (cons indx  %)) item)))
                    (reduce into))
@@ -289,8 +368,9 @@
                 (zipmap cursor-index-keys in ))))}))
 
 (def default-db
-  (let [idb
-        (merge (comp-decorator init-comp)
+  (let [icomp init-comp ;; (cvt-format test-comp)
+        idb
+        (merge (comp-decorator icomp)
                {:init-state {:cursor-color 0}
                 :dispinfo (merge dispinfo m-dispinfo)
                 :m-dispinfo m-dispinfo
@@ -299,3 +379,7 @@
                 :play-head-position (zipmap cursor-index-keys [0 0 0 0 0])
                 :dim {:editor (mapv dispinfo [:x-end :y-end])}})]
     idb))
+
+;;[{:part-title sthayi, :noteseq [{:notes [{:svara [:madhyam :s]}], :lyrics a} {:notes [{:svara [:madhyam :r]}], :lyrics b} {:notes [{:svara [:madhyam :g]}], :lyrics c} {:notes [{:svara [:madhyam :m]}], :lyrics d} {:notes [{:svara [:madhyam :p]}], :lyrics a} {:notes [{:svara [:madhyam :d]}], :lyrics b} {:notes [{:svara [:madhyam :n]}], :lyrics c} {:notes [{:svara [:taar :s]}], :lyrics d} {:notes [{:svara [:madhyam :_]}]} {:notes [{:svara [:madhyam :_]}]} {:notes [{:svara [:madhyam :_]}]} {:notes [{:svara [:madhyam :_]}]} {:notes [{:svara [:madhyam :_]}]} {:notes [{:svara [:madhyam :_]}]} {:notes [{:svara [:madhyam :_]}]} {:notes [{:svara [:madhyam :_]}]}]}]
+
+;;[{:part-title sthayi, :noteseq [{:notes [{:npb 1, :svara [:madhyam :a]}], :lyrics ae} {:notes [{:svara [:madhyam :s]}], :lyrics ri} {:notes [{:svara [:madhyam :r]}], :lyrics aa} {:notes [{:svara [:madhyam :g]}], :lyrics li} {:notes [{:svara [:madhyam :m]}], :lyrics pi} {:notes [{:npb 1, :svara [:madhyam :s]}], :lyrics ya} {:notes [{:npb 1, :svara [:madhyam :s]}], :lyrics bi} {:notes [{:npb 1, :svara [:madhyam :s]}], :lyrics na} {:notes [{:npb 1, :svara [:madhyam :s]}]} {:notes [{:npb 1, :svara [:madhyam :s]}]} {:notes [{:npb 1, :svara [:madhyam :r]}]} {:notes [{:npb 1, :svara [:madhyam :g]}]} {:notes [{:npb 1, :svara [:madhyam :m]}]} {:notes [{:npb 1, :svara [:taar :s]}]} {:notes [{:npb 1, :svara [:taar :r]}]} {:notes [{:npb 1, :svara [:taar :g]}]} {:notes [{:npb 2, :svara [:mandra :s]} {:npb 2, :svara [:mandra :r]}]} {:notes [{:npb 2, :svara [:mandra :g]} {:npb 2, :svara [:mandra :m]}]} {:notes [{:npb 3, :svara [:mandra :r]} {:npb 3, :svara [:mandra :g]} {:npb 3, :svara [:mandra :m]}]} {:notes [{:npb 3, :svara [:mandra :g]} {:npb 3, :svara [:mandra :m]} {:npb 3, :svara [:mandra :p]}]} {:notes [{:npb 4, :svara [:mandra :g]} {:npb 4, :svara [:mandra :m]} {:npb 4, :svara [:mandra :p]} {:npb 4, :svara [:mandra :d]}]} {:notes [{:npb 1, :svara [:mandra :s]}]} {:notes [{:svara [:madhyam :-]}]}]}]
