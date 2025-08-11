@@ -7,6 +7,7 @@
                                    single-dropdown
                                    checkbox
                                    line
+                                   label
                                    radio-button
                                    slider
                                    box
@@ -929,7 +930,6 @@
           [:div {:class "com-edit"}
            (let
                [comp @(subscribe [::subs/composition])
-                _ (println " comp " comp)
                 editing @(subscribe [::subs/currently-editing])
                 rect-style {:width 2 :height @font-size :y (int (* 0.3 @font-size))}
                 image-map (db/image-map
@@ -1038,7 +1038,7 @@
                                                    :y (int (* 0.2 @font-size))}]))
                                               (let [curpos @(subscribe [::subs/get-click-index])]
                                                 (if (= note-xy-map curpos)
-                                                  (do (println " curpos " curpos )
+                                                  (do 
                                                       (update-in
                                                        r3 [:images1] conj
                                                        [:rect
@@ -1055,30 +1055,26 @@
                                                                                 "blinking-cursor"))
                                                                         1000)))]))
                                                   r3)))
-                                            #_r3 #_(if-let [sah (get sah-list note-index)]
-                                                     (if (= nsi 0)
-                                                       (let [r4
-                                                             (update-in r3
-                                                                        [:images1]
-                                                                        conj
-                                                                        [:text
-                                                                         {:x (+ x1 (int (* 0.3 @font-size)))
-                                                                          :y (int (* 1.7 @font-size))
-                                                                          :style {:font-size (* 0.5 @font-size)}
-                                                                          :on-click
-                                                                          (fn[i]
-                                                                            (reset! cursor-y (.-pageY i))
-                                                                            (dispatch [::events/currently-editing :sahitya])
-                                                                            (dispatch [::events/set-click-index
-                                                                                       (assoc note-xy-map :nsi 0)]))}
-                                                                         sah])]
-                                                         (if (> 2 (count sah))
-                                                           r4
-                                                           (-> r4
-                                                               (update-in [:x1] + (int (* (* 0.3 (count sah))
-                                                                                          (* 0.7 @font-size)))))))
-                                                       r3)
-                                                     r3)]
+                                            r3
+                                            (if (and (= 0 nsi) play-mode?)
+                                              (let [sah (get-in comp
+                                                                [:indexed-noteseq score-part-index
+                                                                 avartan-index bhaag-index note-index :lyrics])
+                                                    r4
+                                                        (update-in r3
+                                                                   [:images1]
+                                                                   conj
+                                                                   [:text
+                                                                    {:x (+ x1 (int (* 0.3 @font-size)))
+                                                                     :y (int (* 1.7 @font-size))
+                                                                     :style {:font-size (* 0.5 @font-size)}}
+                                                                    sah])]
+                                                (if (> 2 (count sah))
+                                                  r4
+                                                  (-> r4
+                                                      (update-in [:x1] + (int (* (* 0.3 (count sah))
+                                                                                 (* 0.7 @font-size)))))))
+                                              r3)]
                                         r3))
                                     {:x1 x :images1 []}))
 
@@ -1129,28 +1125,6 @@
                           {:x 5 :images []}))
                         images
                         (:images r3)
-                        #_(if show-lyrics?
-                            (-> (:images r3)
-                                (into (let [tv @(subscribe [::subs/get-sahitya
-                                                            [avartan-index bhaag-index]])]
-                                        [[:defs
-                                          [:linearGradient {:id "sahitya-fill"}
-                                           [:stop {:offset "0%" :stop-color "gray"}]
-                                           [:stop {:offset "100%" :stop-color "lightgray"}]]]
-                                         [:rect
-                                          {:x (int (* 0.2 @font-size)) :y (int (* 1.3 @font-size))
-                                           :width (:x r3) :height (int (* 0.6 @font-size))
-                                           :rx "5"
-                                           :style
-                                           (let [m {:font-size "15px"}]
-                                             (merge m
-                                                    (if sahitya
-                                                      {:fill "transparent"}
-                                                      {:fill "url(#sahitya-fill)"})))
-                                           :on-click
-                                           (fn[_]
-                                             (dispatch [::events/currently-editing :lyrics]))}]])))
-                            (:images r3))
                         x-end (:x r3)]
                     ;;add vertical bars for bhaag
                     ;;2 bars if the avartan starts
@@ -1216,16 +1190,17 @@
                                                                  [:svg {:xmlns "http://www.w3.org/2000/svg"
                                                                         :width (+ x (int (* @font-size 0.6)))}]
                                                                  images)
-                                                         (let [ topsize (str (* 1.1 @font-size) "px")]
-                                                           [input-text :model sah-list
-                                                            :width "50px"
-                                                            :class "overlay-text"
-                                                            :style {:top topsize :font-size (* 0.8 @font-size)}
-                                                            :on-change (fn[x]
-                                                                         (let [new-sahitya
-                                                                               (clojure.string/split x #",")]
-                                                                           (dispatch [::events/conj-sahitya
-                                                                                      (assoc cursor-map :text-val new-sahitya)])))])]]
+                                                         (let [topsize (str (* 1.1 @font-size) "px")]
+                                                           (when-not play-mode?
+                                                             [input-text :model sah-list
+                                                              :width "50px"
+                                                              :class "overlay-text"
+                                                              :style {:top topsize :font-size (* 0.8 @font-size)}
+                                                              :on-change (fn[x]
+                                                                           (let [new-sahitya
+                                                                                 (clojure.string/split x #",")]
+                                                                             (dispatch [::events/conj-sahitya
+                                                                                        (assoc cursor-map :text-val new-sahitya)])))]))]]
                                                 res))
                                             row)
                                            vec)]

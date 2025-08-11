@@ -217,7 +217,6 @@
                          (fn[{:keys [lyr-acc] :as iacc}
                              {:keys [notes lyrics]:as imap}]
                            (let [lyr (if lyrics (.split lyrics #",") lyr-acc)]
-                             (println " lyr " lyr " notes " notes)
                              (-> iacc
                                  (update-in
                                   [:noteseq]
@@ -279,7 +278,6 @@
 (defn add-indexes
   [{:keys [taal score-parts] :as score}]
   (let [indexes (mapv #(add-part-index taal  %) score-parts)
-        _ (println " indexes " indexes)
         index (->> (map :index indexes)
                    (map-indexed (fn[indx item] (mapv #(vec (cons indx  %)) item)))
                    (reduce into))
