@@ -1482,10 +1482,6 @@ input[type="search"]
 
 @media (max-width: 767px)
 {
-    /*.composition .name
-    {
-        font-size: 12px;
-    }*/
 
     .introduction .container .row
     {
@@ -1626,7 +1622,7 @@ input[type="search"]
     
     .edit-composition .com-edit
     {
-        padding: 10px;
+        padding: 5px;
         margin: auto;
 	min-height: inherit;
         border: 0;

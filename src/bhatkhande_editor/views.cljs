@@ -884,7 +884,6 @@
          [:div
           {:class "edit-composition"
            :style {:overflow-y "scroll"
-                   ;;:max-height myhgt
                    :height myhgt
                    :min-height myhgt
                    :flex-flow "column" :flex "1 0 0px"}
@@ -1038,7 +1037,7 @@
                                                    :y (int (* 0.2 @font-size))}]))
                                               (let [curpos @(subscribe [::subs/get-click-index])]
                                                 (if (= note-xy-map curpos)
-                                                  (do 
+                                                  (do
                                                       (update-in
                                                        r3 [:images1] conj
                                                        [:rect
@@ -1056,25 +1055,27 @@
                                                                         1000)))]))
                                                   r3)))
                                             r3
-                                            (if (and (= 0 nsi) play-mode?)
-                                              (let [sah (get-in comp
-                                                                [:indexed-noteseq score-part-index
-                                                                 avartan-index bhaag-index note-index :lyrics])
-                                                    r4
-                                                        (update-in r3
-                                                                   [:images1]
-                                                                   conj
-                                                                   [:text
-                                                                    {:x (+ x1 (int (* 0.3 @font-size)))
-                                                                     :y (int (* 1.7 @font-size))
-                                                                     :style {:font-size (* 0.5 @font-size)}}
-                                                                    sah])]
-                                                (if (> 2 (count sah))
+                                            (let [sah (get-in comp
+                                                              [:indexed-noteseq score-part-index
+                                                               avartan-index bhaag-index note-index :lyrics])
                                                   r4
-                                                  (-> r4
-                                                      (update-in [:x1] + (int (* (* 0.3 (count sah))
-                                                                                 (* 0.7 @font-size)))))))
-                                              r3)]
+                                                  (if (and (= 0 nsi) play-mode?)
+                                                    (update-in r3
+                                                               [:images1]
+                                                               conj
+                                                               [:text
+                                                                {:x (+ x1 (int (* 0.3 @font-size)))
+                                                                 :y (int (* 1.7 @font-size))
+                                                                 :on-click (fn[i] (println " text onclick"))
+                                                                 :style {:font-size (* 0.5 @font-size)}}
+                                                                sah])
+                                                    r3)]
+                                              (if (> (count sah) 2)
+                                                (let [new-x (int (* (* 0.5 (count sah))
+                                                                    (* 0.7 @font-size)))
+                                                      x-incr (+ new-x (get-in r4 [:x1]))]
+                                                  (update-in r4 [:x1] (constantly x-incr)))
+                                                r4))]
                                         r3))
                                     {:x1 x :images1 []}))
 
@@ -1104,7 +1105,7 @@
                                                   [:images] conj
                                                   [:text {:x (int (* 0.5 @font-size))
                                                           :y  (if (or show-lyrics? sahitya)
-                                                                (int (* 2.3 @font-size))
+                                                                (int (* 2.5 @font-size))
                                                                 (int (* 1.6 @font-size)))
                                                           :style {:font-size (* 0.5 @font-size)}}
                                                    (let [t @(subscribe [::subs/taal])
@@ -1177,25 +1178,35 @@
                                                     cursor-map {:score-part-index score-part-index
                                                                 :avartan-index avartan-index
                                                                 :bhaag-index bhaag-index}
-                                                    sah-list (clojure.string/join ","
-                                                                                  (get-sahitya comp cursor-map))
-
                                                     res [:div {:class "bhaag-item" :style
                                                                (merge
                                                                 {:max-width (+ x (int (* @font-size 0.7))) }
                                                                 {:max-height
-                                                                 (int (* (if @(subscribe [::subs/show-lyrics?]) 2.5 2)
+                                                                 (int (* (if @(subscribe [::subs/show-lyrics?]) 2.8 2)
                                                                          @font-size))})}
                                                          (reduce conj
                                                                  [:svg {:xmlns "http://www.w3.org/2000/svg"
                                                                         :width (+ x (int (* @font-size 0.6)))}]
                                                                  images)
-                                                         (let [topsize (str (* 1.1 @font-size) "px")]
-                                                           (when-not play-mode?
+
+                                                         (let [xs (->> bhaag (map :notes) (map count))
+                                                               topsize (str (* 1.2 @font-size) "px")
+                                                               sah-list
+                                                               (->>
+                                                                (map vector (get-sahitya comp cursor-map) xs)
+                                                                (map
+                                                                 (fn[[s svara-count]]
+                                                                   (if (> svara-count 1)
+                                                                     (str s (clojure.string/join
+                                                                             "" (repeat svara-count " ")))
+                                                                     s)))
+                                                                (clojure.string/join ","))]
+                                                           (when (and @(subscribe [::subs/show-lyrics?])
+                                                                      (not play-mode?))
                                                              [input-text :model sah-list
-                                                              :width "50px"
                                                               :class "overlay-text"
-                                                              :style {:top topsize :font-size (* 0.8 @font-size)}
+                                                              :style {:top topsize :font-size (* 0.8 @font-size)
+                                                                      :width "96%"}
                                                               :on-change (fn[x]
                                                                            (let [new-sahitya
                                                                                  (clojure.string/split x #",")]
