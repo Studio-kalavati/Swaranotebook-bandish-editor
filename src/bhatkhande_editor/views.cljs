@@ -1059,15 +1059,14 @@
                                                               [:indexed-noteseq score-part-index
                                                                avartan-index bhaag-index note-index :lyrics])
                                                   r4
-                                                  (if (and (= 0 nsi) play-mode?)
+                                                  (if (and (= 0 nsi) play-mode? show-lyrics?)
                                                     (update-in r3
                                                                [:images1]
                                                                conj
                                                                [:text
                                                                 {:x (+ x1 (int (* 0.3 @font-size)))
                                                                  :y (int (* 1.7 @font-size))
-                                                                 :on-click (fn[i] (println " text onclick"))
-                                                                 :style {:font-size (* 0.5 @font-size)}}
+                                                                 :style {:font-size (* 0.7 @font-size)}}
                                                                 sah])
                                                     r3)]
                                               (if (> (count sah) 2)
@@ -1104,9 +1103,9 @@
                                        (update-in r6
                                                   [:images] conj
                                                   [:text {:x (int (* 0.5 @font-size))
-                                                          :y  (if (or show-lyrics? sahitya)
+                                                          :y  (if (and show-lyrics? sahitya)
                                                                 (int (* 2.5 @font-size))
-                                                                (int (* 1.6 @font-size)))
+                                                                (int (* 1.8 @font-size)))
                                                           :style {:font-size (* 0.5 @font-size)}}
                                                    (let [t @(subscribe [::subs/taal])
                                                          sk-index
@@ -1182,7 +1181,7 @@
                                                                (merge
                                                                 {:max-width (+ x (int (* @font-size 0.7))) }
                                                                 {:max-height
-                                                                 (int (* (if @(subscribe [::subs/show-lyrics?]) 2.8 2)
+                                                                 (int (* (if show-lyrics? 2.8 2)
                                                                          @font-size))})}
                                                          (reduce conj
                                                                  [:svg {:xmlns "http://www.w3.org/2000/svg"
@@ -1201,11 +1200,11 @@
                                                                              "" (repeat svara-count " ")))
                                                                      s)))
                                                                 (clojure.string/join ","))]
-                                                           (when (and @(subscribe [::subs/show-lyrics?])
-                                                                      (not play-mode?))
+                                                           (when (and show-lyrics? (not play-mode?))
                                                              [input-text :model sah-list
                                                               :class "overlay-text"
                                                               :style {:top topsize :font-size (* 0.8 @font-size)
+                                                                      :height (* 1 @font-size)
                                                                       :width "96%"}
                                                               :on-change (fn[x]
                                                                            (let [new-sahitya

@@ -264,7 +264,6 @@
 
 (defn conj-sahitya
   [{:keys [db]} [_ {:keys [score-part-index text-val bhaag-index avartan-index] :as imap}]]
-  (println " conj-sahitya " imap)
   (let [indx (->> db :composition :index
                   (map-indexed
                    (fn[indx i] (when (= i [score-part-index avartan-index bhaag-index 0 0]) indx)))
@@ -277,7 +276,8 @@
                        [:score-parts score-part-index :noteseq index :lyrics]
                        (constantly sahitya))) (:composition db)
                     (map vector text-val indexes))]
-    {:db (assoc db :composition (db/add-indexes comp))}))
+    {:db (assoc db :composition (db/add-indexes comp))
+     :dispatch [::save-to-localstorage]}))
 
 (reg-event-fx ::conj-sahitya [log-event] conj-sahitya)
 
@@ -287,7 +287,7 @@
    (let [storage (.-sessionStorage js/window)
          w (t/writer :json)
          out-string
-         (t/write w (select-keys (-> db :composition) [:noteseq :taal]))]
+         (t/write w (-> db :composition))]
      (.setItem storage "comp" out-string)
      {})))
 
