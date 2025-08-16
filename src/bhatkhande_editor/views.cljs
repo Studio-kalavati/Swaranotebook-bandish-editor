@@ -1112,7 +1112,7 @@
                                                   [:images] conj
                                                   [:text {:x (int (* 0.5 @font-size))
                                                           :y  (if (and show-lyrics? sahitya)
-                                                                (int (* 2.5 @font-size))
+                                                                (int (* 2.6 @font-size))
                                                                 (int (* 1.8 @font-size)))
                                                           :style {:font-size (* 0.5 @font-size)}}
                                                    (let [t @(subscribe [::subs/taal])
@@ -1197,7 +1197,7 @@
                                                                  images)
 
                                                          (let [xs (->> bhaag (map :notes) (map count))
-                                                               topsize (str (* 1.2 @font-size) "px")
+                                                               topsize (str (* 1.3 @font-size) "px")
                                                                sah-list
                                                                (->>
                                                                 (map vector (get-sahitya comp cursor-map) xs)
@@ -1214,6 +1214,7 @@
                                                                :class "overlay-text"
                                                                :style {:top topsize :font-size (* 0.8 @font-size)
                                                                        :height (* 1 @font-size)
+                                                                       :border "1px dotted gray"
                                                                        :width "96%"
                                                                        }
                                                                :on-change (fn[x]

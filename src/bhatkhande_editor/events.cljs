@@ -1122,7 +1122,6 @@
                 (sort-by second))]
     a1))
 
-
 (defn play-start-event-fn
   [{:keys [db]} now]
   (let [bpm (-> db :props :bpm)
