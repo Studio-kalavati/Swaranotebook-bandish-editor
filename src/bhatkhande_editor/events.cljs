@@ -265,11 +265,14 @@
 (defn conj-sahitya
   [{:keys [db]} [_ {:keys [score-part-index text-val bhaag-index avartan-index] :as imap}]]
   (let [indx (->> db :composition :index
+                  (filter #(= (first %) score-part-index))
                   (map-indexed
                    (fn[indx i] (when (= i [score-part-index avartan-index bhaag-index 0 0]) indx)))
                   (filter identity)
                   first)
         indexes (range indx (+ indx (count text-val)))
+        ;;index contains notes from all the bhaags
+        ;;but reduce works on notes on the specific score-part-index
         comp (reduce (fn[acc [sahitya index]]
                       (update-in
                        acc
@@ -1122,7 +1125,6 @@
 
 (defn play-start-event-fn
   [{:keys [db]} now]
-  (println " psef " (dissoc db :sample-buffers) " now " now)
   (let [bpm (-> db :props :bpm)
         note-interval (/ 60 bpm)
         play-head-position

@@ -864,6 +864,14 @@
                                                         (zmdi-butn2 "zmdi zmdi-tag-close zmdi-hc-lg"
                                                                     #(dispatch [::events/delete-single-svara]))]]])]]])]]]))))
 
+(defn text-width [input text]
+  (let [style   (.getComputedStyle js/window input)
+        font    (str (.-fontSize style) " " (.-fontFamily style))
+        canvas  (.createElement js/document "canvas")
+        context (.getContext canvas "2d")]
+    (set! (.-font context) font)
+    (.-width (.measureText context text))))
+
 (defn swara-display-area
   []
   (let [
@@ -1201,16 +1209,20 @@
                                                                      s)))
                                                                 (clojure.string/join ","))]
                                                            (when (and show-lyrics? (not play-mode?))
-                                                             [input-text :model sah-list
-                                                              :class "overlay-text"
-                                                              :style {:top topsize :font-size (* 0.8 @font-size)
-                                                                      :height (* 1 @font-size)
-                                                                      :width "96%"}
-                                                              :on-change (fn[x]
-                                                                           (let [new-sahitya
-                                                                                 (clojure.string/split x #",")]
-                                                                             (dispatch [::events/conj-sahitya
-                                                                                        (assoc cursor-map :text-val new-sahitya)])))]))]]
+                                                             [input-text
+                                                               :model sah-list
+                                                               :class "overlay-text"
+                                                               :style {:top topsize :font-size (* 0.8 @font-size)
+                                                                       :height (* 1 @font-size)
+                                                                       :width "96%"
+                                                                       }
+                                                               :on-change (fn[x]
+                                                                            (let [
+                                                                                  new-val x
+                                                                                  new-sahitya
+                                                                                  (clojure.string/split new-val #",")]
+                                                                              (dispatch [::events/conj-sahitya
+                                                                                         (assoc cursor-map :text-val new-sahitya)])))]))]]
                                                 res))
                                             row)
                                            vec)]
