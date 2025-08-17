@@ -1327,6 +1327,7 @@
                                                 #js {"duration" (* 1000 idur)})
                                                (.addEventListener
                                                 "finish"
+                                                ;;make the cursor disappear after the time is over
                                                 (fn[_]
                                                   (set! (.-style notel)
                                                         (str "fill-opacity:0"))))))
