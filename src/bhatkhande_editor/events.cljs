@@ -6,8 +6,12 @@
     :refer [reg-event-db reg-event-fx
             dispatch]]
    [chronoid.core :as c]
-   [bhatkhande-editor.db :as db :refer [pitch-s-list]]
-   [bhatkhande-editor.utils :as utils :refer [json-onload]]
+
+   [bhatkhande-editor.db :as db :refer [pitch-s-list cursor-index-keys space-notes
+                                        init-part]]
+   [bhatkhande-editor.utils :as utils :refer [json-onload cursor2vec cursor2map
+                                              remove-empty-avartan
+                                              get-noteseq-key]]
    ["firebase/app" :default firebase]
    ["firebase/auth" :default fbauth]
    ["firebase/storage" :default storage]
@@ -18,13 +22,20 @@
    [clojure.string :as cstring]
    [sargam.talas :refer [taal-def]]))
 
+(defn running-on-localhost? []
+     (let [hostname (.. js/window -location -hostname)]
+       (or (= hostname "localhost")
+           (= hostname "127.0.0.1")
+           (= hostname "[::1]"))))
+
 (def log-event
   (re-frame.core/->interceptor
    :id      :log-event
    :after  (fn [context]
              (let [[k v] (-> context :coeffects :event) ]
-                (.capture (-> context :coeffects :db :posthog) (name k)
-                          (if (map? v) (clj->js v)(clj->js {(name k) v})))
+               #_(when-not (running-on-localhost?)
+                 (.capture (-> context :coeffects :db :posthog) (name k)
+                           (if (map? v) (clj->js v)(clj->js {(name k) v}))))
                 context))))
 
 (def clear-highlight-interceptor
@@ -110,10 +121,10 @@
 
 (reg-event-fx
  ::play-svara
- (fn [{:keys [db]} [_ shruti]]
+ (fn [{:keys [db]} [_ svara]]
    (if (:audio-context db)
      (let [audctx (:audio-context db)
-           buf (@(:note-buffers db) shruti)
+           buf (@(:note-buffers db) svara)
            absn (new js/AudioBufferSourceNode audctx
                      #js {"buffer" buf})]
        (if audctx
@@ -144,7 +155,7 @@
               :madhyam
               (or (-> db :props :note-octave) :madhyam)) svara]]
        [[::conj-svara {:svara
-                       {:shruti mod-svara}}]
+                       {:svara mod-svara}}]
         [::play-svara mod-svara]])}))
 
 (reg-event-fx
@@ -158,115 +169,118 @@
         ;;when multiple notes in a beat, index-forward-seq's next-index
         ;;returns the next note in the same beat
         ;;so skip forward until the next full note is found.
-        next-index (loop [n0 (vals cursor-pos)]
-           (let [n1 (get-in ndb [:composition :index-forward-seq n0])]
-             ;;note sub-index should be 0 for the next whole note
-             (cond
-               (nil? n1) n0 ;;at the end
-               (= 0 (last n1)) n1
-               :else (recur n1))))]
-    (if next-index
-      (zipmap [:row-index :bhaag-index :note-index :nsi] next-index)
-      cursor-pos)))
+        ;;todo-this isn't  returned the  next note
+        next-index (loop [n0 (mapv #(cursor-pos %) cursor-index-keys)]
+                     (let [n1 (get-in ndb [:composition :index-forward-seq n0])]
+                       ;;note sub-index should be 0 for the next whole note
+                       (cond
+                         (nil? n1) n0 ;;at the end
+                         (= 0 (last n1)) n1
+                         :else (recur n1))))
+        res (if next-index
+          (zipmap cursor-index-keys next-index)
+          cursor-pos)]
+    res))
 
 (defn move-cursor-backward
   "returns the index of the previous note group."
   [ndb ]
   (let [cursor-pos (get-in ndb [:props :cursor-pos ] )
-        prev-index (get-in ndb [:composition :index-backward-seq (vals cursor-pos)])
-        note-index (get-ns-index ndb)]
+        prev-index (get-in ndb [:composition :index-backward-seq (cursor2vec cursor-pos)])]
     (let [res
-          (if (= 0 note-index)
-            cursor-pos
-            (zipmap [:row-index :bhaag-index :note-index :nsi]
-                    (if (> (last prev-index) 0 )
-                      ;;if deleting a multi-note, the ni is > 0
-                      ;;instead make it 0
-                      (conj (subvec prev-index 0 3) 0)
-                      prev-index)))]
+          (if prev-index
+            (cursor2map (if (> (last prev-index) 0 )
+                          ;;if deleting a multi-note, the ni is > 0
+                          ;;instead make it 0
+                          (conj (subvec prev-index 0 4) 0)
+                          prev-index))
+            cursor-pos)]
       res)))
 
-(defn insert-note
-  [{:keys [note-index nsvara]} noteseq]
-  (if (= -1 note-index)
-    ;;insert note before rest of seq cos this is at 0 position
-    (into [{:notes [nsvara]}] noteseq)
-    (into (conj (subvec noteseq 0 (inc note-index)) {:notes [nsvara]})
-          (subvec noteseq (inc note-index)))))
+(defn full-avartan-notes
+  "return a noteseq of a full avartan, given the taal"
+  [taal]
+  (let [num-beats (:num-beats (taal-def taal))]
+    (space-notes num-beats)))
+
+(defn conj-avartan
+  [noteseq taal]
+  (if (-> noteseq last :notes (= [{:svara [:madhyam :_]}]))
+    noteseq
+    (into noteseq (full-avartan-notes taal))))
 
 (defn update-noteseq
   "inserts a note into the noteseq and return a 2-tuple,
   the updated noteseq and the next note cursor"
-  [{:keys [note-index svara notes-per-beat cpos] :as imap} noteseq]
-  (let [ith-note (get-in noteseq [note-index])
-         nsvara (assoc svara :npb notes-per-beat)
-        note-insert (insert-note (assoc imap :nsvara nsvara) noteseq)
-         res
-        (if (> notes-per-beat 1)
-          ;;2 states here: either adding the first note of a multi-note
-          ;;if not the same as the last npb
-          (if
-              (and (not= notes-per-beat (-> ith-note :notes count))
-                   (= notes-per-beat (-> ith-note :notes last :npb)))
-            [(update-in noteseq [note-index :notes] conj nsvara)
-             (if (> notes-per-beat (-> ith-note :notes count))
-               ;;if multi-note will be full after this, stay on the same note
-               ;;don't increment the cursor
-               :cur-cursor
-               ;;increment just note-sub-index
-               (zipmap [:row-index :bhaag-index :note-index :nsi]
-                       (mapv (update-in cpos [:nsi] inc)
-                             [:row-index :bhaag-index :note-index :nsi])))]
-            [note-insert :next-note-cursor]
-            ;;otherwise append to multi-note
-            )
-          [note-insert :next-note-cursor])]
+  [{:keys [svara notes-per-beat cpos taal] :as imap} indexed-noteseq]
+  (let [cursor-vec (conj (vec (butlast (cursor2vec cpos))) :notes)
+        note-insert-indexed
+        (update-in indexed-noteseq cursor-vec
+                   (fn[noteseq-at-i]
+                     (if (= noteseq-at-i [{:svara [:madhyam :_]}])
+                       (into [svara](vec (repeat (dec notes-per-beat) {:svara [:madhyam :_]})))
+                       (update-in noteseq-at-i [(:nsi cpos)] (constantly svara)))))
+        note-insert (-> (:score-part-index cpos)
+                        note-insert-indexed
+                        flatten
+                        vec
+                        (conj-avartan taal))
+        next-cursor (if (= notes-per-beat (inc (:nsi cpos)))
+                      :next-note-cursor
+                      (update-in cpos [:nsi] inc))
+        res [note-insert next-cursor]]
     res))
 
 (defn conj-svara
   [{:keys [db]} [_ {:keys [svara]}]]
    (let [cpos (get-in db [:props :cursor-pos ] )
          notes-per-beat (-> db :props :notes-per-beat)
-         prev-index (get-in db [:composition :index-backward-seq (vals cpos)])
-         note-index
-         (if (nil? prev-index)
-           -1
-           (db/get-noteseq-index
-            (zipmap [:row-index :bhaag-index :note-index :nsi] prev-index)
-            (get-in db [:composition :taal])))
+         score-part-index (:score-part-index cpos)
          [updated-ns updated-cursor] (update-noteseq
-                                      {:note-index note-index :svara svara :notes-per-beat notes-per-beat
-                                       :cpos cpos }
-                                      (get-in db [:composition :noteseq]))
+                                      {:svara svara
+                                       :notes-per-beat notes-per-beat
+                                       :taal (get-in db [:composition :taal])
+                                       :cpos cpos}
+                                      (get-in db [:composition :indexed-noteseq]))
          ndb
          (-> db
-             (update-in [:composition :noteseq] (constantly updated-ns))
+             (update-in [:composition :score-parts score-part-index :noteseq] (constantly updated-ns))
              (update-in [:composition] db/add-indexes))
          ndb
          (-> ndb
              (update-in [:props :cursor-pos]
                         (constantly
-                         (cond
-                           (= updated-cursor :next-note-cursor)
-                           (move-cursor-forward ndb)
-                           (= updated-cursor :cur-cursor) cpos
-                           :else
-                           updated-cursor))))]
+                         (let [upc (cond
+                                     (= updated-cursor :next-note-cursor)
+                                     (move-cursor-forward ndb)
+                                     (= updated-cursor :cur-cursor) cpos
+                                     :else
+                                     updated-cursor)]
+                           upc))))]
      {:db ndb
       :dispatch [::save-to-localstorage]}))
 
 (reg-event-fx ::conj-svara [log-event] conj-svara)
 
 (defn conj-sahitya
-  [{:keys [db]} [_ {:keys [text-val bhaag-index row-index]}]]
-  (let [indx (db/get-noteseq-index {:row-index row-index
-                                    :bhaag-index bhaag-index
-                                    :note-index 0}
-                                   (get-in db [:composition :taal]))]
-    {:db (-> db
-             (update-in
-              [:composition :noteseq indx :lyrics]
-              (constantly text-val)))}))
+  [{:keys [db]} [_ {:keys [score-part-index text-val bhaag-index avartan-index] :as imap}]]
+  (let [indx (->> db :composition :index
+                  (filter #(= (first %) score-part-index))
+                  (map-indexed
+                   (fn[indx i] (when (= i [score-part-index avartan-index bhaag-index 0 0]) indx)))
+                  (filter identity)
+                  first)
+        indexes (range indx (+ indx (count text-val)))
+        ;;index contains notes from all the bhaags
+        ;;but reduce works on notes on the specific score-part-index
+        comp (reduce (fn[acc [sahitya index]]
+                      (update-in
+                       acc
+                       [:score-parts score-part-index :noteseq index :lyrics]
+                       (constantly sahitya))) (:composition db)
+                    (map vector text-val indexes))]
+    {:db (assoc db :composition (db/add-indexes comp))
+     :dispatch [::save-to-localstorage]}))
 
 (reg-event-fx ::conj-sahitya [log-event] conj-sahitya)
 
@@ -276,7 +290,7 @@
    (let [storage (.-sessionStorage js/window)
          w (t/writer :json)
          out-string
-         (t/write w (select-keys (-> db :composition) [:noteseq :taal]))]
+         (t/write w (-> db :composition))]
      (.setItem storage "comp" out-string)
      {})))
 
@@ -309,17 +323,17 @@
                    (constantly imap)))}))
 
 (defn next-bhaag-lyrics-popup
-  [{:keys [db]} [_ {:keys [row-index bhaag-index] :as imap}]]
+  [{:keys [db]} [_ {:keys [avartan-index bhaag-index] :as imap}]]
   (let [fsmap (get-in db [:composition :index-forward-seq])
         next-bhaag-note
-        (loop [rb [row-index bhaag-index 0 0]]
+        (loop [rb [avartan-index bhaag-index 0 0]]
           (let [[r b x y :as next-note-index] (fsmap rb)]
             (if (or (and (= x 0) (= y 0)) (nil? next-note-index))
               [r b]
               (recur next-note-index ))))
         slpop-value (if (= [nil nil] next-bhaag-note)
                       false
-                      {:row-index (first next-bhaag-note)
+                      {:avartan-index (first next-bhaag-note)
                        :bhaag-index (second next-bhaag-note)})]
     {:db
      (-> db
@@ -366,7 +380,7 @@
         next-cp (if (= :left to)
                   (move-cursor-backward db)
                   (move-cursor-forward db))
-        is-last-note? (nil? (get-in db [:composition :index-forward-seq (vals cursor-pos)]))
+        is-last-note? (nil? (get-in db [:composition :index-forward-seq (cursor2vec cursor-pos)]))
         ndb (update-in db [:props :cursor-pos] (constantly next-cp))]
     {:db
      ;;don't add the last - note to the highlight set
@@ -382,11 +396,13 @@
 
 (defn copy-to-clipboard
   [{:keys [db]} [_ _]]
-  (let [notes (->>
+  (let [
+        noteseq-key (get-noteseq-key db)
+        notes (->>
                (get-in db [:props :highlighted-pos] )
                (map #(db/get-noteseq-index
                       % (get-in db [:composition :taal])))
-               (map #(get-in db [:composition :noteseq %])))]
+               (map #(get-in db (conj noteseq-key %))))]
     {:db (update-in db [:props :clipboard]
                     (constantly notes))}))
 
@@ -398,17 +414,19 @@
    (let [highlighted (get-in db [:props :highlighted-pos] )
          note-indexes (map #(db/get-noteseq-index
                              % (get-in db [:composition :taal])) highlighted)
-         noteseq (get-in db [:composition :noteseq])
+
+         noteseq-key (get-noteseq-key db)
+         noteseq (get-in db noteseq-key)
          notes (->>
                 note-indexes
-                (map #(get-in db [:composition :noteseq %])))
+                (map #(get-in db (conj noteseq-key %))))
          noteseq-wo-highlight (vec (keep-indexed
                                     (fn [indx item]
                                       (when-not ((set note-indexes) indx) item))
                                     noteseq))]
      {:db
       (-> db
-          (update-in [:composition :noteseq]
+          (update-in noteseq-key
                      (constantly noteseq-wo-highlight))
           (update-in [:props :cursor-pos] (constantly (first highlighted)))
           (update-in [:props :clipboard]
@@ -421,17 +439,27 @@
  ;;[log-event]
  (fn[{:keys [db]} [_ _]]
    (let [selected-notes (get-in db [:props :clipboard])
+         noteseq-key (get-noteseq-key db)
+         taal (get-in db [:composition :taal])
          note-index
          (db/get-noteseq-index
           (get-in db [:props :cursor-pos])
           (get-in db [:composition :taal]))
-         noteseq (get-in db [:composition :noteseq])
+         noteseq (get-in db noteseq-key)
          prefix (subvec noteseq 0 note-index)
          postfix (subvec noteseq note-index)]
      {:db
       (-> db
-          (update-in [:composition :noteseq]
-                     (constantly (into (into prefix selected-notes) postfix)))
+          (update-in noteseq-key
+                     (constantly
+                      (let [ins (into (into prefix selected-notes) postfix)
+                            num-beats (:num-beats (taal-def taal))
+                            unfilled-count (- num-beats (rem (count ins) num-beats))]
+                        (if (= 0 unfilled-count)
+                          ins
+                          (remove-empty-avartan
+                           (into ins (vec (repeat unfilled-count {:notes [{:svara [:madhyam :_]}]})))
+                           num-beats)))))
           (update-in [:composition] db/add-indexes))})))
 
 (reg-event-fx
@@ -446,25 +474,86 @@
                  [:props :cursor-pos]
                  (constantly new-cursor-pos))})))
 
-(defn delete-single-swara
+(defn delete-single-svara
   [{:keys [db]} [_ _]]
-  (let [note-index (get-ns-index db)]
-    ;;need to update cursor position too
-    {:db
-     (-> db
-         (update-in [:composition :noteseq]
-                    #(let [res
-                           (if (= 0 note-index)
-                             ;;dont delete  the first one
-                             %
-                             (into (subvec % 0 (dec note-index)) (subvec % note-index)))]
-                       res))
-         (update-in [:composition] db/add-indexes)
-         (update-in [:props :cursor-pos]
-                    (constantly (move-cursor-backward db))))
-     :dispatch [::save-to-localstorage]}))
+  (let [cursor-pos (get-in db [:props :cursor-pos])
+        prev-cursor ((-> db :composition :index-backward-seq ) (cursor2vec cursor-pos))]
+    (if prev-cursor
+      (let [cursor-vec (conj (vec (butlast prev-cursor)) :notes)
+            score-part-index (first prev-cursor)
+            indexed-noteseq (get-in db [:composition :indexed-noteseq])
 
-(reg-event-fx ::delete-single-swara [clear-highlight-interceptor] delete-single-swara)
+            taal (get-in db [:composition :taal])
+            num-beats (:num-beats (taal-def taal))
+            nindexed-noteseq
+            (update-in indexed-noteseq cursor-vec
+                       (constantly [{:svara [:madhyam :_]}]))
+            flat-noteseq (-> (nindexed-noteseq score-part-index)
+                             flatten vec
+                             (remove-empty-avartan num-beats))]
+        {:db
+         (-> db
+             (update-in [:composition :score-parts score-part-index :noteseq]
+                        (constantly flat-noteseq))
+             (update-in [:composition] db/add-indexes)
+             (update-in [:props :cursor-pos]
+                        (constantly (let [cp (move-cursor-backward db)]
+                                      cp))))
+         :dispatch [::save-to-localstorage]})
+      {:db db})))
+
+(defn insert-empty-part
+  [{:keys [db]} [_ ptitle]]
+  (let [taal (get-in db [:composition :taal])
+        num-beats (:num-beats (taal-def taal))
+        res (-> db
+                (update-in [:composition :score-parts]
+                           (fn[i] (conj i (init-part num-beats ptitle))))
+                (update-in [:composition] db/add-indexes))]
+    {:db res}))
+
+(reg-event-fx ::insert-empty-part insert-empty-part)
+
+(defn delete-part
+  [{:keys [db]} [_ part-index]]
+  (let [res (-> db
+                (update-in [:composition :score-parts]
+                           (fn[i]
+                             (let [res (->> (map-indexed (fn[indx part] [(not= part-index indx) part]) i)
+                                            (filter (fn[[a _]] a))
+                                            (mapv second))]
+                               res)))
+                (update-in [:composition] db/add-indexes))]
+    {:db res}))
+
+(reg-event-fx ::delete-part delete-part)
+(reg-event-fx ::delete-single-svara [clear-highlight-interceptor] delete-single-svara)
+
+(reg-event-fx
+ ::update-part-title
+ (fn [{:keys [db]} [_ part-index part-title]]
+   {:db
+    (-> (update-in db [:composition :score-parts part-index :part-title ]
+                   (constantly part-title)))}))
+
+(reg-event-fx
+ ::update-comp-title
+ (fn [{:keys [db]} [_ comp-title]]
+   {:db
+    (-> (update-in db [:composition :title ]
+                   (constantly comp-title)))}))
+
+(reg-event-fx
+ ::hide-part
+ (fn [{:keys [db]} [_ part-index]]
+   {:db
+    (-> (update-in db [:props :hidden-parts] conj part-index))}))
+
+(reg-event-fx
+ ::unhide-part
+ (fn [{:keys [db]} [_ part-index]]
+   {:db
+    (-> (update-in db [:props :hidden-parts] disj part-index))}))
 
 (reg-event-fx
  ::set-custom-svaras
@@ -680,7 +769,7 @@
  ::set-user
  [log-event]
  (fn [{:keys [db]}[_ user]]
-   (try 
+   (try
      (if (and user (:email user))
        (let [storage (.-sessionStorage js/window)
              newsletter-signup?
@@ -751,7 +840,7 @@
           #js {"method" "get"})
          (.then (fn[i] (.text i)))
          (.then (fn[i]
-                  (let [imap (js->clj (t/read tr i))]
+                  (let [imap (db/cvt-format (js->clj (t/read tr i)))]
                     (dispatch [::set-url-path urlparams])
                     (dispatch [::refresh-comp imap]))))
          (.catch (fn[i] (println " error " i ))))
@@ -870,14 +959,15 @@
  ::refresh-comp
  (fn [{:keys [db]} [_ inp]]
    (let [comp (db/add-indexes inp)
-         lyrics? (> (->> comp :noteseq (map :lyrics) (filter identity) count) 0)
+         ;;TODO add lyrics back
+         ;;lyrics? (> (->> comp :noteseq (map :lyrics) (filter identity) count) 0)
          ndb (-> db
                  (update-in [:composition] (constantly comp))
-                 (update-in [:props :show-lyrics] (constantly lyrics?))
+                 ;;(update-in [:props :show-lyrics] (constantly lyrics?))
                  (update-in [:props :cursor-pos]
                             (constantly
                              (let [in (-> comp :index last)]
-                               (zipmap [:row-index :bhaag-index :note-index :nsi] in)))))]
+                               (zipmap [:avartan-index :bhaag-index :note-index :nsi] in)))))]
      {:db ndb
       :dispatch [::set-active-panel :home-panel]})))
 
@@ -944,11 +1034,13 @@
   [{:keys [composition play-head-position now
            bpm beat-mode]
     :as imap
-    :or {play-head-position 0 now 0}}]
-  (let [noteseq (:noteseq composition)
-        note-interval (/ 60 bpm)
-        taal (:taal composition )
+    :or {play-head-position (zipmap cursor-index-keys [0 0 0 0 0])
+         now 0}}]
+  (let [taal (:taal composition )
         num-beats (:num-beats (taal-def taal))
+        noteseq (->> (map :noteseq (-> composition :score-parts))
+                     (reduce into))
+        note-interval (/ 60 bpm)
         metronome-on-at (set (->> taal-def taal
                                   :bhaags
                                   (reductions +) ;;[4 8 12 16]
@@ -957,25 +1049,26 @@
                                   (into [1])))
         a0 (->>
             noteseq
-               (map vector (range))
-               (drop-while (fn[[note-index _]] (> play-head-position note-index)))
-               (map (fn[at x] (into [at] x))(range 0 (->> noteseq count inc) note-interval)))
-           a1
-           (->> a0
-                (map (fn[[at _ {:keys [notes]}]]
-                       ;;make 0 based to 1 based index
-                       (let [notseq
-                             (if (= 1 (count notes))
-                               [[(-> notes first :shruti) (+ now at) note-interval]]
-                               ;;if many notes in one beat, schedule them to play at equal intervals
-                               (let [sub-note-intervals (/ note-interval (-> notes count))]
-                                 (mapv (fn[a b] [a (+ now b) sub-note-intervals])
-                                       (map :shruti notes)
-                                       (range at (+ at note-interval) sub-note-intervals))))]
-                         notseq)))
-                (reduce into []))
-           ;;find note indexes where duration should be long if followed by avagraha
-           ;;returns a list of 2-tuples, where first is index and second is duration of note
+            (map vector (range))
+            (drop-while (fn[[note-index _]] (> play-head-position note-index)))
+            (map (fn[at x] (into [at] x))(range 0 (->> noteseq count inc) note-interval)))
+
+        a1
+        (->> a0
+             (map (fn[[at _ {:keys [notes]}]]
+                    ;;make 0 based to 1 based index
+                    (let [notseq
+                          (if (= 1 (count notes))
+                            [[(-> notes first :svara) (+ now at) note-interval]]
+                            ;;if many notes in one beat, schedule them to play at equal intervals
+                            (let [sub-note-intervals (/ note-interval (-> notes count))]
+                              (mapv (fn[a b] [a (+ now b) sub-note-intervals])
+                                    (map :svara notes)
+                                    (range at (+ at note-interval) sub-note-intervals))))]
+                      notseq)))
+             (reduce into []))
+        ;;find note indexes where duration should be long if followed by avagraha
+        ;;returns a list of 2-tuples, where first is index and second is duration of note
         avagraha-note-indexes
         (->> a1
              (map vector (range))
@@ -996,6 +1089,7 @@
               {:indx nil :duracc 0 :acc []})
              :acc
              (map (fn[[a b]] [(dec a) b])))
+
         metro-tick-seq-0-offset
         (->> a0
              (map (fn[[at note-index {:keys [notes] :as ivec}]]
@@ -1028,13 +1122,18 @@
   [{:keys [db]} now]
   (let [bpm (-> db :props :bpm)
         note-interval (/ 60 bpm)
-        play-head-position (:play-head-position db)
+        play-head-position
+        (->> db :composition :index
+             (keep-indexed
+              (fn[indx i]
+                (let [cursor-vals (mapv (:play-head-position db) cursor-index-keys)]
+                  (when (= i cursor-vals) indx))))
+             first)
         ;;play-head-position refers to whole notes (e.g 5 /16)
         ;;but if the notes have dugun/tigun, we need the number of actual notes.
         ;;for each if each note is dugun,
         ;;if play-head-position is 4, then play-head-subnotes-position is 8
-        play-head-subnotes-position (->> db :composition :noteseq (take play-head-position)
-                                         (map (comp count :notes)) (apply + ))
+        ;;play-head-subnotes-position (->> db :composition :noteseq (take play-head-position) (map (comp count :notes)) (apply + ))
         a1 (get-play-at-time-seq {:composition (->> db :composition)
                                   :beat-mode (-> db :props :beat-mode)
                                   :bpm bpm
@@ -1072,20 +1171,19 @@
                                                 {note-index svara-index}))
                                          (apply merge))
         play-note-index 0
-        res {:play-state :start
+        res
+        {:play-state :start
          :play-at-time a1
          :play-note-index play-note-index
          :note-interval note-interval
          :num-notes (count a1)
          :bhaag-index 0
          :elem-index (if (> play-head-position 0)
-                       (let [r (subvec (:elem-index db) play-head-subnotes-position)]
+                       (let [r (subvec (:elem-index db) play-head-position)]
                          r)
                        (:elem-index db))
          ;;translates the play-note index to the view-note index
-         :play-to-view-map noteindex-to-svaraindex-map}
-
-        ]
+         :play-to-view-map noteindex-to-svaraindex-map}]
     res))
 
 (reg-event-fx
@@ -1122,18 +1220,18 @@
 
 (reg-event-fx
  ::register-elem
- (fn [{:keys [db]} [_ index {:keys [note-index nsi]} elem]]
+ (fn [{:keys [db]} [_ index {:keys [avartan-index note-index nsi bhaag-index] :as icursor} elem]]
    {:db
     (let [ndb
-          (if (and (= 0 index) (= 0 nsi))
-                (-> (update-in db [:elem-index ] (constantly [elem]))
-                    (update-in [:bhaag-first-note] (constantly [index])))
-                (let [idb (update-in db [:elem-index ] conj elem)]
+          (if (every? #(= 0 %) (vals icursor))
+            (do
+              (-> (update-in db [:elem-index ] (constantly [elem]))
+                  (update-in [:avartan-first-note] (constantly [icursor]))))
+            (let [idb (update-in db [:elem-index ] conj elem)]
                   ;;first notes in a bhaag have note-index 0
-                  (if (and (= 0 note-index) (= 0 nsi))
+                  (if (and (= 0 note-index) (= 0 nsi) (= 0 bhaag-index))
                     (do
-                      #_(println " register index " index " note-xy-map "note-xy-map)
-                      (update-in idb [:bhaag-first-note] conj index))
+                      (update-in idb [:avartan-first-note] conj icursor))
                     idb)))]
       ndb)}))
 
@@ -1142,11 +1240,11 @@
 (reg-event-fx
  ::set-play-position
  [log-event]
- (fn [{:keys [db]} [_ nth-bhaag-to-play-from]]
-   (let [a1 ((:bhaag-first-note db) nth-bhaag-to-play-from)]
+ (fn [{:keys [db]} [_ nth-avartan-to-play-from]]
+   (let [a1 ((:avartan-first-note db) nth-avartan-to-play-from)]
      {:db
       (->
-       (update-in db [:nth-bhaag-to-play-from] (constantly nth-bhaag-to-play-from))
+       (update-in db [:nth-avartan-to-play-from] (constantly nth-avartan-to-play-from))
        (update-in [:play-head-position] (constantly a1)))})))
 
 (reg-event-fx
@@ -1157,6 +1255,9 @@
            play-at-time (:play-at-time db)
            max-note-index (count play-at-time)
            play-note-index (or (:play-note-index db) 0)
+           ;;dont extend till the full width of the font, otherwise the
+           ;;it overlaps into the next note
+           font-size (-> db :dispinfo :font-size (* 0.75) int)
            past-notes-fn (fn[time-index start-index time-change-fn]
                            (take-while
                             (fn[i]
@@ -1210,18 +1311,19 @@
                                            (js/setTimeout
                                             (fn []
                                               (set! (.-style notel)
-                                                    (str "fill-opacity:0.2"))
+                                                    (str "fill-opacity:1"))
                                               (->
                                                (.animate
                                                 notel
                                                 #js [
-                                                     #js {"opacity" 0.5}
-                                                     #js {"opacity" 1 "offset" 0.2}
-                                                     #js {"opacity" 0}]
-                                                #js {"duration"
-                                                     (* 1000 2 (:note-interval db))})
+                                                     ;;simulate a cursor moving across the note
+                                                     #js {"transform" "translateX(0px)"}
+                                                     #js {"transform" (str "translateX(" font-size "px)")}
+                                                     ]
+                                                #js {"duration" (* 1000 idur)})
                                                (.addEventListener
                                                 "finish"
+                                                ;;make the cursor disappear after the time is over
                                                 (fn[_]
                                                   (set! (.-style notel)
                                                         (str "fill-opacity:0"))))))
@@ -1247,6 +1349,12 @@
  ::set-font-size
  (fn [{:keys [db]} [_ font-size]]
    {:db (update-in db [:dispinfo :font-size] (constantly font-size))}))
+
+;;change the mode if we're editing svaras or lyrics
+(reg-event-fx
+ ::currently-editing
+ (fn [{:keys [db]} [_ editing]]
+   {:db (update-in db [:props :currently-editing] (constantly editing))}))
 
 #_(reg-event-fx
  ::pitch-shift

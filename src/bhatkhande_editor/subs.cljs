@@ -121,12 +121,8 @@
 
 (reg-sub
  ::get-sahitya
- (fn [db [_ [row-index bhaag-index]]]
-   (let [indx (db/get-noteseq-index {:row-index row-index
-                                     :bhaag-index bhaag-index
-                                     :note-index 0}
-                                    (get-in db [:composition :taal]))]
-     (-> db (get-in [:composition :noteseq indx :lyrics])))))
+ (fn [db [_ cmap]]
+   (db/get-sahitya (-> db :composition) cmap)))
 
 (reg-sub
  ::get-note-pos
@@ -183,6 +179,12 @@
    (= :start (:play-state db))))
 
 (reg-sub
+ ::hidden-parts
+ :<- [::props]
+ (fn [props [_ _]]
+   (:hidden-parts props)))
+
+(reg-sub
  ::bpm
  :<- [::props]
  (fn [props [_ _]]
@@ -201,14 +203,20 @@
    (:tanpura? props)))
 
 (reg-sub
+ ::currently-editing
+ :<- [::props]
+ (fn [props [_ _]]
+   (:currently-editing props)))
+
+(reg-sub
  ::my-bandishes
  (fn [db [_ _]]
    (:my-bandishes db)))
 
 (reg-sub
- ::bhaag-to-play-from
+ ::avartan-to-play-from
  (fn [db [_ _]]
-   (:nth-bhaag-to-play-from db)))
+   (:nth-avartan-to-play-from db)))
 
 (reg-sub
  ::play-head-position
@@ -217,6 +225,6 @@
 
 ;;number of bhaags to play in play mode
 (reg-sub
- ::max-num-bhaags
+ ::max-num-avartans
  (fn [db [_ _]]
-   (count (:bhaag-first-note db))))
+   (count (:avartan-first-note db))))
