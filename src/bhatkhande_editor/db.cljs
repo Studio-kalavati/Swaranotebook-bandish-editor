@@ -238,7 +238,6 @@
             :taal (:taal input-format)}
           (:score-parts input-format) input-format
           :else "invalid format")]
-    (println " resp " resp)
     resp))
 
 (def init-comp

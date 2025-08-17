@@ -1389,7 +1389,6 @@
                                 :width (if mobile? "80vw" "max(25vw,150px)")
                                 :disabled? (if @(subscribe [::subs/playing?]) true false)
                                 :on-change #(do
-                                              (println " sph " (or % 0))
                                               (dispatch [::events/set-play-position (or % 0)]))]]
           [v-box :style {:background-color "cornsilk"}
            :children

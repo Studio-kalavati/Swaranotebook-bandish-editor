@@ -455,7 +455,6 @@
                       (let [ins (into (into prefix selected-notes) postfix)
                             num-beats (:num-beats (taal-def taal))
                             unfilled-count (- num-beats (rem (count ins) num-beats))]
-                        (println " unfilled " unfilled-count " count "(count ins))
                         (if (= 0 unfilled-count)
                           ins
                           (remove-empty-avartan
@@ -523,7 +522,6 @@
                              (let [res (->> (map-indexed (fn[indx part] [(not= part-index indx) part]) i)
                                             (filter (fn[[a _]] a))
                                             (mapv second))]
-                               (println " prev " (count i) " after " (count res))
                                res)))
                 (update-in [:composition] db/add-indexes))]
     {:db res}))
@@ -715,7 +713,6 @@
  ::google-sign-in-fx
  [log-event]
  (fn [{:keys [db]} [_ _]]
-   (println " g fx ")
    ;;set a local storage because
    ;;when the auth redirect is sent back to the page,
    ;;the local DB atom will not remember and will load its
@@ -772,7 +769,6 @@
  ::set-user
  [log-event]
  (fn [{:keys [db]}[_ user]]
-   (println " set-uset " user)
    (try
      (if (and user (:email user))
        (let [storage (.-sessionStorage js/window)
