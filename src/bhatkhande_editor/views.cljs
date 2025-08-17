@@ -1275,7 +1275,8 @@
                            :on-click (fn[] (dispatch [::events/insert-empty-part "abcd"]))]]]
                         score-fin
                         (let [rows (if newline-on-avartan?
-                                     (mapv #(reduce conj [:div {:class "box-row"}] %) score-res)
+                                     (reduce conj [:div]
+                                             (mapv #(reduce conj [:div {:class "box-row"}] %) score-res))
                                      (reduce conj [:div {:class "box-row"}] (reduce into score-res)))
                               score-ret
                               [:div {:class "part-wrapper part-border"}
@@ -1292,7 +1293,6 @@
                      vec
                      (reduce conj [:div {:class "score-parts"} comp-title]))]
              fin)]]]))))
-
 
 
 (defn play-keyboard-footer
