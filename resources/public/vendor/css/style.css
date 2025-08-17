@@ -1317,6 +1317,7 @@ input[type="search"]
 {
     background-color: floralwhite;
     overflow: auto;
+    scrollbar-width: thin;
 }
 .edit-composition .com-edit
 {
