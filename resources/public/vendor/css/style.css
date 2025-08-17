@@ -1701,7 +1701,7 @@ input[type="search"]
 .box-row {
     width: 100%;
     /* overflow-x: hidden; */
-    padding-right: 17px; /* Increase/decrease this value for cross-browser compatibility */
+    padding: 0 1vw 0 1vw;
     box-sizing: content-box;
     display: flex;
     /*max-height: 20vh; */
