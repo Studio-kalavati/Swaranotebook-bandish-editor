@@ -1318,7 +1318,13 @@
                                                      #js {"transform" "translateX(0px)"}
                                                      #js {"transform" (str "translateX(" font-size "px)")}
                                                      ]
-                                                #js {"duration" (* 1000 idur)})
+                                                ;;for notes followed by Avagraha, the note duration is
+                                                ;;includes the avagraha notes.
+                                                ;;this causes the cursor to show on the note as well as the avagrahas (duplicate cursor)
+                                                ;;so if a note duration is longer than the note interval,
+                                                ;;keep it as short as the note interval (0.5 for 60bpm)
+                                                #js {"duration" (* 1000 (if (> idur (:note-interval db))
+                                                                          (:note-interval db) idur))})
                                                (.addEventListener
                                                 "finish"
                                                 ;;make the cursor disappear after the time is over
