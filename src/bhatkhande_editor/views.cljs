@@ -558,7 +558,7 @@
                                    :child
                                    [input-text
                                     :src (at)
-                                    :model            title-val
+                                    :model (or @(subscribe [::subs/comp-title]) title-val)
                                     :style {:font-size "large" :width "100%"
                                             :justify-content "center"
                                             :text-align "center"}

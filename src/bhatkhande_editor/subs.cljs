@@ -112,8 +112,6 @@
  (fn [db [_ _]]
    (get-in db [:props :cursor-pos])))
 
-
-
 (reg-sub
  ::show-lyrics-popup
  (fn [db [_ _]]

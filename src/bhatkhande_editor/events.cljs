@@ -636,9 +636,7 @@
    (let [ndb (if comp-title
                (update-in db [:composition :title] (constantly comp-title))
                db)
-         comp (->
-               (select-keys (-> ndb :composition) [:noteseq :taal :title])
-               to-trans)
+         comp (-> (-> ndb :composition) to-trans)
          path (str (last (.split (.toString (random-uuid)) #"-"))
                    "-" comp-title)]
      (upload-comp (-> ndb :user :uid) path comp)
