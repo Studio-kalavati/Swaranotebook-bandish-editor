@@ -1733,8 +1733,7 @@
   (wait-for "Loading notations"))
 
 (defn main-panel []
-  (let [active-panel (subscribe [::subs/active-panel])
-        screen-height @(subscribe [::bp/screen-height])]
+  (let [active-panel (subscribe [::subs/active-panel])]
     [v-box
      :src      (at)
      :height   "100%"

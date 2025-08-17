@@ -293,3 +293,6 @@
       (ev/get-play-at-time-seq
        {:composition (-> idb :db :composition),
         :beat-mode :metronome, :bpm 120, :play-head-position 0, :now 5.0})))))
+
+(deftest sanitize-url-test
+  (is (= "abcd" (ev/sanitize-url "abcd'"))))

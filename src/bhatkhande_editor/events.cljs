@@ -629,6 +629,17 @@
            (dispatch [::navigate-to uid title])
            (dispatch [::set-active-panel :home-panel]))))))
 
+(def ^:private url-allowed
+  #"[\-._~:/?#\[\]@!$&'()*+,;=%]")
+
+(defn sanitize-url
+  "Removes characters not allowed in a full URL. Optionally normalizes spaces to '-'."
+  ([s] (sanitize-url s false))
+  ([s hyphenize-spaces?]
+   (-> s
+       (cond-> hyphenize-spaces? (clojure.string/replace #"\s+" "-"))
+       (clojure.string/replace url-allowed ""))))
+
 (reg-event-fx
  ::upload-new-comp
  [log-event]
@@ -637,8 +648,9 @@
                (update-in db [:composition :title] (constantly comp-title))
                db)
          comp (-> (-> ndb :composition) to-trans)
-         path (str (last (.split (.toString (random-uuid)) #"-"))
-                   "-" comp-title)]
+         path (sanitize-url
+               (str (last (.split (.toString (random-uuid)) #"-"))
+                    "-" comp-title))]
      (upload-comp (-> ndb :user :uid) path comp)
      {:dispatch [::set-active-panel :wait-for-save-completion]
       :db ndb})))
