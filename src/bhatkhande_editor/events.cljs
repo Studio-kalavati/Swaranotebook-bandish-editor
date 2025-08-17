@@ -1259,6 +1259,9 @@
            play-at-time (:play-at-time db)
            max-note-index (count play-at-time)
            play-note-index (or (:play-note-index db) 0)
+           ;;dont extend till the full width of the font, otherwise the
+           ;;it overlaps into the next note
+           font-size (-> db :dispinfo :font-size (* 0.75) int)
            past-notes-fn (fn[time-index start-index time-change-fn]
                            (take-while
                             (fn[i]
@@ -1312,16 +1315,16 @@
                                            (js/setTimeout
                                             (fn []
                                               (set! (.-style notel)
-                                                    (str "fill-opacity:0.2"))
+                                                    (str "fill-opacity:1"))
                                               (->
                                                (.animate
                                                 notel
                                                 #js [
-                                                     #js {"opacity" 0.5}
-                                                     #js {"opacity" 1 "offset" 0.2}
-                                                     #js {"opacity" 0}]
-                                                #js {"duration"
-                                                     (* 1000 2 (:note-interval db))})
+                                                     ;;simulate a cursor moving across the note
+                                                     #js {"transform" "translateX(0px)"}
+                                                     #js {"transform" (str "translateX(" font-size "px)")}
+                                                     ]
+                                                #js {"duration" (* 1000 idur)})
                                                (.addEventListener
                                                 "finish"
                                                 (fn[_]

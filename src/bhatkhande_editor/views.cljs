@@ -1026,19 +1026,17 @@
                                                r3 [:images1] conj
                                                (let [phi @(subscribe [::subs/play-head-position])]
                                                  [:rect
-                                                  {:width (int (* 0.6 @font-size)) :height @font-size
-                                                   :fill "#f83600"
+                                                  {:width "3px" :height @font-size
+                                                   :fill "black"
                                                    :fill-opacity 0
-                                                   ;;todo-uncomment
                                                    :ref
                                                    #(when (identity %)
-                                                      (let [opa "fill-opacity:0"
-                                                            opac (str opa
+                                                      (let [opac (str "fill-opacity:"
                                                                       (if (= phi
                                                                              (assoc cursor-map
                                                                                     :note-index note-index
                                                                                     :nsi nsi))
-                                                                        ".5" ""))]
+                                                                        "1" "0"))]
                                                         (set! (.-style %) opac)
                                                         (dispatch [::events/register-elem
                                                                    nseq-index note-xy-map %])))
