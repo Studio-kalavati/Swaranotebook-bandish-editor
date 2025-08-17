@@ -1283,7 +1283,8 @@
                               score-ret
                               [:div {:class "part-wrapper part-border"}
                                part-header
-                               (when-not (hidden-parts score-part-index) rows)
+                               (when-not (and (not play-mode? )
+                                              (hidden-parts score-part-index)) rows)
                                [gap :size "1vh"]]]
                           [:div {:class "wrapper"} score-ret
                            (when-not play-mode? part-footer)])]
