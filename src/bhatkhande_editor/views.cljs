@@ -497,7 +497,7 @@
                                  (reset! newline-on-avartan? nval)
                                  (dispatch [::events/newline-on-avartan? nval]))]
                              [gap :size "20px"]
-                             [title :label "Newline on each Avartan?"
+                             [title :label "One Avartan per row?"
                               :level :level3]])
                            [gap :size "50px"]
                            [v-box
@@ -877,6 +877,7 @@
   (let [
         edit-part-index (reagent/atom nil)
         edit-comp-title (reagent/atom nil)
+        sahitya-editing? (reagent/atom false)
         delete-confirm (reagent/atom false)]
     (fn []
       (let [winhgt (.-innerHeight js/window)
@@ -1044,7 +1045,7 @@
                                                    :x (+ x1 (int (* 0.2 @font-size)))
                                                    :y (int (* 0.2 @font-size))}]))
                                               (let [curpos @(subscribe [::subs/get-click-index])]
-                                                (if (= note-xy-map curpos)
+                                                (if (and (= note-xy-map curpos) (not @sahitya-editing?))
                                                   (do
                                                       (update-in
                                                        r3 [:images1] conj
@@ -1215,13 +1216,16 @@
                                                                :style {:top topsize :font-size (* 0.8 @font-size)
                                                                        :height (* 1 @font-size)
                                                                        :border "1px dotted gray"
+                                                                       :caret-color "black"
                                                                        :width "96%"
                                                                        }
+                                                              ;;when the sahitya text box is clicked,
+                                                              ;;stop showing the cursor for svaras
+                                                              :attr {:on-focus #(reset! sahitya-editing? true)
+                                                                     :on-blur #(reset! sahitya-editing? false)}
                                                                :on-change (fn[x]
-                                                                            (let [
-                                                                                  new-val x
-                                                                                  new-sahitya
-                                                                                  (clojure.string/split new-val #",")]
+                                                                            (let [new-sahitya
+                                                                                  (clojure.string/split x #",")]
                                                                               (dispatch [::events/conj-sahitya
                                                                                          (assoc cursor-map :text-val new-sahitya)])))]))]]
                                                 res))
