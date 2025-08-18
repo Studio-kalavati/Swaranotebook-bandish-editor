@@ -33,7 +33,7 @@
    :id      :log-event
    :after  (fn [context]
              (let [[k v] (-> context :coeffects :event) ]
-               #_(when-not (running-on-localhost?)
+               (when-not (running-on-localhost?)
                  (.capture (-> context :coeffects :db :posthog) (name k)
                            (if (map? v) (clj->js v)(clj->js {(name k) v}))))
                 context))))
