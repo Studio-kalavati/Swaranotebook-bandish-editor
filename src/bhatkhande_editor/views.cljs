@@ -558,7 +558,7 @@
                                    :child
                                    [input-text
                                     :src (at)
-                                    :model (or @(subscribe [::subs/comp-title]) title-val)
+                                    :model (or @(subscribe [::subs/comp-title]) @title-val)
                                     :style {:font-size "large" :width "100%"
                                             :justify-content "center"
                                             :text-align "center"}
@@ -566,8 +566,14 @@
                                   [button
                                    :label " Save "
                                    :class "btn-hc-lg btn-primary "
-                                   :on-click #(let [tv (cstring/replace @title-val
-                                                                        #" " "-")]
+                                   :on-click
+                                   #(let [use-title
+                                          ;; if title has been edited, use title-val
+                                          ;; if its not edited, then its empty, so use the default comp-title
+                                          (if (= @title-val "")
+                                                      @(subscribe [::subs/comp-title])
+                                                      @title-val)
+                                          tv (cstring/replace use-title #" " "-")]
                                                 (reset! show-title-popup? false)
                                                 (dispatch [::events/upload-new-comp tv]))]]]]])
                      (when @show-login-popup?
