@@ -558,7 +558,7 @@
                                    :child
                                    [input-text
                                     :src (at)
-                                    :model (or @(subscribe [::subs/comp-title]) title-val)
+                                    :model (or @(subscribe [::subs/comp-title]) @title-val)
                                     :style {:font-size "large" :width "100%"
                                             :justify-content "center"
                                             :text-align "center"}
@@ -566,8 +566,14 @@
                                   [button
                                    :label " Save "
                                    :class "btn-hc-lg btn-primary "
-                                   :on-click #(let [tv (cstring/replace @title-val
-                                                                        #" " "-")]
+                                   :on-click
+                                   #(let [use-title
+                                          ;; if title has been edited, use title-val
+                                          ;; if its not edited, then its empty, so use the default comp-title
+                                          (if (= @title-val "")
+                                                      @(subscribe [::subs/comp-title])
+                                                      @title-val)
+                                          tv (cstring/replace use-title #" " "-")]
                                                 (reset! show-title-popup? false)
                                                 (dispatch [::events/upload-new-comp tv]))]]]]])
                      (when @show-login-popup?
@@ -1225,11 +1231,31 @@
                                                                             (let [new-sahitya
                                                                                   (clojure.string/split x #",")]
                                                                               (dispatch [::events/conj-sahitya
-                                                                                         (assoc cursor-map :text-val new-sahitya)])))]))]]
+                                                                                         (assoc cursor-map :text-val new-sahitya)])))]))
+                                                         [input-text
+                                                               :model "abcd"
+                                                               :class "overlay-text"
+                                                               :style {:font-size (* 0.8 @font-size)
+                                                                       :height (* 1 @font-size)
+                                                                       :border "1px dotted gray"
+                                                                       :caret-color "black"
+                                                                       :width "96%"
+                                                                       }
+                                                               :on-change (fn[x]
+                                                                            (println " aa "))]]]
                                                 res))
                                             row)
                                            vec)]
-                                  res0)))
+                                  (->> (map-indexed (fn[bhaag-indx i] [bhaag-indx i]) res0)
+                                       (reduce (fn[acc [bhaag-indx i]]
+                                                 (into acc
+                                                       [i
+                                                        [box :align :center
+                                                         :child [md-icon-button
+                                                                 :md-icon-name "zmdi zmdi-comment-outline"
+                                                                 :on-click (fn[]
+                                                                             (do (println " click " score-part-index avartan-index bhaag-indx)))]]
+                                                            ])) [])))))
                              vec)
                         part-header
                         [h-box

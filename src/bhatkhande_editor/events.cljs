@@ -630,7 +630,7 @@
            (dispatch [::set-active-panel :home-panel]))))))
 
 (def ^:private url-allowed
-  #"[\-._~:/?#\[\]@!$&'()*+,;=%]")
+  #"[\._~:/?#\[\]@!$&'()*+,;=%]")
 
 (defn sanitize-url
   "Removes characters not allowed in a full URL. Optionally normalizes spaces to '-'."
@@ -648,9 +648,9 @@
                (update-in db [:composition :title] (constantly comp-title))
                db)
          comp (-> (-> ndb :composition) to-trans)
-         path (sanitize-url
-               (str (last (.split (.toString (random-uuid)) #"-"))
-                    "-" comp-title))]
+         pre-sanitized-url (str (last (.split (.toString (random-uuid)) #"-"))
+                               "-" comp-title)
+         path (sanitize-url pre-sanitized-url)]
      (upload-comp (-> ndb :user :uid) path comp)
      {:dispatch [::set-active-panel :wait-for-save-completion]
       :db ndb})))
