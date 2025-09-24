@@ -1231,31 +1231,11 @@
                                                                             (let [new-sahitya
                                                                                   (clojure.string/split x #",")]
                                                                               (dispatch [::events/conj-sahitya
-                                                                                         (assoc cursor-map :text-val new-sahitya)])))]))
-                                                         [input-text
-                                                               :model "abcd"
-                                                               :class "overlay-text"
-                                                               :style {:font-size (* 0.8 @font-size)
-                                                                       :height (* 1 @font-size)
-                                                                       :border "1px dotted gray"
-                                                                       :caret-color "black"
-                                                                       :width "96%"
-                                                                       }
-                                                               :on-change (fn[x]
-                                                                            (println " aa "))]]]
+                                                                                         (assoc cursor-map :text-val new-sahitya)])))]))]]
                                                 res))
                                             row)
                                            vec)]
-                                  (->> (map-indexed (fn[bhaag-indx i] [bhaag-indx i]) res0)
-                                       (reduce (fn[acc [bhaag-indx i]]
-                                                 (into acc
-                                                       [i
-                                                        [box :align :center
-                                                         :child [md-icon-button
-                                                                 :md-icon-name "zmdi zmdi-comment-outline"
-                                                                 :on-click (fn[]
-                                                                             (do (println " click " score-part-index avartan-index bhaag-indx)))]]
-                                                            ])) [])))))
+                                  res0)))
                              vec)
                         part-header
                         [h-box
