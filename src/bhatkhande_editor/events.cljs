@@ -968,6 +968,7 @@
 (reg-event-fx
  ::refresh-comp
  (fn [{:keys [db]} [_ inp]]
+ (println " refresh-comp " inp)
    (let [comp (db/add-indexes inp)
          ;;TODO add lyrics back
          ;;lyrics? (> (->> comp :noteseq (map :lyrics) (filter identity) count) 0)
