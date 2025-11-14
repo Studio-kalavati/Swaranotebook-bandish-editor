@@ -694,7 +694,6 @@
            p2
            (str (last (.split (.toString (random-uuid)) #"-")) "-" comp-title))]
      (upload-comp (-> db :user :uid) path comp)
-     (println " saving comp " comp-title " with content " comp)
      {:dispatch [::set-active-panel :wait-for-save-completion]
       :db db})))
 
