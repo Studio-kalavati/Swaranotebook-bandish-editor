@@ -685,7 +685,7 @@
  [log-event]
  (fn [{:keys [db]} [_ _]]
    (let [comp (->
-               (select-keys (-> db :composition) [:noteseq :taal])
+               (-> db :composition)
                to-trans)
          comp-title (get-in db [:composition :title])
          path
@@ -694,6 +694,7 @@
            p2
            (str (last (.split (.toString (random-uuid)) #"-")) "-" comp-title))]
      (upload-comp (-> db :user :uid) path comp)
+     (println " saving comp " comp-title " with content " comp)
      {:dispatch [::set-active-panel :wait-for-save-completion]
       :db db})))
 
