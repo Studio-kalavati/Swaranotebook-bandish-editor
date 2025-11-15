@@ -685,7 +685,7 @@
  [log-event]
  (fn [{:keys [db]} [_ _]]
    (let [comp (->
-               (-> db :composition)
+               (select-keys (:composition db ) [:score-parts :title :taal])
                to-trans)
          comp-title (get-in db [:composition :title])
          path
@@ -847,7 +847,11 @@
    (let [tr (t/reader :json)]
      (-> (js/fetch
           (db/get-bandish-url (str path "/" id))
-          #js {"method" "get"})
+          (clj->js {:cache "no-store"
+                    :method "get"
+                    :headers {"pragma" "no-cache"
+                              "cache-control" "no-cache"}})
+          )
          (.then (fn[i] (.text i)))
          (.then (fn[i]
                   (let [imap (db/cvt-format (js->clj (t/read tr i)))]
@@ -968,7 +972,6 @@
 (reg-event-fx
  ::refresh-comp
  (fn [{:keys [db]} [_ inp]]
- (println " refresh-comp " inp)
    (let [comp (db/add-indexes inp)
          ;;TODO add lyrics back
          ;;lyrics? (> (->> comp :noteseq (map :lyrics) (filter identity) count) 0)
