@@ -33,6 +33,8 @@ Custom formatters must be enabled in the browser before
 [CLJS DevTools](https://github.com/binaryage/cljs-devtools) can display ClojureScript data in the
 console in a more readable way.
 
+For local testing, Firebase won't send the set-user event. [See here](https://stackoverflow.com/a/79114969) for a workaround. You need to start Chrome with `google-chrome --args --disable-features=ThirdPartyStoragePartitioning`
+
 #### Chrome/Chromium
 
 1. Open [DevTools](https://developers.google.com/web/tools/chrome-devtools/) (Linux/Windows: `F12`

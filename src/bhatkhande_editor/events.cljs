@@ -661,10 +661,12 @@
    (let [reader (js/FileReader.)]
      (set! (.-onload reader)
            (fn [e]
-             (let [j (-> (.parse js/JSON (-> e .-target .-result))
-                         (js->clj) json-onload)]
-               (dispatch (if (map? j) [::refresh-comp j]
-                             [::set-active-panel :import-error-panel])))))
+             (try
+               (let [j (-> (.parse js/JSON (-> e .-target .-result))
+                           (js->clj) json-onload)]
+                 (dispatch [::refresh-comp j]))
+               (catch js/Error e
+                 (dispatch [::set-active-panel :import-error-panel])))))
      (.readAsText reader file)) db))
 
 (reg-event-fx
@@ -685,7 +687,7 @@
  [log-event]
  (fn [{:keys [db]} [_ _]]
    (let [comp (->
-               (-> db :composition)
+               (select-keys (:composition db ) [:score-parts :title :taal])
                to-trans)
          comp-title (get-in db [:composition :title])
          path
@@ -844,13 +846,20 @@
  ::get-bandish-json
  [log-event]
  (fn [{:keys [db]} [_ {:keys [path id] :as urlparams}]]
+   (println "getting comp from " urlparams)
    (let [tr (t/reader :json)]
      (-> (js/fetch
           (db/get-bandish-url (str path "/" id))
-          #js {"method" "get"})
+          (clj->js {:cache "no-store"
+                    :method "get"
+                    :headers {"pragma" "no-cache"
+                              "cache-control" "no-cache"}})
+          )
          (.then (fn[i] (.text i)))
          (.then (fn[i]
-                  (let [imap (db/cvt-format (js->clj (t/read tr i)))]
+                  (let [raw(js->clj (t/read tr i))
+                        imap (db/cvt-format raw)]
+                    (println " refreshing comp " imap " text " raw)
                     (dispatch [::set-url-path urlparams])
                     (dispatch [::refresh-comp imap]))))
          (.catch (fn[i] (println " error " i ))))
