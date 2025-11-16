@@ -849,11 +849,14 @@
    (println "getting comp from " urlparams)
    (let [tr (t/reader :json)]
      (-> (js/fetch
-          (db/get-bandish-url (str path "/" id))
-          (clj->js {:cache "no-store"
+          (str (db/get-bandish-url (str path "/" id))
+               "?_=" (.getTime (js/Date.)))
+          ;;setting cache no-store fails to load from the URL, it hits a CORS error,
+          ;;hence removing.
+          (clj->js {;;:cache "no-store"
                     :method "get"
-                    :headers {"pragma" "no-cache"
-                              "cache-control" "no-cache"}})
+                    ;;:headers {"pragma" "no-cache" "cache-control" "no-cache"}
+                    })
           )
          (.then (fn[i] (.text i)))
          (.then (fn[i]
