@@ -140,17 +140,18 @@
 (defn json-cvt
   [compdata]
   (let [nseq (:noteseq compdata)
-        res {:score {:part {:noteseq
-                        (mapv (fn[{:keys [notes lyrics]}]
-                                (let [iret {:notes (mapv (fn[{:keys [svara]}]
-                                                           {:svara svara}) notes)}]
-                                  (if lyrics
-                                    (assoc iret :lyrics lyrics)
-                                    iret)))
-                              nseq)
-                        :taal (:taal compdata)}
-                 :version "2025-25-01"}}]
-    res))
+        res (if nseq
+              {:score-parts [{:noteseq
+                              (mapv (fn[{:keys [notes lyrics]}]
+                                      (let [iret {:notes (mapv (fn[{:keys [svara]}]
+                                                                 {:svara svara}) notes)}]
+                                        (if lyrics
+                                          (assoc iret :lyrics lyrics)
+                                          iret)))
+                                    nseq)}]
+               :taal (:taal compdata)}
+              (select-keys compdata [:score-parts :title :taal]))]
+    (assoc res :version "2025-25-01")))
 
 (defn download-link
   [compdata title]

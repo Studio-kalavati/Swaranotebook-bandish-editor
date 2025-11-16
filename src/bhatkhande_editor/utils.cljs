@@ -44,28 +44,37 @@
 (s/valid? :snb/composition {:snb/title "Bandish"
                        :snb/taal :snb/jhaptaal
                        :snb/score-parts [{:snb/part-title "sthayi"
-                                          :snb/noteseq [{:snb/notes [{:snb/svara [:snb/mandra :snb/n]}]}]}]
+                                          :snb/noteseq [{:snb/notes [{:snb/svara [:snb/mandra :snb/n] :lyrics "a"}]}]}]
                        :snb/version "2025-25-01"})
 
 (def key-fn #(keyword "snb" %))
 
-(defn prewalk-fn
+(defn transform-entry
+  "walk the json input and convert most keys to namespaced keywords.
+  For some values, keep it as a string (e.g. lyrics, title),
+  and or the rest, convert values to namespaced keywords too"
   [x]
-  (do
-      (cond
-        (map-entry? x)
-        (let [ikey (key x)]
-          (cond
-            (string? ikey) {(key-fn ikey)
-                            (if (= ikey "taal") (key-fn (val x))
-                                (val x))}
-            :else x))
-        (and (vector? x) ( = 2 (count x))) (mapv key-fn x)
-        :else x)))
+  (let [ns-prefix :snb]
+    (cond
+      (map? x)
+      (into {}
+            (for [[k v] x]
+              (let [new-k (keyword (name ns-prefix) (name k))
+                    new-v (cond
+                            ;;for these keys, don't convert the value into a keyword, leave it as a string
+                            (and (#{"lyrics" "title" "part-title" "version"} k) (string? v))
+                            v
+                            (and (= k "svara") (vector? v))
+                            (mapv #(keyword (name ns-prefix) (name %)) v)
+                            :else (if (or (keyword? v) (string? v))
+                                    (keyword (name ns-prefix) (name v))
+                                    v))]
+                [new-k new-v])))
+      :else x)))
 
 (defn parse-json
   [json-str]
-  (prewalk prewalk-fn json-str))
+  (prewalk transform-entry json-str))
 
 (defn strip-ns-keywords
   [ijs]
@@ -73,25 +82,16 @@
                    (let [x1 (keyword (first (istr/split (name x)"/" )))]
                      (if (= :shruti x1) :svara x1)) x)) ijs))
 
-(defn cvt2noteseq
-  [kw-json]
-  (let [k(strip-ns-keywords kw-json)]
-    (println " k ")
-    k)
-  #_(let [{:keys [:snb/noteseq :snb/taal] :as imap} (get-in kw-json [:snb/score 0])]
-      (when (and noteseq taal)
-        (let [nns (strip-ns-keywords noteseq)
-              j1 {:noteseq nns :taal (strip-ns-keywords taal)}]
-          (println " json-onload " j1)
-          j1))))
-
 (defn json-onload
   [ijson]
   (let [kw-json (parse-json ijson)
-        _ (println " parsed " kw-json)
         isvalid? (s/valid? :snb/composition kw-json)]
-    (if-not isvalid? (println " ex " (s/explain :snb/composition kw-json)))
-    (cvt2noteseq kw-json)))
+    (if isvalid?
+      (strip-ns-keywords kw-json)
+      (do
+        (s/explain :snb/composition kw-json)
+        (throw (js/Error. (str "Invalid JSON format: "
+                               (with-out-str (s/explain :snb/composition kw-json)))))))))
 
 (defn cursor2vec
   "return a cursor array like [0 1 0 1 0], given a map argument like so:

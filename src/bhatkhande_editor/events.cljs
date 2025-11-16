@@ -661,10 +661,12 @@
    (let [reader (js/FileReader.)]
      (set! (.-onload reader)
            (fn [e]
-             (let [j (-> (.parse js/JSON (-> e .-target .-result))
-                         (js->clj) json-onload)]
-               (dispatch (if (map? j) [::refresh-comp j]
-                             [::set-active-panel :import-error-panel])))))
+             (try
+               (let [j (-> (.parse js/JSON (-> e .-target .-result))
+                           (js->clj) json-onload)]
+                 (dispatch [::refresh-comp j]))
+               (catch js/Error e
+                 (dispatch [::set-active-panel :import-error-panel])))))
      (.readAsText reader file)) db))
 
 (reg-event-fx

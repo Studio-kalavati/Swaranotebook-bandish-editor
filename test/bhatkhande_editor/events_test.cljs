@@ -9,19 +9,43 @@
                          [{:snb/notes [{:snb/svara [:snb/mandra :snb/s]}],
                            :snb/lyrics "Oo,Darlin',I've,been"}],
                          :snb/taal :snb/teentaal}]})
+(def multipart-spec-format-composition
+  {:snb/title "Bandish"
+   :snb/taal :snb/jhaptaal
+   :snb/score-parts [{:snb/part-title "sthayi"
+                      :snb/noteseq [{:snb/notes [{:snb/svara [:snb/mandra :snb/n] :lyrics "a"}]}]}]
+   :snb/version "2025-25-01"}
+
+  )
+(def multipart-json-format-composition
+  {"title" "Bandish"
+   "taal" "jhaptaal"
+   "score-parts" [{"part-title" "sthayi"
+                   "noteseq" [{"notes" [{"svara" ["mandra" "n"] "lyrics" "a"}]}]}]
+   "version""2025-25-01"})
 
 (deftest valid-score?
-  (is (s/valid? :snb/composition score)))
+  (is (s/valid? :snb/composition multipart-spec-format-composition)))
 
-(deftest json-2-ns
+(def single-part-format-json
+  {"score" [{"part-id" "A", "noteseq"
+             [{"notes" [{"svara" ["mandra" "s"]}],
+               "lyrics" "Oo,Darlin',I've,been"}]
+             "taal" "teentaal"}]})
+
+;;not supporting single part export/import
+#_(deftest json-2-ns-single-part-format
   (is
    (= score
-    (ut/parse-json {"score" [{"part-id" "A", "noteseq"
-                              [{"notes" [{"svara" ["mandra" "s"]}],
-                                "lyrics" "Oo,Darlin',I've,been"}]
-                              "taal" "teentaal"}]}))))
+    (ut/parse-json single-part-format-json))))
 
-(deftest nsjson-to-noteseq
+(deftest json-2-ns-multi-part-format
+  (is
+   (s/valid? :snb/composition
+      (ut/parse-json multipart-json-format-composition))))
+
+;;not allowing import of old format
+#_(deftest nsjson-to-single-part-format-noteseq
   (is
    (= {:noteseq [{:notes [{:shruti [:mandra :s]}], :lyrics "a"}], :taal :teentaal}
       (ut/cvt2noteseq (ut/parse-json {"score" [{"part-id" "A", "noteseq"
@@ -36,6 +60,11 @@
                                                  {"notes" [{"svara" ["mandra" "s"]}],
                                                   "lyrics" "b"}]
                                                 "taal" "teentaal"}]})))))
+
+(def nsjson-to-multipart
+  (is (=
+       {:title "Bandish", :taal :jhaptaal, :score-parts [{:part-title "sthayi", :noteseq [{:notes [{:svara [:mandra :n], :lyrics "a"}]}]}], :version "2025-25-01"}
+       (ut/json-onload multipart-json-format-composition))))
 
 (deftest keyboard-conj
   (let [svara [:madhyam :m]]
