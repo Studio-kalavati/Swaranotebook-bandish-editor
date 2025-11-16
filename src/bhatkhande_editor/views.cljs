@@ -1224,10 +1224,17 @@
                                                                        :caret-color "black"
                                                                        :width "96%"
                                                                        }
+                                                              :change-on-blur? true
                                                               ;;when the sahitya text box is clicked,
                                                               ;;stop showing the cursor for svaras
-                                                              :attr {:on-focus #(reset! sahitya-editing? true)
-                                                                     :on-blur #(reset! sahitya-editing? false)}
+                                                              :attr {:on-focus
+                                                                     #(reset! sahitya-editing? true)
+                                                                     :on-blur
+                                                                     #(let [new-sahitya
+                                                                            (clojure.string/split (.-value (.-target %)) #",")]
+                                                                        (dispatch [::events/conj-sahitya
+                                                                                   (assoc cursor-map :text-val new-sahitya)])
+                                                                        (reset! sahitya-editing? false))}
                                                                :on-change (fn[x]
                                                                             (let [new-sahitya
                                                                                   (clojure.string/split x #",")]
