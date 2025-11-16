@@ -9,10 +9,11 @@
                          #(#{:snb/mandra :snb/madhyam :snb/taar} (first %))
                          #(keyword? (second %))))
 
+(s/def :snb/lyrics string?)
 (s/valid? :snb/svara [:snb/mandra :snb/n])
 
 (s/def :snb/notes
-  (s/coll-of (s/keys :req [:snb/svara])))
+  (s/coll-of (s/keys :req [:snb/svara] :opt [:snb/lyrics])))
 
 (s/valid? :snb/notes [{:snb/svara [:snb/madhyam :snb/r]}])
 (s/valid? :snb/notes [{:snb/svara [:snb/madhyam :snb/r]}])
@@ -21,6 +22,10 @@
 
 (s/valid? :snb/noteseq [{:snb/notes [{:snb/svara [:snb/madhyam :snb/r]}]}
                         {:snb/notes [{:snb/svara [:snb/madhyam :snb/g]}]}])
+
+(s/valid? :snb/noteseq [{:snb/notes [{:snb/svara [:snb/madhyam :snb/r]}] :lyrics "a"}
+                        {:snb/notes [{:snb/svara [:snb/madhyam :snb/g]}] :lyrics "b"}])
+
 (s/def :snb/part-title string?) ; or keyword? if you want tighter control
 
 (s/def :snb/score-parts (s/coll-of (s/keys :req [:snb/part-title :snb/noteseq])))
