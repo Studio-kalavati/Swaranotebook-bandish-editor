@@ -846,6 +846,7 @@
  ::get-bandish-json
  [log-event]
  (fn [{:keys [db]} [_ {:keys [path id] :as urlparams}]]
+   (println "getting comp from " urlparams)
    (let [tr (t/reader :json)]
      (-> (js/fetch
           (db/get-bandish-url (str path "/" id))
@@ -856,7 +857,9 @@
           )
          (.then (fn[i] (.text i)))
          (.then (fn[i]
-                  (let [imap (db/cvt-format (js->clj (t/read tr i)))]
+                  (let [raw(js->clj (t/read tr i))
+                        imap (db/cvt-format raw)]
+                    (println " refreshing comp " imap " text " raw)
                     (dispatch [::set-url-path urlparams])
                     (dispatch [::refresh-comp imap]))))
          (.catch (fn[i] (println " error " i ))))
