@@ -3,13 +3,44 @@
             [clojure.walk :refer [prewalk]]
             [clojure.spec.alpha :as s]))
 
-(s/def :snb/taal keyword?)
+;;svara is a 2-tuple [octave svara]
+(s/def :snb/svara (s/and vector?
+                         #(= 2 (count %))
+                         #(#{:snb/mandra :snb/madhyam :snb/taar} (first %))
+                         #(keyword? (second %))))
 
-(s/def :snb/part-id string?)
-(s/def :snb/noteseq vector?)
-(s/def :snb/part (s/keys :req [:snb/taal :snb/noteseq :snb/part-id]))
-(s/def :snb/score (s/coll-of :snb/part))
-(s/def :snb/composition (s/keys :req [:snb/score]))
+(s/valid? :snb/svara [:snb/mandra :snb/n])
+
+(s/def :snb/notes
+  (s/coll-of (s/keys :req [:snb/svara])))
+
+(s/valid? :snb/notes [{:snb/svara [:snb/madhyam :snb/r]}])
+(s/valid? :snb/notes [{:snb/svara [:snb/madhyam :snb/r]}])
+
+(s/def :snb/noteseq (s/coll-of (s/keys :req [:snb/notes])))
+
+(s/valid? :snb/noteseq [{:snb/notes [{:snb/svara [:snb/madhyam :snb/r]}]}
+                        {:snb/notes [{:snb/svara [:snb/madhyam :snb/g]}]}])
+(s/def :snb/part-title string?) ; or keyword? if you want tighter control
+
+(s/def :snb/score-parts (s/coll-of (s/keys :req [:snb/part-title :snb/noteseq])))
+
+(s/valid? :snb/score-parts [{:snb/part-title "sthayi"
+                             :snb/noteseq [{:snb/notes [{:snb/svara [:snb/mandra :snb/n]}]}]}])
+
+(s/def :snb/title string?)
+(s/def :snb/taal keyword?) ;; e.g. :snb/jhaptaal
+(s/def :snb/version string?)
+
+(s/def :snb/composition
+  (s/keys :req [:snb/title :snb/taal :snb/score-parts :snb/version]))
+
+
+(s/valid? :snb/composition {:snb/title "Bandish"
+                       :snb/taal :snb/jhaptaal
+                       :snb/score-parts [{:snb/part-title "sthayi"
+                                          :snb/noteseq [{:snb/notes [{:snb/svara [:snb/mandra :snb/n]}]}]}]
+                       :snb/version "2025-25-01"})
 
 (def key-fn #(keyword "snb" %))
 
@@ -35,20 +66,24 @@
   [ijs]
   (prewalk (fn[x](if (keyword? x)
                    (let [x1 (keyword (first (istr/split (name x)"/" )))]
-                     (if (= :svara x1) :shruti x1)) x)) ijs))
+                     (if (= :shruti x1) :svara x1)) x)) ijs))
 
 (defn cvt2noteseq
   [kw-json]
-  (let [{:keys [:snb/noteseq :snb/taal] :as imap} (get-in kw-json [:snb/score 0])]
-    (when (and noteseq taal)
-      (let [nns (strip-ns-keywords noteseq)
-            j1 {:noteseq nns :taal (strip-ns-keywords taal)}]
-        (println " json-onload " j1)
-        j1))))
+  (let [k(strip-ns-keywords kw-json)]
+    (println " k ")
+    k)
+  #_(let [{:keys [:snb/noteseq :snb/taal] :as imap} (get-in kw-json [:snb/score 0])]
+      (when (and noteseq taal)
+        (let [nns (strip-ns-keywords noteseq)
+              j1 {:noteseq nns :taal (strip-ns-keywords taal)}]
+          (println " json-onload " j1)
+          j1))))
 
 (defn json-onload
   [ijson]
   (let [kw-json (parse-json ijson)
+        _ (println " parsed " kw-json)
         isvalid? (s/valid? :snb/composition kw-json)]
     (if-not isvalid? (println " ex " (s/explain :snb/composition kw-json)))
     (cvt2noteseq kw-json)))
