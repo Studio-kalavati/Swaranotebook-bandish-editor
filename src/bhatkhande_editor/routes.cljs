@@ -20,11 +20,13 @@
 
 (def routes
   (atom
-   ["/app/"
-    {"" :home
-     "index.html" :home
-     "list" :list-comps
-     "view/" {[:path "/" :id]:load}}]))
+   ["/app"
+    {
+     "/" :home
+     "" :home
+     "/index.html" :home
+     "/list" :list-comps
+     "/view/" {[:path "/" :id]:load}}]))
 
 (defn match-route-with-query-params
   [route path & {:as options}]
