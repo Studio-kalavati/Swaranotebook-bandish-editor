@@ -1554,7 +1554,6 @@
                                title-label (->> (clojure.string/split i #"-")
                                                 rest
                                                 (clojure.string/join "-"))]
-                           (println " open url " iurl)
                            [v-box
                             :children
                             [[h-box

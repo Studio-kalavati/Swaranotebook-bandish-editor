@@ -710,7 +710,13 @@
          (.then
           (fn[i]
             (let [fullpaths
-                  (->> (map #(.-fullPath %) (.-items i)))]
+                  (->> (.-items i)
+                       (sort-by #(let [namesplit (clojure.string/split (.-name %) #"-")]
+                                   (if (> (count namesplit) 1)
+                                   (->> namesplit rest  (clojure.string/join "-"))
+                                    %  )))
+                       (map #(do 
+                               (.-fullPath %)))) ]
               (dispatch [::my-bandishes fullpaths])))))
      {:dispatch [::set-active-panel :wait-for-loading-comps]})))
 
