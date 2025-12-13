@@ -12,6 +12,13 @@ jobs:
     env:
       siteUrl: '${{ secrets.SITEURL }}'
       apiKey: '${{ secrets.APIKEY }}'
+      authDomain: '${{ secrets.AUTHDOMAIN }}'
+      storageBucket:  '${{ secrets.STORAGEBUCKET }}'
+      messagingSenderId: '${{ secrets.MESSAGINGSENDERID }}'
+      appId: '${{ secrets.APPID }}'
+      posthogKey: '${{ secrets.POSTHOGKEY }}'
+      mailerliteApiToken: '${{ secrets.MAILERLITEAPITOKEN }}'
+      mailerliteGroupId: '${{ secrets.MAILERLITEAPIGROUPID }}'
       projectId: bandish-editor
 
     steps:
