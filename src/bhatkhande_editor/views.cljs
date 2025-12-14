@@ -1071,28 +1071,18 @@
                                             r3
                                             (let [sah (get-in comp
                                                               [:indexed-noteseq score-part-index
-                                                               avartan-index bhaag-index note-index :lyrics])
-                                                  r4
-                                                  (if (and (= 0 nsi) play-mode? show-lyrics?)
-                                                    (update-in r3
-                                                               [:images1]
-                                                               conj
-                                                               [:text
-                                                                {:x (+ x1 (int (* 0.3 @font-size)))
-                                                                 :y (int (* 1.7 @font-size))
-                                                                 :style {:font-size (* 0.7 @font-size)}}
-                                                                sah])
-                                                    r3)]
+                                                               avartan-index bhaag-index 
+                                                               note-index :lyrics])]
                                               (if (> (count sah) 2)
                                                 (let [new-x (int (* (* 0.5 (count sah))
                                                                     (* 0.333 @font-size)))
-                                                      old-x (get-in r4 [:x1]) ]
-                                                  (println sah "xswe" new-x " oldx-inc " old-x "now " (+ old-x new-x) 
+                                                      old-x (get-in r3 [:x1]) ]
+                                                  #_(println sah "xswe" new-x " oldx-inc " old-x "now " (+ old-x new-x) 
                                                            " (vector (* 0.5 (count sah)) (* 0.7 @font-size)) " 
                                                            (vector (* 0.5 (count sah)) (* 0.7 @font-size))
                                                            " ith " [note-index note])
-                                                  (update-in r4 [:x1] + 0 #_new-x))
-                                                r4))]
+                                                  (update-in r3 [:x1] + 0 #_new-x))
+                                                r3))]
                                         r3))
                                     {:x1 x :images1 []}))
                                   r5(-> acc
@@ -1234,7 +1224,7 @@
                                                                              "" (repeat svara-count " ")))
                                                                      s)))
                                                                 (clojure.string/join ","))]
-                                                           (when (and show-lyrics? (not play-mode?))
+                                                           (when show-lyrics?
                                                              [input-text
                                                                :model sah-list
                                                                :class "overlay-text"
@@ -1244,6 +1234,7 @@
                                                                        :caret-color "black"
                                                                        :width "96%"
                                                                        }
+                                                                       :disabled? play-mode?
                                                               :change-on-blur? true
                                                               ;;when the sahitya text box is clicked,
                                                               ;;stop showing the cursor for svaras
