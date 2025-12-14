@@ -281,7 +281,6 @@
                    (map-indexed (fn[indx item] (mapv #(vec (cons indx  %)) item)))
                    (reduce into))
         indexed-noteseq (mapv :indexed-noteseq indexes)]
-    (println " score " score)
     (merge (assoc score :index index :indexed-noteseq indexed-noteseq)
            (get-forward-backward-map2 index))))
 
