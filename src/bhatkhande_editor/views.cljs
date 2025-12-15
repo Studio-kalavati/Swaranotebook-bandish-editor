@@ -1190,23 +1190,18 @@
                                                     ;;sometimes there are far more notes, and sometimes far more lyrics.
                                                     ;;the min-width should the wide enough to show the wider one (lyrics or notes)
                                                     lyrics-multiplier (if (= 4 num-char-sahitya) base-multiplier
-                                                                 (+ base-multiplier (* 0.5 (- num-char-sahitya 4))))
+                                                                 (+ base-multiplier (* 0.45 (- num-char-sahitya 4))))
                                                     notes-in-bhaag (count (flatten (map :notes bhaag)))
                                                     notes-multiplier (if (= 4 notes-in-bhaag) base-multiplier
                                                                  (+ base-multiplier (* 0.7 (- notes-in-bhaag 4))))
                                                     multiplier (if (> lyrics-multiplier notes-multiplier) lyrics-multiplier notes-multiplier)
-                                                    _ (println "bag " notes-in-bhaag " sah " sahitya " x " x 
+                                                    #_(println "bag " notes-in-bhaag " sah " sahitya " x " x 
                                                                "(* @font-size 0.7) "(* @font-size 0.7) " num-sah "  num-char-sahitya
                                                                 " mult "   (* num-char-sahitya @font-size 0.7) " numlt " multiplier
                                                                )
                                                     res [:div {:class "bhaag-item" :style
-                                                               (merge
-                                                                {;:max-width (+ x (int (* @font-size 0.7))) 
-                                                                 :min-width (* @font-size multiplier)
-                                                                 }
-                                                                {:max-height
-                                                                 (int (* (if show-lyrics? 2.8 2)
-                                                                         @font-size))})}
+                                                                { :min-width (* @font-size multiplier) 
+                                                                 :max-height (int (* (if show-lyrics? 2.8 2) @font-size))}}
                                                          (reduce conj
                                                                  [:svg {:xmlns "http://www.w3.org/2000/svg"
                                                                         :width (+ x (int (* @font-size 0.6)))}]
@@ -1219,8 +1214,8 @@
                                                                 (map vector (get-sahitya comp cursor-map) xs)
                                                                 (map
                                                                  (fn[[s svara-count]]
-                                                                   (if (> svara-count 1)
-                                                                     (str s (clojure.string/join
+                                                                   (if (and s (> svara-count 1))
+                                                                     (str (clojure.string/trim s) (clojure.string/join
                                                                              "" (repeat svara-count " ")))
                                                                      s)))
                                                                 (clojure.string/join ","))]
@@ -1242,7 +1237,8 @@
                                                                      #(reset! sahitya-editing? true)
                                                                      :on-blur
                                                                      #(let [new-sahitya
-                                                                            (clojure.string/split (.-value (.-target %)) #",")]
+                                                                            (->> (clojure.string/split (.-value (.-target %)) #",")
+                                                                                           (map clojure.string/trim))]
                                                                         (dispatch [::events/conj-sahitya
                                                                                    (assoc cursor-map :text-val new-sahitya)])
                                                                         (reset! sahitya-editing? false))}
