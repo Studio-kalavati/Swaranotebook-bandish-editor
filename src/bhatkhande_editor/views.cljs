@@ -1195,10 +1195,6 @@
                                                     notes-multiplier (if (= 4 notes-in-bhaag) base-multiplier
                                                                  (+ base-multiplier (* 0.7 (- notes-in-bhaag 4))))
                                                     multiplier (if (> lyrics-multiplier notes-multiplier) lyrics-multiplier notes-multiplier)
-                                                    #_(println "bag " notes-in-bhaag " sah " sahitya " x " x 
-                                                               "(* @font-size 0.7) "(* @font-size 0.7) " num-sah "  num-char-sahitya
-                                                                " mult "   (* num-char-sahitya @font-size 0.7) " numlt " multiplier
-                                                               )
                                                     res [:div {:class "bhaag-item" :style
                                                                 { :min-width (* @font-size multiplier) 
                                                                  :max-height (int (* (if show-lyrics? 2.8 2) @font-size))}}
@@ -1239,6 +1235,7 @@
                                                                      #(let [new-sahitya
                                                                             (->> (clojure.string/split (.-value (.-target %)) #",")
                                                                                            (map clojure.string/trim))]
+                                                                        
                                                                         (dispatch [::events/conj-sahitya
                                                                                    (assoc cursor-map :text-val new-sahitya)])
                                                                         (reset! sahitya-editing? false))}
