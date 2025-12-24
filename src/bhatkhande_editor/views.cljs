@@ -1071,27 +1071,20 @@
                                             r3
                                             (let [sah (get-in comp
                                                               [:indexed-noteseq score-part-index
-                                                               avartan-index bhaag-index note-index :lyrics])
-                                                  r4
-                                                  (if (and (= 0 nsi) play-mode? show-lyrics?)
-                                                    (update-in r3
-                                                               [:images1]
-                                                               conj
-                                                               [:text
-                                                                {:x (+ x1 (int (* 0.3 @font-size)))
-                                                                 :y (int (* 1.7 @font-size))
-                                                                 :style {:font-size (* 0.7 @font-size)}}
-                                                                sah])
-                                                    r3)]
+                                                               avartan-index bhaag-index 
+                                                               note-index :lyrics])]
                                               (if (> (count sah) 2)
                                                 (let [new-x (int (* (* 0.5 (count sah))
-                                                                    (* 0.7 @font-size)))
-                                                      x-incr (+ new-x (get-in r4 [:x1]))]
-                                                  (update-in r4 [:x1] (constantly x-incr)))
-                                                r4))]
+                                                                    (* 0.333 @font-size)))
+                                                      old-x (get-in r3 [:x1]) ]
+                                                  #_(println sah "xswe" new-x " oldx-inc " old-x "now " (+ old-x new-x) 
+                                                           " (vector (* 0.5 (count sah)) (* 0.7 @font-size)) " 
+                                                           (vector (* 0.5 (count sah)) (* 0.7 @font-size))
+                                                           " ith " [note-index note])
+                                                  (update-in r3 [:x1] + 0 #_new-x))
+                                                r3))]
                                         r3))
                                     {:x1 x :images1 []}))
-
                                   r5(-> acc
                                         (update-in [:x] (constantly (:x1 r2)))
                                         (update-in [:images] into (:images1 r2)))
@@ -1134,7 +1127,6 @@
                                   r8 (update-in
                                       r7
                                       [:images] conj)]
-
                               r8))
                           {:x 5 :images []}))
                         images
@@ -1186,17 +1178,26 @@
                                 (let [res0
                                       (->> (map-indexed
                                             (fn[bhaag-index bhaag]
-                                              (let [{:keys [images x]}
+                                              (let [{:keys [images x] :as bag}
                                                     (draw-bhaag score-part-index avartan-index bhaag-index bhaag)
                                                     cursor-map {:score-part-index score-part-index
                                                                 :avartan-index avartan-index
                                                                 :bhaag-index bhaag-index}
+                                                    sahitya (get-sahitya comp cursor-map)
+                                                    num-char-sahitya (apply + (map count sahitya))
+                                                    base-multiplier 3.25
+                                                    ;;find the max width required for the lyrics and notes
+                                                    ;;sometimes there are far more notes, and sometimes far more lyrics.
+                                                    ;;the min-width should the wide enough to show the wider one (lyrics or notes)
+                                                    lyrics-multiplier (if (= 4 num-char-sahitya) base-multiplier
+                                                                 (+ base-multiplier (* 0.45 (- num-char-sahitya 4))))
+                                                    notes-in-bhaag (count (flatten (map :notes bhaag)))
+                                                    notes-multiplier (if (= 4 notes-in-bhaag) base-multiplier
+                                                                 (+ base-multiplier (* 0.7 (- notes-in-bhaag 4))))
+                                                    multiplier (if (> lyrics-multiplier notes-multiplier) lyrics-multiplier notes-multiplier)
                                                     res [:div {:class "bhaag-item" :style
-                                                               (merge
-                                                                {:max-width (+ x (int (* @font-size 0.7))) }
-                                                                {:max-height
-                                                                 (int (* (if show-lyrics? 2.8 2)
-                                                                         @font-size))})}
+                                                                { :min-width (* @font-size multiplier) 
+                                                                 :max-height (int (* (if show-lyrics? 2.8 2) @font-size))}}
                                                          (reduce conj
                                                                  [:svg {:xmlns "http://www.w3.org/2000/svg"
                                                                         :width (+ x (int (* @font-size 0.6)))}]
@@ -1209,12 +1210,12 @@
                                                                 (map vector (get-sahitya comp cursor-map) xs)
                                                                 (map
                                                                  (fn[[s svara-count]]
-                                                                   (if (> svara-count 1)
-                                                                     (str s (clojure.string/join
+                                                                   (if (and s (> svara-count 1))
+                                                                     (str (clojure.string/trim s) (clojure.string/join
                                                                              "" (repeat svara-count " ")))
                                                                      s)))
                                                                 (clojure.string/join ","))]
-                                                           (when (and show-lyrics? (not play-mode?))
+                                                           (when show-lyrics?
                                                              [input-text
                                                                :model sah-list
                                                                :class "overlay-text"
@@ -1224,6 +1225,7 @@
                                                                        :caret-color "black"
                                                                        :width "96%"
                                                                        }
+                                                                       :disabled? play-mode?
                                                               :change-on-blur? true
                                                               ;;when the sahitya text box is clicked,
                                                               ;;stop showing the cursor for svaras
@@ -1231,7 +1233,9 @@
                                                                      #(reset! sahitya-editing? true)
                                                                      :on-blur
                                                                      #(let [new-sahitya
-                                                                            (clojure.string/split (.-value (.-target %)) #",")]
+                                                                            (->> (clojure.string/split (.-value (.-target %)) #",")
+                                                                                           (map clojure.string/trim))]
+                                                                        
                                                                         (dispatch [::events/conj-sahitya
                                                                                    (assoc cursor-map :text-val new-sahitya)])
                                                                         (reset! sahitya-editing? false))}
@@ -1424,6 +1428,7 @@
              :children
              [(when logged-in?
                 (let [ifn #(do
+                             (dispatch [::events/navigate :list-comps])
                              (dispatch [::events/list-files]))]
                   [h-box :justify :between :align :center :children
                    [[box
@@ -1554,7 +1559,6 @@
                                title-label (->> (clojure.string/split i #"-")
                                                 rest
                                                 (clojure.string/join "-"))]
-                           (println " open url " iurl)
                            [v-box
                             :children
                             [[h-box

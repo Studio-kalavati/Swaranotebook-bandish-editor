@@ -710,7 +710,13 @@
          (.then
           (fn[i]
             (let [fullpaths
-                  (->> (map #(.-fullPath %) (.-items i)))]
+                  (->> (.-items i)
+                       (sort-by #(let [namesplit (clojure.string/split (.-name %) #"-")]
+                                   (if (> (count namesplit) 1)
+                                   (->> namesplit rest  (clojure.string/join "-"))
+                                    %  )))
+                       (map #(do 
+                               (.-fullPath %)))) ]
               (dispatch [::my-bandishes fullpaths])))))
      {:dispatch [::set-active-panel :wait-for-loading-comps]})))
 
@@ -846,7 +852,6 @@
  ::get-bandish-json
  [log-event]
  (fn [{:keys [db]} [_ {:keys [path id] :as urlparams}]]
-   (println "getting comp from " urlparams)
    (let [tr (t/reader :json)]
      (-> (js/fetch
           (str (db/get-bandish-url (str path "/" id))
@@ -862,7 +867,6 @@
          (.then (fn[i]
                   (let [raw(js->clj (t/read tr i))
                         imap (db/cvt-format raw)]
-                    (println " refreshing comp " imap " text " raw)
                     (dispatch [::set-url-path urlparams])
                     (dispatch [::refresh-comp imap]))))
          (.catch (fn[i] (println " error " i ))))
@@ -980,7 +984,6 @@
 (reg-event-fx
  ::refresh-comp
  (fn [{:keys [db]} [_ inp]]
- (println " refresh-comp " inp)
    (let [comp (db/add-indexes inp)
          ;;TODO add lyrics back
          ;;lyrics? (> (->> comp :noteseq (map :lyrics) (filter identity) count) 0)
