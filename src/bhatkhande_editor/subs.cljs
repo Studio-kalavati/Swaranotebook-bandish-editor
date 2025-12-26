@@ -234,6 +234,12 @@
     (:youtube-sync props)))
 
 (reg-sub
+  ::youtube-video-id
+  :<- [::props]
+  (fn [props [_ _]]
+    (:youtube-video-id props)))
+
+(reg-sub
   ::timeline-segments
   :<- [::props]
   (fn [props _]

@@ -113,12 +113,36 @@
     [:composition :score-parts score-part-index :noteseq]))
 
 (defn remove-empty-avartan
-  "remove empty avartan from the end of a flat noteseq"
-  [flat-noteseq num-beats]
-  (let [empty-notes (->> flat-noteseq reverse
+   "remove empty avartan from the end of a flat noteseq"
+   [flat-noteseq num-beats]
+   (let [empty-notes (->> flat-noteseq reverse
                          (take-while #(= % {:notes [{:svara [:madhyam :_]}]})))]
-    ;;remove it if more than last avartan plus 1 beat is empty, with no lyrics written
-    (if (>= (count empty-notes) (inc num-beats) )
-      (subvec flat-noteseq 0 (- (count flat-noteseq) num-beats))
-      flat-noteseq))
-  )
+     ;;remove it if more than last avartan plus 1 beat is empty, with no lyrics written
+     (if (>= (count empty-notes) (inc num-beats))
+       (subvec flat-noteseq 0 (- (count flat-noteseq) num-beats))
+       flat-noteseq)))
+
+(defn extract-youtube-video-id
+  "Extract YouTube video ID from various URL formats.
+   Supports:
+   - https://www.youtube.com/watch?v=VIDEO_ID
+   - https://youtu.be/VIDEO_ID
+   - https://www.youtube.com/embed/VIDEO_ID
+   - https://m.youtube.com/watch?v=VIDEO_ID
+   Returns nil if no valid video ID is found."
+  [url]
+  (when url
+    (cond
+      (istr/includes? url "youtube.com/watch")
+      (let [match (re-find #"[?&]v=([^&]+)" url)]
+        (second match))
+
+      (istr/includes? url "youtu.be/")
+      (let [match (re-find #"(?:youtu\.be/|youtube\.com/embed/)([^\?&]+)" url)]
+        (second match))
+
+      (istr/includes? url "youtube.com/embed/")
+      (let [match (re-find #"embed/([^\?&]+)" url)]
+        (second match))
+
+      :else nil)))

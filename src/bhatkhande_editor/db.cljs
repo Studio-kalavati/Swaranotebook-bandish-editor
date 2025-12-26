@@ -343,8 +343,9 @@
                       :notes-per-beat 1
                       :hidden-parts #{}
                       :note-index []
-                      :youtube-sync true
-                      :timeline-segments [20 20 20 20 20]
+                        :youtube-sync true
+                       :youtube-video-id "dQw4w9WgXcQ"
+                       :timeline-segments [20 20 20 20 20]
                       :timeline-segment-count 5
                       :dragging-timeline-segment nil
                       :timeline-colors [:blue :green]})

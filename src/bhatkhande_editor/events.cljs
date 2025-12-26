@@ -1421,6 +1421,11 @@
     (assoc-in db [:props :dragging-timeline-segment] nil)))
 
 (reg-event-db
+  ::set-youtube-video-id
+  (fn [db [_ video-id]]
+    (assoc-in db [:props :youtube-video-id] video-id)))
+
+(reg-event-db
   ::set-timeline-segment-count
   (fn [db [_ count]]
     (when (and (>= count 2) (<= count 10))

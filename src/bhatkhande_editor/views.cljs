@@ -29,10 +29,11 @@
    [reagent.core :as reagent]
    [cognitect.transit :as t]
    [clojure.string :as cstring]
-   [bhatkhande-editor.events :as events]
-   [bhatkhande-editor.routes :as routes]
-   [bhatkhande-editor.db :as db :refer [mswaras pitch-options-list get-sahitya]]
-   [bhatkhande-editor.subs :as subs]))
+    [bhatkhande-editor.events :as events]
+    [bhatkhande-editor.routes :as routes]
+    [bhatkhande-editor.db :as db :refer [mswaras pitch-options-list get-sahitya]]
+    [bhatkhande-editor.subs :as subs]
+    [bhatkhande-editor.utils :as utils]))
 
 (def editor-height (reagent/atom 0))
 (def cursor-y (reagent/atom 0))
@@ -1678,14 +1679,33 @@
 
 (defn youtube-iframe-box
   []
-  [box
-           :size "4"
-           :width "100%"
-           :child
-             [:iframe
-              {:src "https://www.youtube.com/embed/dQw4w9WgXcQ"
-                :style {:width "100%" :height "50%" :border "none"}
-                 :allowFullScreen false}]])
+  (let [url-input (reagent/atom "")
+        youtube-video-id @(subscribe [::subs/youtube-video-id])]
+    [v-box
+     :gap "10px"
+     :children
+     [[h-box
+       :gap "10px"
+       :children
+       [[input-text
+         :model @url-input
+         :placeholder "Paste YouTube URL..."
+         :on-change #(reset! url-input %)
+         :style {:width "70%"}]
+        [button
+         :label "Load"
+         :on-click
+         #(if-let [video-id (utils/extract-youtube-video-id @url-input)]
+            (dispatch [::events/set-youtube-video-id video-id])
+            (println "Could not extract YouTube video ID from URL"))]]]
+      [box
+       :size "4"
+       :width "100%"
+       :child
+       [:iframe
+        {:src (str "https://www.youtube.com/embed/" youtube-video-id)
+         :style {:width "100%" :height "50%" :border "none"}
+         :allowFullScreen false}]]]]))
 
 (defn timeline-view
   []
