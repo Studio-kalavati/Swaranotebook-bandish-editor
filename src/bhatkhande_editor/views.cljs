@@ -1676,6 +1676,130 @@
                 (conj bbox share-panel)
                 :else bbox)]]))))
 
+(defn youtube-iframe-box
+  []
+  [box
+           :size "4"
+           :width "100%"
+           :child
+             [:iframe
+              {:src "https://www.youtube.com/embed/dQw4w9WgXcQ"
+                :style {:width "100%" :height "50%" :border "none"}
+                 :allowFullScreen false}]])
+
+(defn timeline-view
+  []
+  (let [dragging-handle (reagent/atom nil)
+        drag-start-x (reagent/atom nil)
+        container-width (reagent/atom 0)
+        
+        handle-mouse-down (fn [handle-index e]
+                           (reset! dragging-handle handle-index)
+                           (reset! drag-start-x (.-clientX e))
+                           (.preventDefault e)
+                           (.stopPropagation e))
+        
+        handle-mouse-move (fn [e]
+                           (when @dragging-handle
+                             (let [delta-x (- (.-clientX e) @drag-start-x)
+                                   delta-percent (* 100.0 (/ delta-x @container-width))]
+                               (dispatch [::events/drag-segment @dragging-handle delta-percent])
+                               (reset! drag-start-x (.-clientX e)))))
+        
+        handle-mouse-up (fn []
+                         (when @dragging-handle
+                           (dispatch [::events/end-drag-segment])
+                           (reset! dragging-handle nil)
+                           (reset! drag-start-x nil)))
+        
+        format-time (fn [seconds]
+                     (let [mins (int (/ seconds 60))
+                           secs (mod (int seconds) 60)]
+                       (str mins ":" (when (< secs 10) "0") secs)))]
+    
+    (fn []
+      (let [segments @(subscribe [::subs/timeline-segments])
+            youtube-sync @(subscribe [::subs/youtube-sync])]
+        (when youtube-sync
+          (let [total-duration @(subscribe [::subs/bpm])
+                cumulative-percentages (reductions + segments)
+                time-ranges (map-indexed
+                            (fn [idx cumulative-percent]
+                              (let [start-time (if (= idx 0)
+                                                 0
+                                                 (/ (* (nth cumulative-percentages (dec idx)) total-duration) 100))
+                                    end-time (/ (* cumulative-percent total-duration) 100)]
+                                [start-time end-time]))
+                            cumulative-percentages)]
+            [:div
+             {:style {:width "100%"
+                      :padding "15px 0"
+                      :margin-top "10px"
+                      :position "relative"
+                      :border-radius "8px"
+                      :background-color "#f5f5f5"}
+              :ref #(when (identity %)
+                      (reset! container-width (.-offsetWidth %)))
+              :on-mouse-up handle-mouse-up
+              :on-mouse-leave handle-mouse-up
+              :on-mouse-move handle-mouse-move}
+             
+             (doall
+              (map-indexed
+               (fn [segment-index segment-percent]
+                 (let [color (if (even? segment-index) db/timeline-blue db/timeline-green)
+                       is-last? (= segment-index (dec (count segments)))
+                       [start-time end-time] (nth time-ranges segment-index)
+                       is-dragging? (= @dragging-handle segment-index)]
+                   [:div
+                    {:key (str "segment-" segment-index)
+                     :style {:display "inline-block"
+                             :height "80px"
+                             :width (str segment-percent "%")
+                             :background-color color
+                             :opacity (if (or is-dragging? 
+                                          (= @dragging-handle (dec segment-index)))
+                                       0.7 1)
+                             :border-radius (if (= segment-index 0) "8px 0 0 8px"
+                                            (if is-last? "0 8px 8px 0" "0"))
+                             :position "relative"
+                             :transition "opacity 0.15s ease"
+                             :overflow "hidden"}
+                     :on-mouse-down handle-mouse-down}
+                    
+                    [:div
+                     {:style {:position "absolute"
+                              :top "50%"
+                              :left "50%"
+                              :transform "translate(-50%, -50%)"
+                              :color "white"
+                              :font-weight "bold"
+                              :font-size "14px"
+                              :text-align "center"
+                              :text-shadow "1px 1px 2px rgba(0,0,0,0.5)"
+                              :pointer-events "none"}}
+                     (str (format-time start-time) " - " (format-time end-time))]
+                    
+                    (when-not is-last?
+                      [:div
+                       {:style {:position "absolute"
+                                :right "-8px"
+                                :top "50%"
+                                :transform "translateY(-50%)"
+                                :width "16px"
+                                :height "16px"
+                                :background-color "white"
+                                :border (str "3px solid " color)
+                                :border-radius "50%"
+                                :cursor "ew-resize"
+                                :z-index 10
+                                :box-shadow (if is-dragging?
+                                             "0 0 10px rgba(0,0,0,0.5)"
+                                             "0 2px 5px rgba(0,0,0,0.3)")
+                                :transition "box-shadow 0.15s ease"}
+                        :on-mouse-down #(handle-mouse-down segment-index %)}])]))
+               segments))]))))))
+
 (defn show-editor
   []
   (let [youtube-sync @(subscribe [::subs/youtube-sync])]
@@ -1689,23 +1813,20 @@
            :size "6"
            :width "60%"
            :child [swara-display-area]]
-          [box
-           :size "4"
-           :width "40%"
-           :child
-            [:iframe
-             {:src "https://www.youtube.com/embed/dQw4w9WgXcQ"
-               :style {:width "100%" :height "50%" :border "none"}
-                :allowFullScreen false}]]]]
-        [swara-display-area])
+          [v-box
+           :gap "5px"
+           :children [
+             [youtube-iframe-box]
+             [timeline-view]]]]]
+       [swara-display-area])
      [:div {:class "keyboard wow fadeInUp"
-                :ref #(when (identity %)
-                        (let [ch (.-offsetHeight %)]
-                          (reset! editor-height ch)))}
-          (let [istate @(subscribe [::subs/mode])]
-            (if (= :play istate)
-              [play-keyboard-footer]
-              [swara-buttons]))]]))
+                 :ref #(when (identity %)
+                         (let [ch (.-offsetHeight %)]
+                           (reset! editor-height ch)))}
+           (let [istate @(subscribe [::subs/mode])]
+             (if (= :play istate)
+               [play-keyboard-footer]
+               [swara-buttons]))]]))
 
 (defn wait-for
   [msg]

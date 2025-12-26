@@ -1384,15 +1384,57 @@
 
 ;;change the mode if we're editing svaras or lyrics
 (reg-event-fx
- ::currently-editing
- (fn [{:keys [db]} [_ editing]]
-   {:db (update-in db [:props :currently-editing] (constantly editing))}))
+  ::currently-editing
+  (fn [{:keys [db]} [_ editing]]
+    {:db (update-in db [:props :currently-editing] (constantly editing))}))
+
+(reg-event-db
+  ::start-drag-segment
+  (fn [db [_ handle-index]]
+    (assoc-in db [:props :dragging-timeline-segment] handle-index)))
+
+(reg-event-db
+  ::drag-segment
+  (fn [db [_ handle-index delta-percent]]
+    (let [segments (get-in db [:props :timeline-segments])
+          left-idx handle-index
+          right-idx (inc handle-index)
+          min-percent db/min-segment-percent
+          max-percent db/max-segment-percent
+          current-left (nth segments left-idx)
+          current-right (nth segments right-idx)
+          new-left-percent (max min-percent 
+                                 (min max-percent 
+                                      (+ current-left delta-percent)))
+          new-right-percent (max min-percent 
+                                  (min max-percent 
+                                       (- current-right delta-percent)))]
+      (-> db
+          (update-in [:props :timeline-segments] 
+                     assoc left-idx new-left-percent)
+          (update-in [:props :timeline-segments] 
+                     assoc right-idx new-right-percent)))))
+
+(reg-event-db
+  ::end-drag-segment
+  (fn [db [_ _]]
+    (assoc-in db [:props :dragging-timeline-segment] nil)))
+
+(reg-event-db
+  ::set-timeline-segment-count
+  (fn [db [_ count]]
+    (when (and (>= count 2) (<= count 10))
+      (let [percent (/ 100 count)]
+        (-> db
+            (assoc-in [:props :timeline-segment-count] count)
+            (assoc-in [:props :timeline-segments] 
+                      (vec (repeat count percent))))))))
 
 #_(reg-event-fx
- ::pitch-shift
- (fn [{:keys [db]} [_ shift-by]]
-   @(:sample-buffers db)
-   {:db (update-in db [:dispinfo :font-size] (constantly font-size))}))
+  ::pitch-shift
+  (fn [{:keys [db]} [_ shift-by]]
+    @(:sample-buffers db)
+    {:db (update-in db [:dispinfo :font-size] (constantly font-size))}))
 
 #_(reg-event-fx
  ::post-log

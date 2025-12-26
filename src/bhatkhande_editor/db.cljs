@@ -327,23 +327,27 @@
    :font-size 32 :spacing 10 :text-align :left})
 
 (def default-props {:raga :bilawal
-                     :note-pos {}
-                     :mode :edit
-                     :currently-editing :svaras
-                     :lang :english
-                     :newline-on-avartan? false
-                     :show-lyrics false
-                     :bpm 120
-                     :beat-mode :metronome
-                     :note-octave :madhyam
-                     :onscreen-keyboard :show
-                     :highlighted-pos []
-                     :pitch "c"
-                     :tanpura? true
-                     :notes-per-beat 1
-                     :hidden-parts #{}
-                     :note-index []
-                     :youtube-sync true})
+                      :note-pos {}
+                      :mode :edit
+                      :currently-editing :svaras
+                      :lang :english
+                      :newline-on-avartan? false
+                      :show-lyrics false
+                      :bpm 120
+                      :beat-mode :metronome
+                      :note-octave :madhyam
+                      :onscreen-keyboard :show
+                      :highlighted-pos []
+                      :pitch "c"
+                      :tanpura? true
+                      :notes-per-beat 1
+                      :hidden-parts #{}
+                      :note-index []
+                      :youtube-sync true
+                      :timeline-segments [20 20 20 20 20]
+                      :timeline-segment-count 5
+                      :dragging-timeline-segment nil
+                      :timeline-colors [:blue :green]})
 
 (def pitch-sharps-list ["C" "C#" "D" "D#" "E" "F" "F#" "G" "G#" "A" "A#" "B"])
 (def pitch-s-list ["c" "cs" "d" "ds" "e" "f" "fs" "g" "gs" "a" "as" "b"])
@@ -352,7 +356,12 @@
   (mapv #(assoc {} :id %1 :label %2 :sample %3) (range 0 12) pitch-sharps-list
         pitch-s-list))
 (def cursor-index-keys
-  [:score-part-index :avartan-index :bhaag-index :note-index :nsi])
+   [:score-part-index :avartan-index :bhaag-index :note-index :nsi])
+
+(def min-segment-percent 5)
+(def max-segment-percent 50)
+(def timeline-blue "#2196F3")
+(def timeline-green "#4CAF50")
 
 (defn comp-decorator
   [comp0]

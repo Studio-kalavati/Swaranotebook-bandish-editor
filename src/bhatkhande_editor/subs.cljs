@@ -232,3 +232,27 @@
   :<- [::props]
   (fn [props [_ _]]
     (:youtube-sync props)))
+
+(reg-sub
+  ::timeline-segments
+  :<- [::props]
+  (fn [props _]
+    (:timeline-segments props)))
+
+(reg-sub
+  ::timeline-segment-count
+  :<- [::props]
+  (fn [props _]
+    (:timeline-segment-count props)))
+
+(reg-sub
+  ::dragging-timeline-segment
+  :<- [::props]
+  (fn [props _]
+    (:dragging-timeline-segment props)))
+
+(reg-sub
+  ::timeline-colors
+  :<- [::props]
+  (fn [props _]
+    (:timeline-colors props)))
