@@ -1695,8 +1695,8 @@
            :child
             [:iframe
              {:src "https://www.youtube.com/embed/dQw4w9WgXcQ"
-               :style {:width "100%" :height "100%" :border "none"}
-                :allowFullScreen true}]]]]
+               :style {:width "100%" :height "50%" :border "none"}
+                :allowFullScreen false}]]]]
         [swara-display-area])
      [:div {:class "keyboard wow fadeInUp"
                 :ref #(when (identity %)
