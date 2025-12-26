@@ -1678,16 +1678,34 @@
 
 (defn show-editor
   []
-  [:div
-   [swara-display-area]
-   [:div {:class "keyboard wow fadeInUp"
-          :ref #(when (identity %)
-                  (let [ch (.-offsetHeight %)]
-                    (reset! editor-height ch)))}
-    (let [istate @(subscribe [::subs/mode])]
-      (if (= :play istate)
-        [play-keyboard-footer]
-        [swara-buttons]))]])
+  (let [youtube-sync @(subscribe [::subs/youtube-sync])]
+    [:div
+     (if youtube-sync
+       [h-box
+        :gap "1vw"
+        :style {:width "100%"}
+        :children [
+          [box
+           :size "6"
+           :width "60%"
+           :child [swara-display-area]]
+          [box
+           :size "4"
+           :width "40%"
+           :child
+            [:iframe
+             {:src "https://www.youtube.com/embed/dQw4w9WgXcQ"
+               :style {:width "100%" :height "100%" :border "none"}
+                :allowFullScreen true}]]]]
+        [swara-display-area])
+     [:div {:class "keyboard wow fadeInUp"
+                :ref #(when (identity %)
+                        (let [ch (.-offsetHeight %)]
+                          (reset! editor-height ch)))}
+          (let [istate @(subscribe [::subs/mode])]
+            (if (= :play istate)
+              [play-keyboard-footer]
+              [swara-buttons]))]]))
 
 (defn wait-for
   [msg]

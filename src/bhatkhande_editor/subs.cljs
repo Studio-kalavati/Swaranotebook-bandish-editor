@@ -223,6 +223,12 @@
 
 ;;number of bhaags to play in play mode
 (reg-sub
- ::max-num-avartans
- (fn [db [_ _]]
-   (count (:avartan-first-note db))))
+  ::max-num-avartans
+  (fn [db [_ _]]
+    (count (:avartan-first-note db))))
+
+(reg-sub
+  ::youtube-sync
+  :<- [::props]
+  (fn [props [_ _]]
+    (:youtube-sync props)))
