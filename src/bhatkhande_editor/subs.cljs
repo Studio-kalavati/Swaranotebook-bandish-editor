@@ -240,6 +240,12 @@
      (:youtube-video-id props)))
 
 (reg-sub
+   ::youtube-player
+   :<- [::props]
+   (fn [props [_ _]]
+     (:youtube-player props)))
+
+(reg-sub
    ::youtube-video-duration
    :<- [::props]
    (fn [props [_ _]]

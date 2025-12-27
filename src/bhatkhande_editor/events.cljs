@@ -1426,6 +1426,25 @@
      (assoc-in db [:props :youtube-video-id] video-id)))
 
 (reg-event-db
+   ::set-youtube-player
+   (fn [db [_ player]]
+     (assoc-in db [:props :youtube-player] player)))
+
+(reg-event-fx
+   ::start-youtube-video-from
+   (fn [{:keys [db]} [_ from to]]
+     (let [player (get-in db [:props :youtube-player] )
+           youtube-video-id (get-in db [:props :youtube-video-id])
+           params #js {:videoId youtube-video-id 
+                       :startSeconds from :endSeconds to}]
+       (println " player " player " from " from)
+      (when player 
+  (.loadVideoById ^js/YT.player player params)
+        #_(.seekTo ^js/YT.Player player from) 
+        (.playVideo  ^js/YT.Player player)))
+     {}))
+
+(reg-event-db
    ::set-youtube-video-duration
    (fn [db [_ duration]]
      (assoc-in db [:props :youtube-video-duration] duration)))

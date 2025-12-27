@@ -1702,6 +1702,7 @@
                   (let [onready (fn [event]
                                                                           (let [player (.-target event)]
                                                                             (reset! player-instance player)
+                                                                            (dispatch [::events/set-youtube-player player])
                                                                             (let [duration (.getDuration ^js/YT.player player)]
                                                                               (println "Video duration:" duration)
                                                                               (when (and duration (> duration 0))
@@ -1861,7 +1862,9 @@
                  (let [color (if (even? segment-index) db/timeline-blue db/timeline-green)
                        is-last? (= segment-index (dec (count segments)))
                        [start-time end-time] (nth time-ranges segment-index)
-                       is-dragging? (= @dragging-handle segment-index)]
+                       is-dragging? (= @dragging-handle segment-index)
+                       onclick (fn[_] (dispatch [::events/start-youtube-video-from start-time end-time])) 
+                       ]
                    [:div
                     {:key (str "segment-" segment-index)
                      :style {:display "inline-block"
@@ -1876,8 +1879,9 @@
                              :position "relative"
                              :transition "opacity 0.15s ease"
                              :overflow "hidden"}
-                     :on-mouse-down handle-mouse-down}
-                    
+                    ;; :on-mouse-down handle-mouse-down 
+                    :on-click onclick
+                     }
                     [:div
                      {:style {:position "absolute"
                               :top "50%"
@@ -1889,7 +1893,10 @@
                               :text-align "center"
                               :text-shadow "1px 1px 2px rgba(0,0,0,0.5)"
                               :pointer-events "none"}}
-                     (str (format-time start-time) " - " (format-time end-time))]
+                     [v-box :children 
+                      [(str (format-time start-time) " - " (format-time end-time))
+                  ;;[md-icon-button :md-icon-name "zmdi zmdi-play-circle" :on-click ]
+                  ]]]
                     
                     (when-not is-last?
                       [:div
