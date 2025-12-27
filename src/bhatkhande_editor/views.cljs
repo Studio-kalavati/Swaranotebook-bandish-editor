@@ -1679,14 +1679,65 @@
 
 (defn youtube-box
   [youtube-video-id]
-  [box
-       :size "4"
-       :width "100%"
-       :child
-       [:iframe
-        {:src (str "https://www.youtube.com/embed/" youtube-video-id)
-         :style {:width "100%" :height "50%" :border "none"}
-         :allowFullScreen false}]])
+  (let [player-instance (reagent/atom nil)
+        api-ready? (reagent/atom false)]
+    (reagent/create-class
+     {:display-name "YouTubeBox"
+      
+      :component-did-mount
+      (fn []
+        (when-not (.-onYouTubeIframeAPIReady js/window)
+          (let [script (js/document.createElement "script")
+                script-src "https://www.youtube.com/iframe_api"]
+            (set! (.-src script) script-src)
+            (set! (.-onload script)
+                  (fn []
+                    (reset! api-ready? true)
+                    (println "YouTube API script loaded")))
+            (.appendChild (.-body js/document) script)))
+        
+        (set! (.-onYouTubeIframeAPIReady js/window)
+              (fn []
+                (when-not @player-instance
+                  (let [onready (fn [event]
+                                                                          (let [player (.-target event)]
+                                                                            (reset! player-instance player)
+                                                                            (let [duration (.getDuration ^js/YT.player player)]
+                                                                              (println "Video duration:" duration)
+                                                                              (when (and duration (> duration 0))
+                                                                              (dispatch [::events/set-youtube-video-duration duration])))))
+                        player (new js/YT.Player "youtube-player"
+                                                 #js {:height "50%"
+                                                        :width "100%"
+                                                        :videoId youtube-video-id
+                                                        :playerVars #js {:playsinline 1
+                                                                       :rel 0}
+                                                        :events #js {:onReady onready
+                                                                    :onStateChange onready }})]
+                    player)))))
+      
+      :component-did-update
+      (fn [this old-argv]
+        (let [new-argv (reagent/argv this)
+              old-video-id(when old-argv (second old-argv))
+              new-video-id (second new-argv)
+              player @player-instance]
+          (when (and (not= new-video-id old-video-id)
+                     @player-instance)
+            (.loadVideoById ^js/YT.player player new-video-id))))
+      
+      :component-will-unmount
+      (fn []
+        (when @player-instance
+          (.destroy @player-instance)
+          (reset! player-instance nil)))
+      
+      :reagent-render
+      (fn [youtube-video-id]
+        [:div
+         {:id "youtube-player"
+          :style {:width "100%" ;;:height "50%" 
+                  :position "relative"}}])})))
 
 (defn youtube-iframe-box
   []
@@ -1781,7 +1832,7 @@
       (let [segments @(subscribe [::subs/timeline-segments])
             youtube-sync @(subscribe [::subs/youtube-sync])]
         (when youtube-sync
-          (let [total-duration @(subscribe [::subs/bpm])
+          (let [total-duration (or @(subscribe [::subs/youtube-video-duration]) 0)
                 cumulative-percentages (reductions + segments)
                 time-ranges (map-indexed
                             (fn [idx cumulative-percent]
