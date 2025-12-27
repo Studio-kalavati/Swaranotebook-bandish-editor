@@ -1677,35 +1677,75 @@
                 (conj bbox share-panel)
                 :else bbox)]]))))
 
-(defn youtube-iframe-box
-  []
-  (let [url-input (reagent/atom "")
-        youtube-video-id @(subscribe [::subs/youtube-video-id])]
-    [v-box
-     :gap "10px"
-     :children
-     [[h-box
-       :gap "10px"
-       :children
-       [[input-text
-         :model @url-input
-         :placeholder "Paste YouTube URL..."
-         :on-change #(reset! url-input %)
-         :style {:width "70%"}]
-        [button
-         :label "Load"
-         :on-click
-         #(if-let [video-id (utils/extract-youtube-video-id @url-input)]
-            (dispatch [::events/set-youtube-video-id video-id])
-            (println "Could not extract YouTube video ID from URL"))]]]
-      [box
+(defn youtube-box
+  [youtube-video-id]
+  [box
        :size "4"
        :width "100%"
        :child
        [:iframe
         {:src (str "https://www.youtube.com/embed/" youtube-video-id)
          :style {:width "100%" :height "50%" :border "none"}
-         :allowFullScreen false}]]]]))
+         :allowFullScreen false}]])
+
+(defn youtube-iframe-box
+  []
+  (let [show-change-video-modal? (reagent/atom false)
+        new-video-url (reagent/atom "") ]
+    (fn []
+      (let [video-id @(subscribe [::subs/youtube-video-id])]
+        [:div
+         [h-box
+          :justify :end
+          :children
+          [[button
+            :label "Change Video"
+            :style {:font-size "small" :margin-bottom "5px"}
+            :on-click #(reset! show-change-video-modal? true)]]]
+         [youtube-box video-id]
+         (when @show-change-video-modal?
+           [modal-panel
+            :backdrop-on-click #(reset! show-change-video-modal? false)
+            :child [:div {:style {:min-width "min(80vw,400px)"}}
+                     [v-box
+                      :gap "2vh"
+                      :class "body"
+                      :align :center
+                      :children
+                      [[title :level :level3 :label "Change YouTube Video"]
+                       [gap :size "2vh"]
+                       [input-text
+                        :model new-video-url
+                        :on-change #(reset! new-video-url %)
+                        :style {:width "100%"
+                                :justify-content "center"
+                                :text-align "center"}]
+                       [gap :size "2vh"]
+                       (when (and (not (empty? @new-video-url))
+                                  (not (utils/extract-youtube-video-id @new-video-url)))
+                         [title :level :level4 :label "Invalid YouTube URL"
+                          :style {:color "red"}])
+                       [gap :size "2vh"]
+                       [h-box
+                        :gap "2vw"
+                        :children
+                        [[button
+                          :label "OK"
+                          :class "btn-hc-lg btn-primary"
+                          :on-click #(let [extracted-id (utils/extract-youtube-video-id @new-video-url)]
+                                      (if extracted-id
+                                        (do
+                                          (println" extracted ytid " extracted-id)
+                                          (dispatch [::events/set-youtube-video-id extracted-id])
+                                          (reset! show-change-video-modal? false)
+                                          (reset! new-video-url ""))
+                                        (println "Invalid YouTube URL")))]
+                         [button
+                          :label "Cancel"
+                          :class "btn-default"
+                          :on-click #(do
+                                      (reset! show-change-video-modal? false)
+                                      (reset! new-video-url ""))]]]]]]])]))))
 
 (defn timeline-view
   []
