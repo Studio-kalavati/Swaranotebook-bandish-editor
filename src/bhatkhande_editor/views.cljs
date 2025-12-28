@@ -1732,8 +1732,9 @@
           [[button
             :label "Change Video"
             :style {:font-size "small" :margin-bottom "5px"}
-            :on-click #(reset! show-change-video-modal? true)]]]
-         [youtube-box video-id]
+            :on-click #(reset! show-change-video-modal? true)]
+           [youtube-box video-id] ]]
+         
          (when @show-change-video-modal?
            [modal-panel
             :backdrop-on-click #(reset! show-change-video-modal? false)
@@ -1902,20 +1903,17 @@
   (let [youtube-sync @(subscribe [::subs/youtube-sync])]
     [:div
      (if youtube-sync
-       [h-box
+       [v-box
         :gap "1vw"
         :style {:width "100%"}
         :children [
-          [box
-           :size "6"
-           :width "60%"
-           :child [swara-display-area]]
           [v-box
            :gap "5px"
            :children [
              [youtube-iframe-box]
-             [timeline-view]]]]]
-       [swara-display-area])
+             [timeline-view]
+             [swara-display-area] ]]
+          ]])
      [:div {:class "keyboard wow fadeInUp"
                  :ref #(when (identity %)
                          (let [ch (.-offsetHeight %)]

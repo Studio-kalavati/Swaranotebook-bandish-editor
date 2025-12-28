@@ -102,6 +102,12 @@
    (-> comp :title)))
 
 (reg-sub
+ ::part-titles
+ :<- [::composition]
+ (fn [comp _]
+   (->> comp :score-parts (mapv :part-title))))
+
+(reg-sub
  ::save-possible?
  (fn [db [_ _]]
    (and (= (-> db :props :path) (-> db :user :uid))
