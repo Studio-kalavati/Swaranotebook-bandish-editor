@@ -1874,7 +1874,7 @@
                               :text-shadow "1px 1px 2px rgba(0,0,0,0.5)"
                               :pointer-events "none"}}
                      [v-box :children 
-                      [(str (format-time start-time) " - " (format-time end-time))
+                      [(str "▶ " (format-time start-time) " - " (format-time end-time))
                   ;;[md-icon-button :md-icon-name "zmdi zmdi-play-circle" :on-click ]
                   ]]]
                     
