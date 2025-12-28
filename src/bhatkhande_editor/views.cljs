@@ -29,11 +29,12 @@
    [reagent.core :as reagent]
    [cognitect.transit :as t]
    [clojure.string :as cstring]
-    [bhatkhande-editor.events :as events]
-    [bhatkhande-editor.routes :as routes]
-    [bhatkhande-editor.db :as db :refer [mswaras pitch-options-list get-sahitya]]
-    [bhatkhande-editor.subs :as subs]
-    [bhatkhande-editor.utils :as utils]))
+     [bhatkhande-editor.events :as events]
+     [bhatkhande-editor.routes :as routes]
+     [bhatkhande-editor.db :as db :refer [mswaras pitch-options-list get-sahitya]]
+     [bhatkhande-editor.subs :as subs]
+     [bhatkhande-editor.utils :as utils]
+     [bhatkhande-editor.youtube :as youtube]))
 
 (def editor-height (reagent/atom 0))
 (def cursor-y (reagent/atom 0))
@@ -1679,66 +1680,53 @@
 
 (defn youtube-box
   [youtube-video-id]
-  (let [player-instance (reagent/atom nil)
-        api-ready? (reagent/atom false)]
+  (let [player-id "youtube-player"]
     (reagent/create-class
      {:display-name "YouTubeBox"
-      
-      :component-did-mount
-      (fn []
-        (when-not (.-onYouTubeIframeAPIReady js/window)
-          (let [script (js/document.createElement "script")
-                script-src "https://www.youtube.com/iframe_api"]
-            (set! (.-src script) script-src)
-            (set! (.-onload script)
-                  (fn []
-                    (reset! api-ready? true)
-                    (println "YouTube API script loaded")))
-            (.appendChild (.-body js/document) script)))
-        
-        (set! (.-onYouTubeIframeAPIReady js/window)
-              (fn []
-                (when-not @player-instance
-                  (let [onready (fn [event]
-                                                                          (let [player (.-target event)]
-                                                                            (reset! player-instance player)
-                                                                            (dispatch [::events/set-youtube-player player])
-                                                                            (let [duration (.getDuration ^js/YT.player player)]
-                                                                              (println "Video duration:" duration)
-                                                                              (when (and duration (> duration 0))
-                                                                              (dispatch [::events/set-youtube-video-duration duration])))))
-                        player (new js/YT.Player "youtube-player"
-                                                 #js {:height "50%"
-                                                        :width "100%"
-                                                        :videoId youtube-video-id
-                                                        :playerVars #js {:playsinline 1
-                                                                       :rel 0}
-                                                        :events #js {:onReady onready
-                                                                    :onStateChange onready }})]
-                    player)))))
-      
-      :component-did-update
-      (fn [this old-argv]
-        (let [new-argv (reagent/argv this)
-              old-video-id(when old-argv (second old-argv))
-              new-video-id (second new-argv)
-              player @player-instance]
-          (when (and (not= new-video-id old-video-id)
-                     @player-instance)
-            (.loadVideoById ^js/YT.player player new-video-id))))
-      
-      :component-will-unmount
-      (fn []
-        (when @player-instance
-          (.destroy @player-instance)
-          (reset! player-instance nil)))
-      
-      :reagent-render
-      (fn [youtube-video-id]
-        [:div
-         {:id "youtube-player"
-          :style {:width "100%" ;;:height "50%" 
-                  :position "relative"}}])})))
+
+       :component-did-mount
+        (fn []
+          (do 
+            (println " cdm" youtube-video-id)
+          (when youtube-video-id
+            (let [existing-player (youtube/get-player)
+                  player-element (.getElementById js/document player-id)
+                  is-iframe? (and player-element
+                                 (= "IFRAME" (.-tagName player-element)))]
+               (do 
+                 (println " on iframe ready " existing-player 
+                           " -- iframe " is-iframe?)
+                 (if (and existing-player
+                       is-iframe?
+                       (.getIframe ^js/YT.player existing-player))
+                   (do (println " player exists- loading ")
+                (youtube/load-video! existing-player youtube-video-id))
+                   (do (println " player doesn't exist - creating ")
+                (youtube/create-player! player-id youtube-video-id dispatch))))))))
+
+       :component-did-update
+       (fn [this old-argv]
+         (do 
+           (println " cdu")
+         (when youtube-video-id
+         (let [new-argv (reagent/argv this)
+               old-video-id (when old-argv (second old-argv))
+               new-video-id (second new-argv)
+               player (youtube/get-player)
+               player-element (.getElementById js/document player-id)
+               is-iframe? (and player-element
+                              (= "IFRAME" (.-tagName player-element)))]
+           (when (and (not= new-video-id old-video-id)
+                      player
+                      is-iframe?)
+             (youtube/load-video! player new-video-id))))))
+
+       :reagent-render
+       (fn [youtube-video-id]
+         [:div
+          {:id player-id
+           :style {:width "100%"
+                   :position "relative"}}])})))
 
 (defn youtube-iframe-box
   []
