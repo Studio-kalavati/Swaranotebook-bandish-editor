@@ -1686,29 +1686,20 @@
 
        :component-did-mount
         (fn []
-          (do 
-            (println " cdm" youtube-video-id)
           (when youtube-video-id
             (let [existing-player (youtube/get-player)
                   player-element (.getElementById js/document player-id)
                   is-iframe? (and player-element
                                  (= "IFRAME" (.-tagName player-element)))]
-               (do 
-                 (println " on iframe ready " existing-player 
-                           " -- iframe " is-iframe?)
-                 (if (and existing-player
+               (if (and existing-player
                        is-iframe?
                        (.getIframe ^js/YT.player existing-player))
-                   (do (println " player exists- loading ")
-                (youtube/load-video! existing-player youtube-video-id))
-                   (do (println " player doesn't exist - creating ")
-                (youtube/create-player! player-id youtube-video-id dispatch))))))))
+                  (youtube/load-video! existing-player youtube-video-id)
+                  (youtube/create-player! player-id youtube-video-id dispatch)))))
 
        :component-did-update
        (fn [this old-argv]
-         (do 
-           (println " cdu")
-         (when youtube-video-id
+        (when youtube-video-id
          (let [new-argv (reagent/argv this)
                old-video-id (when old-argv (second old-argv))
                new-video-id (second new-argv)
@@ -1719,7 +1710,7 @@
            (when (and (not= new-video-id old-video-id)
                       player
                       is-iframe?)
-             (youtube/load-video! player new-video-id))))))
+             (youtube/load-video! player new-video-id)))))
 
        :reagent-render
        (fn [youtube-video-id]
