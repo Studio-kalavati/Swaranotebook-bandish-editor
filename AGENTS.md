@@ -161,3 +161,22 @@ Frontend: ClojureScript + Re-frame + Re-com, Build: shadow-cljs, Tests: cljs-tes
 - Audio API for sound playback (santoor, tabla, tanpura samples)
 - Browser devtools must have "Disable cache" and "Enable custom formatters" enabled
 - For single test runs: Comment out other tests in test files (no built-in filter for shadow-cljs test runner)
+
+# Clojure REPL Evaluation
+
+The command `clj-nrepl-eval` is installed on your path for evaluating Clojure code via nREPL.
+
+**Discover nREPL servers:**
+
+`clj-nrepl-eval --discover-ports`
+
+**Evaluate code:**
+
+`clj-nrepl-eval -p <port> "<clojure-code>"`
+
+With timeout (milliseconds)
+
+`clj-nrepl-eval -p <port> --timeout 5000 "<clojure-code>"`
+
+The REPL session persists between evaluations - namespaces and state are maintained.
+Always use `:reload` when requiring namespaces to pick up changes.
