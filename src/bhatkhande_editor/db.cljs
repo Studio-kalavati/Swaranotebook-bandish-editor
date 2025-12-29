@@ -346,10 +346,12 @@
                          :youtube-sync true
                         :youtube-video-id "dQw4w9WgXcQ"
                         :youtube-video-duration nil
-                        :timeline-segments [20 20 20 20 20]
-                       :timeline-segment-count 5
-                       :dragging-timeline-segment nil
-                       :timeline-colors [:blue :green]})
+                         :timeline-segments [20 20 20 20 20]
+                        :timeline-segment-count 5
+                        :dragging-timeline-segment nil
+                        :timeline-colors [:blue :green]
+                        :timeline-segment-parts []
+                        :visible-timeline-dropdown nil})
 
 (def pitch-sharps-list ["C" "C#" "D" "D#" "E" "F" "F#" "G" "G#" "A" "A#" "B"])
 (def pitch-s-list ["c" "cs" "d" "ds" "e" "f" "fs" "g" "gs" "a" "as" "b"])

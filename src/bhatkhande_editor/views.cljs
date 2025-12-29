@@ -1784,6 +1784,7 @@
   (let [dragging-handle (reagent/atom nil)
         drag-start-x (reagent/atom nil)
         container-width (reagent/atom 0)
+        container-ref (reagent/atom nil)
         
         handle-mouse-down (fn [handle-index e]
                            (reset! dragging-handle handle-index)
@@ -1807,11 +1808,19 @@
         format-time (fn [seconds]
                      (let [mins (int (/ seconds 60))
                            secs (mod (int seconds) 60)]
-                       (str mins ":" (when (< secs 10) "0") secs)))]
+                       (str mins ":" (when (< secs 10) "0") secs)))
+        
+        handle-document-click (fn [e]
+                             (when-let [container @container-ref]
+                               (when-not (.contains container (.-target e))
+                                 (dispatch [::events/hide-timeline-dropdown]))))]
     
     (fn []
       (let [segments @(subscribe [::subs/timeline-segments])
-            youtube-sync @(subscribe [::subs/youtube-sync])]
+            youtube-sync @(subscribe [::subs/youtube-sync])
+            part-titles @(subscribe [::subs/part-titles])
+            segment-parts @(subscribe [::subs/timeline-segment-parts])
+            visible-dropdown @(subscribe [::subs/visible-timeline-dropdown])]
         (when youtube-sync
           (let [total-duration (or @(subscribe [::subs/youtube-video-duration]) 0)
                 cumulative-percentages (reductions + segments)
@@ -1825,13 +1834,15 @@
                             cumulative-percentages)]
             [:div
              {:style {:width "100%"
-                      :padding "15px 0"
+                      :padding "40px 0 15px 0"
                       :margin-top "10px"
                       :position "relative"
                       :border-radius "8px"
                       :background-color "#f5f5f5"}
               :ref #(when (identity %)
-                      (reset! container-width (.-offsetWidth %)))
+                      (reset! container-width (.-offsetWidth %))
+                      (reset! container-ref %)
+                      (.addEventListener js/document "click" handle-document-click))
               :on-mouse-up handle-mouse-up
               :on-mouse-leave handle-mouse-up
               :on-mouse-move handle-mouse-move}
@@ -1844,39 +1855,71 @@
                        [start-time end-time] (nth time-ranges segment-index)
                        is-dragging? (= @dragging-handle segment-index)
                        onclick (fn[_] (dispatch [::events/start-youtube-video-from start-time end-time])) 
-                       ]
-                   [:div
-                    {:key (str "segment-" segment-index)
-                     :style {:display "inline-block"
-                             :height "80px"
-                             :width (str segment-percent "%")
-                             :background-color color
-                             :opacity (if (or is-dragging? 
-                                          (= @dragging-handle (dec segment-index)))
-                                       0.7 1)
-                             :border-radius (if (= segment-index 0) "8px 0 0 8px"
-                                            (if is-last? "0 8px 8px 0" "0"))
-                             :position "relative"
-                             :transition "opacity 0.15s ease"
-                             :overflow "hidden"}
-                    ;; :on-mouse-down handle-mouse-down 
-                    :on-click onclick
-                     }
+                       selected-part (get segment-parts segment-index)
+                       part-choices (into [{:id "" :label "None"}] 
+                                         (mapv (fn[pt] {:id pt :label pt}) part-titles))]
                     [:div
-                     {:style {:position "absolute"
-                              :top "50%"
-                              :left "50%"
-                              :transform "translate(-50%, -50%)"
-                              :color "white"
-                              :font-weight "bold"
-                              :font-size "14px"
-                              :text-align "center"
-                              :text-shadow "1px 1px 2px rgba(0,0,0,0.5)"
-                              :pointer-events "none"}}
-                     [v-box :children 
-                      [(str "▶ " (format-time start-time) " - " (format-time end-time))
-                  ;;[md-icon-button :md-icon-name "zmdi zmdi-play-circle" :on-click ]
-                  ]]]
+                     {:key (str "segment-" segment-index)
+                      :style {:display "inline-block"
+                              :height "10px"
+                              :width (str segment-percent "%")
+                              :background-color color
+                              :opacity (if (or is-dragging? 
+                                           (= @dragging-handle (dec segment-index)))
+                                       0.7 1)
+                              :border-radius (if (= segment-index 0) "8px 0 0 8px"
+                                             (if is-last? "0 8px 8px 0" "0"))
+                              :position "relative"
+                              :transition "opacity 0.15s ease"
+                              :vertical-align "top"}
+                      :on-click onclick
+                      }
+                    
+                     [:div
+                      {:style {:position "absolute"
+                               :bottom "100%"
+                               :left "0"
+                               :width "1px"
+                               :height "25px"
+                               :background-color "black"
+                               :pointer-events "none"}}
+                     [:div
+                      {:style {:position "absolute"
+                               :bottom "0"
+                               :left "5px"
+                               :color "black"
+                               :font-size "11px"
+                               :font-weight "bold"
+                               :white-space "nowrap"
+                               :pointer-events "none"}}
+                      (format-time start-time)]
+                    
+                    [:div
+                      {:style {:position "absolute"
+                               :bottom "15px"
+                               :left "0"
+                               :z-index 100}}
+                     [h-box
+                      :gap "5px"
+                      :children [
+                        [md-icon-button 
+                         :md-icon-name "zmdi zmdi-play zmdi-hc-lg"
+                         :on-click #(dispatch [::events/start-youtube-video-from start-time end-time])]
+                        [md-icon-button 
+                         :md-icon-name "zmdi zmdi-chevron-down zmdi-hc-lg"
+                         :on-click #(dispatch [::events/toggle-timeline-dropdown segment-index])]]] 
+                     (when (= visible-dropdown segment-index)
+                       [:div
+                         {:style {:position "absolute"
+                                  :top "100%"
+                                  :left "0"
+                                  :z-index 2000}}
+                        [single-dropdown
+                         :choices part-choices
+                         :model selected-part
+                         :width "100px"
+                         :on-change #(dispatch [::events/set-timeline-segment-part segment-index %])]])]
+                     ]
                     
                     (when-not is-last?
                       [:div

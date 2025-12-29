@@ -276,7 +276,19 @@
     (:dragging-timeline-segment props)))
 
 (reg-sub
-  ::timeline-colors
-  :<- [::props]
-  (fn [props _]
-    (:timeline-colors props)))
+   ::timeline-colors
+   :<- [::props]
+   (fn [props _]
+     (:timeline-colors props)))
+
+(reg-sub
+   ::timeline-segment-parts
+   :<- [::props]
+   (fn [props _]
+     (:timeline-segment-parts props)))
+
+(reg-sub
+   ::visible-timeline-dropdown
+   :<- [::props]
+   (fn [props _]
+     (:visible-timeline-dropdown props)))
