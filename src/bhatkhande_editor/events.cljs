@@ -1464,9 +1464,26 @@
                  (if (= current segment-index) nil segment-index)))))
 
 (reg-event-db
-   ::hide-timeline-dropdown
-   (fn [db [_ _]]
-     (assoc-in db [:props :visible-timeline-dropdown] nil)))
+    ::hide-timeline-dropdown
+    (fn [db [_ _]]
+      (assoc-in db [:props :visible-timeline-dropdown] nil)))
+
+(reg-event-db
+  ::split-timeline-segment
+  (fn [db [_ segment-index]]
+    (let [segments (get-in db [:props :timeline-segments])
+          segment-percent (nth segments segment-index)
+          half-percent (/ segment-percent 2)
+          before (subvec segments 0 segment-index)
+          after (subvec segments (inc segment-index))
+          new-segments (vec (concat before [half-percent half-percent] after))
+          segment-parts (get-in db [:props :timeline-segment-parts])
+          before-parts (if (= segment-index 0) segment-parts (subvec segment-parts 0 segment-index))
+          after-parts (subvec segment-parts (inc segment-index))
+          new-parts (vec (concat before-parts [nil nil] after-parts))]
+      (-> db
+          (assoc-in [:props :timeline-segments] new-segments)
+          (assoc-in [:props :timeline-segment-parts] new-parts)))))
 
 #_(reg-event-fx
   ::pitch-shift

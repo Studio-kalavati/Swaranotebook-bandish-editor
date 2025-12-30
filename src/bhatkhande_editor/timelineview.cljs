@@ -50,11 +50,21 @@
                            (.stopPropagation e))
         
         handle-mouse-move (fn [e]
-                           (when @dragging-handle
-                             (let [delta-x (- (.-clientX e) @drag-start-x)
-                                   delta-percent (* 100.0 (/ delta-x @container-width))]
-                               (dispatch [::events/drag-segment @dragging-handle delta-percent])
-                               (reset! drag-start-x (.-clientX e)))))
+                            (when @dragging-handle
+                              (let [container-rect (.getBoundingClientRect @container-ref)
+                                    max-client-x (+ (.-left container-rect) (.-width container-rect))
+                                    orig-clamped-client-x (min (.-clientX e) max-client-x)
+                                    clamped-client-x (- (.-clientX e) (.-left container-rect))
+                                    delta-x (- clamped-client-x @drag-start-x)
+                                    delta-percent (* 100.0 (/ delta-x @container-width))
+                                    orig-delta-percent (* 100.0 (/ (- orig-clamped-client-x @drag-start-x) @container-width)) ]
+                                (when (> @container-width (+ 10 clamped-client-x))
+                                  ;;the segments overrun the width  - needs to be fixed
+                                ;;(println " --  "[  orig-clamped-client-x clamped-client-x ])
+                                ;;(println " 22  "[  delta-percent (* 100.0 (/ (- orig-clamped-client-x @drag-start-x) @container-width))])
+                                ;;(println " 12 "[ max-client-x  delta-x delta-percent  (.-left container-rect) (.-width container-rect) (.-clientX e) @container-width])
+                                (dispatch [::events/drag-segment @dragging-handle orig-delta-percent])
+                                (reset! drag-start-x orig-clamped-client-x)))))
         
         handle-mouse-up (fn []
                          (when @dragging-handle
@@ -91,6 +101,7 @@
                             cumulative-percentages)]
             [:div
              {:style {:width "100%"
+                      :max-width "100%"
                       :padding "40px 0 15px 0"
                       :margin-top "10px"
                       :position "relative"
@@ -157,19 +168,24 @@
                                 :left "0"
                                 :z-index 1000
                                 :pointer-events "auto"}}
-                      [h-box
-                       :gap "5px"
-                       :children [
-                         [md-icon-button
-                          :md-icon-name "zmdi zmdi-play zmdi-hc-lg"
-                          :on-click #(do
-                                      (.stopPropagation %)
-                                      (dispatch [::events/start-youtube-video-from start-time end-time]))]
-                         [md-icon-button
-                          :md-icon-name "zmdi zmdi-chevron-down zmdi-hc-lg"
-                          :on-click #(do
-                                      (.stopPropagation %)
-                                      (dispatch [::events/toggle-timeline-dropdown segment-index]))]]]
+                       [h-box
+                        :gap "5px"
+                        :children [
+                          [md-icon-button
+                           :md-icon-name "zmdi zmdi-play zmdi-hc-lg"
+                           :on-click #(do
+                                       (.stopPropagation %)
+                                       (dispatch [::events/start-youtube-video-from start-time end-time]))]
+                          [md-icon-button
+                           :md-icon-name "zmdi zmdi-chevron-down zmdi-hc-lg"
+                           :on-click #(do
+                                       (.stopPropagation %)
+                                       (dispatch [::events/toggle-timeline-dropdown segment-index]))]
+                          [md-icon-button
+                           :md-icon-name "zmdi zmdi-plus zmdi-hc-lg"
+                           :on-click #(do
+                                       (.stopPropagation %)
+                                       (dispatch [::events/split-timeline-segment segment-index]))]]]
                      (when (= visible-dropdown segment-index)
                        [:div
                          {:style {:position "absolute"

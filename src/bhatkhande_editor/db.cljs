@@ -349,7 +349,7 @@
                          :timeline-segments [50 50]
                         :dragging-timeline-segment nil
                         :timeline-colors [:blue :green]
-                        :timeline-segment-parts (->> init-comp :score-parts (map :part-title))
+                        :timeline-segment-parts (->> init-comp :score-parts (mapv :part-title))
                         :visible-timeline-dropdown nil})
 
 (def pitch-sharps-list ["C" "C#" "D" "D#" "E" "F" "F#" "G" "G#" "A" "A#" "B"])
