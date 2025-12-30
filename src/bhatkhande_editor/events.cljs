@@ -1450,16 +1450,6 @@
      (assoc-in db [:props :youtube-video-duration] duration)))
 
 (reg-event-db
-    ::set-timeline-segment-count
-   (fn [db [_ count]]
-     (when (and (>= count 2) (<= count 10))
-       (let [percent (/ 100 count)]
-         (-> db
-             (assoc-in [:props :timeline-segment-count] count)
-             (assoc-in [:props :timeline-segments] 
-                       (vec (repeat count percent))))))))
-
-(reg-event-db
    ::set-timeline-segment-part
    (fn [db [_ segment-index part-title]]
      (let [current-parts (get-in db [:props :timeline-segment-parts])

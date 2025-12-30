@@ -346,11 +346,10 @@
                          :youtube-sync true
                         :youtube-video-id "dQw4w9WgXcQ"
                         :youtube-video-duration nil
-                         :timeline-segments [20 20 20 20 20]
-                        :timeline-segment-count 5
+                         :timeline-segments [50 50]
                         :dragging-timeline-segment nil
                         :timeline-colors [:blue :green]
-                        :timeline-segment-parts []
+                        :timeline-segment-parts (->> init-comp :score-parts (map :part-title))
                         :visible-timeline-dropdown nil})
 
 (def pitch-sharps-list ["C" "C#" "D" "D#" "E" "F" "F#" "G" "G#" "A" "A#" "B"])
@@ -362,8 +361,8 @@
 (def cursor-index-keys
    [:score-part-index :avartan-index :bhaag-index :note-index :nsi])
 
-(def min-segment-percent 5)
-(def max-segment-percent 50)
+(def min-segment-percent 1)
+(def max-segment-percent (- 100 min-segment-percent))
 (def timeline-blue "#2196F3")
 (def timeline-green "#4CAF50")
 
