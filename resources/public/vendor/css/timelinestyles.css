@@ -1,0 +1,93 @@
+/* Main container */
+.timeline-container {
+  width: 100%;
+  max-width: 100%;
+  padding: 40px 0 50px 0;
+  margin-top: 10px;
+  position: relative;
+  border-radius: 8px;
+  background-color: #f5f5f5;
+}
+
+/* Segment */
+.timeline-segment {
+  display: inline-block;
+  height: 4px;
+  position: relative;
+  transition: opacity 0.15s ease;
+  vertical-align: top;
+}
+
+.timeline-segment.first {
+  border-radius: 8px 0 0 8px;
+}
+
+.timeline-segment.last {
+  border-radius: 0 8px 8px 0;
+}
+
+.timeline-segment.selected {
+  box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.8);
+  z-index: 5;
+}
+
+.timeline-segment.dragging {
+  opacity: 0.7;
+}
+
+/* Tick mark */
+.timeline-tick {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  width: 1px;
+  height: 25px;
+  background-color: black;
+  pointer-events: none;
+}
+
+/* Time label */
+.time-label {
+  position: absolute;
+  bottom: 0;
+  left: 5px;
+  color: black;
+  font-size: 11px;
+  font-weight: bold;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* Controls container */
+.controls-container {
+  position: absolute;
+  bottom: 20px;
+  left: 0;
+  padding-left: 10px;
+  z-index: 1000;
+  pointer-events: auto;
+}
+
+
+/* Resize handle */
+.resize-handle {
+  position: absolute;
+  right: -8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  background-color: white;
+  border-radius: 50%;
+  cursor: ew-resize;
+  z-index: 10;
+  transition: box-shadow 0.15s ease;
+}
+
+.resize-handle.dragging {
+  box-shadow: 0 0 10px rgba(0,0,0,0.5);
+}
+
+.resize-handle:not(.dragging) {
+  box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+}

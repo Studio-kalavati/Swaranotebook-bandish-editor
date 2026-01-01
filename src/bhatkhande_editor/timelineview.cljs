@@ -1,40 +1,15 @@
 (ns bhatkhande-editor.timelineview
   (:require
    [re-frame.core :as re-frame :refer [subscribe dispatch dispatch-sync]]
-   [re-com.core :as re-com :refer [title
-                                   hyperlink v-box h-box
-                                   hyperlink-href
+   [re-com.core :as re-com :refer [v-box h-box
                                    single-dropdown
-                                   checkbox
-                                   line
-                                   label
-                                   radio-button
-                                   slider
-                                   box
-                                   input-text
                                    md-icon-button
-                                   ;;simple-v-table
-                                   at
-                                   button
-                                   gap
-                                   throbber
-                                   modal-panel]]
-   [re-com.util     :refer [item-for-id]]
-   [breaking-point.core :as bp]
-   [re-pressed.core :as rp]
-   [sargam.ragas :refer [varjit-svaras]]
-   [sargam.talas :refer [taal-def]]
-   [sargam.languages :refer [lang-labels]]
-   [sargam.spec :as us]
+                                   ]]
    [reagent.core :as reagent]
-   [cognitect.transit :as t]
-   [clojure.string :as cstring]
      [bhatkhande-editor.events :as events]
-     [bhatkhande-editor.routes :as routes]
-     [bhatkhande-editor.db :as db :refer [mswaras pitch-options-list get-sahitya]]
+     [bhatkhande-editor.db :as db]
      [bhatkhande-editor.subs :as subs]
-     [bhatkhande-editor.utils :as utils]
-     [bhatkhande-editor.youtube :as youtube]))
+     ))
 
 (defn timeline-view
   []
@@ -55,8 +30,6 @@
                                     max-client-x (+ (.-left container-rect) (.-width container-rect))
                                     orig-clamped-client-x (min (.-clientX e) max-client-x)
                                     clamped-client-x (- (.-clientX e) (.-left container-rect))
-                                    delta-x (- clamped-client-x @drag-start-x)
-                                    delta-percent (* 100.0 (/ delta-x @container-width))
                                     orig-delta-percent (* 100.0 (/ (- orig-clamped-client-x @drag-start-x) @container-width))]
                                 (when (> @container-width (+ 10 clamped-client-x))
                                   ;;the segments overrun the width  - needs to be fixed
@@ -87,7 +60,7 @@
             youtube-sync @(subscribe [::subs/youtube-sync?])
             part-titles @(subscribe [::subs/part-titles])
             segment-parts @(subscribe [::subs/timeline-segment-parts])
-            visible-dropdown @(subscribe [::subs/visible-timeline-dropdown])]
+            selected-segment @(subscribe [::subs/selected-timeline-segment])]
         (when youtube-sync
           (let [total-duration (or @(subscribe [::subs/youtube-video-duration]) 0)
                 cumulative-percentages (reductions + segments)
@@ -103,13 +76,7 @@
                      vec)]
             (dispatch [::events/set-time-ranges time-ranges])
             [:div
-             {:style {:width "100%"
-                      :max-width "100%"
-                      :padding "40px 0 15px 0"
-                      :margin-top "10px"
-                      :position "relative"
-                      :border-radius "8px"
-                      :background-color "#f5f5f5"}
+             {:class "timeline-container"
               :ref #(when (identity %)
                       (reset! container-width (.-offsetWidth %))
                       (reset! container-ref %)
@@ -125,97 +92,56 @@
                        is-last? (= segment-index (dec (count segments)))
                        [start-time end-time] (nth time-ranges segment-index)
                        is-dragging? (= @dragging-handle segment-index)
-                       onclick (fn [_] (dispatch [::events/start-youtube-video-from start-time end-time]))
-                       selected-part (get segment-parts segment-index)
-                       part-choices (into [{:id "" :label "None"}]
-                                          (mapv (fn [pt] {:id pt :label pt}) part-titles))]
+                       is-selected? (= segment-index selected-segment)
+                       on-click (fn [_] (dispatch [::events/select-timeline-segment segment-index]))]
                    [:div
                     {:key (str "segment-" segment-index)
-                     :style {:display "inline-block"
-                             :height "10px"
-                             :width (str segment-percent "%")
-                             :background-color color
-                             :opacity (if (or is-dragging?
-                                              (= @dragging-handle (dec segment-index)))
-                                        0.7 1)
-                             :border-radius (if (= segment-index 0) "8px 0 0 8px"
-                                                (if is-last? "0 8px 8px 0" "0"))
-                             :position "relative"
-                             :transition "opacity 0.15s ease"
-                             :vertical-align "top"}
-                      ;;:on-click onclick
-                     }
+                     :class (str "timeline-segment"
+                                 (when is-selected? " selected")
+                                 (when (= segment-index 0) " first")
+                                 (when is-last? " last")
+                                 (when (or is-dragging?
+                                           (= @dragging-handle (dec segment-index)))
+                                   " dragging"))
+                     :style {:width (str segment-percent "%")
+                             :background-color color}
+                     :on-click on-click}
 
                     [:div
-                     {:style {:position "absolute"
-                              :bottom "100%"
-                              :left "0"
-                              :width "1px"
-                              :height "25px"
-                              :background-color "black"
-                              :pointer-events "none"}}
-                     [:div
-                      {:style {:position "absolute"
-                               :bottom "0"
-                               :left "5px"
-                               :color "black"
-                               :font-size "11px"
-                               :font-weight "bold"
-                               :white-space "nowrap"
-                               :pointer-events "none"}}
-                      (format-time start-time)]
-
-                     [:div
-                      {:style {:position "absolute"
-                               :bottom "15px"
-                               :left "0"
-                               :z-index 1000
-                               :pointer-events "auto"}}
-                      [h-box
-                       :gap "5px"
-                       :children [[md-icon-button
-                                   :md-icon-name "zmdi zmdi-play zmdi-hc-lg"
-                                   :on-click #(do
-                                                (.stopPropagation %)
-                                                (dispatch [::events/start-youtube-video-from start-time end-time]))]
-                                  [md-icon-button
-                                   :md-icon-name "zmdi zmdi-chevron-down zmdi-hc-lg"
-                                   :on-click #(do
-                                                (.stopPropagation %)
-                                                (dispatch [::events/toggle-timeline-dropdown segment-index]))]
-                                  [md-icon-button
-                                   :md-icon-name "zmdi zmdi-plus zmdi-hc-lg"
-                                   :on-click #(do
-                                                (.stopPropagation %)
-                                                (dispatch [::events/split-timeline-segment segment-index]))]]]
-                      (when (= visible-dropdown segment-index)
-                        [:div
-                         {:style {:position "absolute"
-                                  :top "100%"
-                                  :left "0"
-                                  :z-index 2000}}
-                         [single-dropdown
-                          :choices part-choices
-                          :model selected-part
-                          :width "100px"
-                          :on-change #(dispatch [::events/set-timeline-segment-part segment-index %])]])]]
+                     {:class "timeline-tick"}]
+                    [:div
+                     {:class "time-label"}
+                     (format-time start-time)]
 
                     (when-not is-last?
                       [:div
-                       {:style {:position "absolute"
-                                :right "-8px"
-                                :top "50%"
-                                :transform "translateY(-50%)"
-                                :width "16px"
-                                :height "16px"
-                                :background-color "white"
-                                :border (str "3px solid " color)
-                                :border-radius "50%"
-                                :cursor "ew-resize"
-                                :z-index 10
-                                :box-shadow (if is-dragging?
-                                              "0 0 10px rgba(0,0,0,0.5)"
-                                              "0 2px 5px rgba(0,0,0,0.3)")
-                                :transition "box-shadow 0.15s ease"}
+                       {:class (str "resize-handle" (when is-dragging? " dragging"))
+                        :style {:border (str "3px solid " color)}
                         :on-mouse-down #(handle-mouse-down segment-index %)}])]))
-               segments))]))))))
+               segments))
+
+             [:div
+              {:class "controls-container"}
+              (let [selected-part (get segment-parts selected-segment)
+                    [selected-start-time selected-end-time] (nth time-ranges selected-segment)
+                    part-choices (into [{:id "" :label "None"}]
+                                       (mapv (fn [pt] {:id pt :label pt}) part-titles))]
+                [h-box
+                 :align :center
+                 :justify :center
+                 :gap "5px"
+                 :children [[md-icon-button
+                             :md-icon-name "zmdi zmdi-play zmdi-hc-lg"
+                             :on-click #(dispatch [::events/start-youtube-video-from selected-start-time selected-end-time])]
+                            [md-icon-button
+                             :md-icon-name "zmdi zmdi-chevron-down zmdi-hc-lg"
+                             :on-click #(dispatch [::events/toggle-timeline-dropdown selected-segment])]
+                            [md-icon-button
+                             :md-icon-name "zmdi zmdi-plus zmdi-hc-lg"
+                             :on-click #(dispatch [::events/split-timeline-segment selected-segment])]
+                            [single-dropdown
+                             :choices part-choices
+                             :model selected-part
+                             :width "100px"
+                             :on-change
+                             #(dispatch [::events/set-timeline-segment-part selected-segment %])]]])]]))))))

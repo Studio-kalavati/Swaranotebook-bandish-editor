@@ -1633,9 +1633,16 @@
                  (if (= current segment-index) nil segment-index)))))
 
 (reg-event-db
-    ::hide-timeline-dropdown
-    (fn [db [_ _]]
-      (assoc-in db [:props :visible-timeline-dropdown] nil)))
+     ::hide-timeline-dropdown
+     (fn [db [_ _]]
+       (assoc-in db [:props :visible-timeline-dropdown] nil)))
+
+(reg-event-db
+  ::select-timeline-segment
+  (fn [db [_ segment-index]]
+    (-> db
+        (assoc-in [:props :selected-timeline-segment] segment-index)
+        (assoc-in [:props :visible-timeline-dropdown] nil))))
 
 (reg-event-db
   ::split-timeline-segment

@@ -351,7 +351,8 @@
                         :dragging-timeline-segment nil
                         :timeline-colors [:blue :green]
                         :timeline-segment-parts (->> init-comp :score-parts (mapv :part-title))
-                        :visible-timeline-dropdown nil})
+                         :visible-timeline-dropdown nil
+                         :selected-timeline-segment 0})
 
 (def pitch-sharps-list ["C" "C#" "D" "D#" "E" "F" "F#" "G" "G#" "A" "A#" "B"])
 (def pitch-s-list ["c" "cs" "d" "ds" "e" "f" "fs" "g" "gs" "a" "as" "b"])
