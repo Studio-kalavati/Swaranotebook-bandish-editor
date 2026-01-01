@@ -146,3 +146,8 @@
         (second match))
 
       :else nil)))
+
+(defn bhaag-item-height
+  [show-lyrics? font-size]
+  (let [bih (int (* (if show-lyrics? 2.8 2) font-size))]
+    bih))

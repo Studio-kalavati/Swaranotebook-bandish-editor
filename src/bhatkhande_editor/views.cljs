@@ -242,6 +242,7 @@
         newsletter-signup? (reagent/atom true)
         show-lyrics? (reagent/atom @(subscribe [::subs/show-lyrics?]))
         newline-on-avartan? (reagent/atom @(subscribe [::subs/newline-on-avartan?]))
+        youtube-sync? (reagent/atom @(subscribe [::subs/youtube-sync?]))
         title-val (reagent/atom "")
         svaras-on @(subscribe [::subs/custom-svaras])
         font-size (reagent/atom @(subscribe [::subs/font-size]))
@@ -254,14 +255,14 @@
                 (take 12 us/i-note-seq))
           [true false true false true true false true
            false true false true])
-        octave-notes-list (mapv (fn[_ istate] (reagent/atom istate))
+        octave-notes-list (mapv (fn [_ istate] (reagent/atom istate))
                                 (range 12)
                                 ;;all shuddha svaras true
                                 default-custom-svaras)
         menu-btn [box
                   :size "auto"
                   :align-self :stretch
-                  :style {:flex "1 1 0px" }
+                  :style {:flex "1 1 0px"}
                   :child [:button
                           {:style {:width "100%"
                                    ;; :background-color "coral"
@@ -277,8 +278,8 @@
                              #(reset! show-file-popup? true))]
     (set-keydown-rules)
     (fn []
-      (let [speed-switch-fn (fn[i] {:disp-fn #(dispatch [::events/notes-per-beat i])
-                                    :state #(= i (or @(subscribe [::subs/notes-per-beat]) 1))})
+      (let [speed-switch-fn (fn [i] {:disp-fn #(dispatch [::events/notes-per-beat i])
+                                     :state #(= i (or @(subscribe [::subs/notes-per-beat]) 1))})
             rag-box-style {:align-items "normal" :background-color "unset"}
             but-style {:width (let [iw (.-innerWidth js/window)]
                                 (if (> iw 200)
@@ -304,7 +305,7 @@
                  (= :english lang)
                  "सा रे"))
              {:disp-fn
-              #(do (dispatch [::events/toggle-lang] ))
+              #(do (dispatch [::events/toggle-lang]))
               :state (constantly false)})
             taal-btn
             (box-button rag-box-style "Tal"
@@ -367,7 +368,7 @@
                              [gap :size "5vw"]])
                            [gap :size "2vh"]]]]])
                      (when @show-keyboard-help?
-                       (let [bfn (fn[text kys]
+                       (let [bfn (fn [text kys]
                                    (asjc-hbox {:width "550px"}
                                               [[box :style {:width "250px"}
                                                 :child [:p text]]
@@ -416,8 +417,7 @@
                               :style {:width "100px"}
                               :class "btn-hc-lg btn-primary "
                               :on-click #(do (reset! show-keyboard-help? false))]]
-                            [gap :size "2vh"]]]
-                          ]))
+                            [gap :size "2vh"]]]]))
                      (when @show-file-popup?
                        [modal-panel
                         :backdrop-on-click #(reset! show-file-popup? false)
@@ -484,7 +484,7 @@
                            (asjc-hbox
                             [[checkbox
                               :model show-lyrics?
-                              :style {:width "auto" :height "20px" }
+                              :style {:width "auto" :height "20px"}
                               :on-change
                               #(let [nval (not @show-lyrics?)]
                                  (reset! show-lyrics? nval)
@@ -495,7 +495,7 @@
                            (asjc-hbox
                             [[checkbox
                               :model newline-on-avartan?
-                              :style {:width "auto" :height "20px" }
+                              :style {:width "auto" :height "20px"}
                               :on-change
                               #(let [nval (not @newline-on-avartan?)]
                                  (reset! newline-on-avartan? nval)
@@ -503,6 +503,18 @@
                              [gap :size "20px"]
                              [title :label "One Avartan per row?"
                               :level :level3]])
+                           (asjc-hbox
+                            [[checkbox
+                              :model youtube-sync?
+                              :style {:width "auto" :height "20px"}
+                              :on-change
+                              #(let [nval (not @youtube-sync?)]
+                                 (reset! youtube-sync? nval)
+                                 (dispatch [::events/set-youtube-sync nval]))]
+                             [gap :size "20px"]
+                             [title :label "Sync to Youtube video"
+                              :level :level3]])
+
                            [gap :size "50px"]
                            [v-box
                             :align :center
@@ -528,7 +540,7 @@
                                 :model selected-pitch
                                 :width "100px"
                                 :on-change
-                                (fn[x]
+                                (fn [x]
                                   (reset! selected-pitch x)
                                   (dispatch
                                    [::events/init-note-buffers
@@ -575,11 +587,11 @@
                                           ;; if title has been edited, use title-val
                                           ;; if its not edited, then its empty, so use the default comp-title
                                           (if (= @title-val "")
-                                                      @(subscribe [::subs/comp-title])
-                                                      @title-val)
+                                            @(subscribe [::subs/comp-title])
+                                            @title-val)
                                           tv (cstring/replace use-title #" " "-")]
-                                                (reset! show-title-popup? false)
-                                                (dispatch [::events/upload-new-comp tv]))]]]]])
+                                      (reset! show-title-popup? false)
+                                      (dispatch [::events/upload-new-comp tv]))]]]]])
                      (when @show-login-popup?
                        [modal-panel
                         :backdrop-on-click #(reset! show-login-popup? false)
@@ -621,9 +633,9 @@
                                              (not @newsletter-signup?))]]]]]])
                      (when @show-taal-popup
                        (let [ta (:tala-labels (lang-labels @(subscribe [::subs/lang])))
-                             taal-labels (mapv (fn[[a b]] {:id a  :label b}) ta)
+                             taal-labels (mapv (fn [[a b]] {:id a  :label b}) ta)
 
-                             box-fn (fn[{:keys [id label]}]
+                             box-fn (fn [{:keys [id label]}]
                                       [button
                                        :label label
                                        :style but-style
@@ -650,7 +662,7 @@
                                      :align :center
                                      :children children]]]]]))
                      (when @show-select-svaras-popup
-                       (let [box-fn (fn[model-atom lab]
+                       (let [box-fn (fn [model-atom lab]
                                       [h-box
                                        :style  {:width "100px"}
                                        :align :center
@@ -663,8 +675,7 @@
                                          #(do
                                             (reset! model-atom (not @model-atom)))
                                          :style {:width "auto"
-                                                 :height "20px" }
-                                         ]
+                                                 :height "20px"}]
                                         [gap :size "20px"]
                                         [title :label lab :level :level2
                                          :style {:color (if @model-atom
@@ -698,7 +709,7 @@
                                        #(let [iargs (->>
                                                      (map vector (take 12 us/i-note-seq)
                                                           (map deref octave-notes-list))
-                                                     (filter (fn[[a b]] (when b a)))
+                                                     (filter (fn [[a b]] (when b a)))
                                                      (map first))]
                                           (dispatch [::events/set-custom-svaras iargs])
                                           (reset! show-select-svaras-popup
@@ -714,12 +725,11 @@
                                                   (not @show-select-svaras-popup))
                                           (reset! show-raga-popup
                                                   (not @show-raga-popup)))
-                                       :class "btn btn-default"]
-                                      ]]]]]]))
+                                       :class "btn btn-default"]]]]]]]))
                      (when @show-raga-popup
-                       (let [raga-labels (mapv (fn[[a b]] {:id a  :label b})
+                       (let [raga-labels (mapv (fn [[a b]] {:id a  :label b})
                                                (:raga-labels @(subscribe [::subs/lang-data])))
-                             box-fn (fn[{:keys [id label]}]
+                             box-fn (fn [{:keys [id label]}]
                                       [button
                                        :label label
                                        :style but-style
@@ -770,8 +780,7 @@
                                    :class "body"
                                    :align :center
                                    :children
-                                   [
-                                    [title :level :level2 :label "Lyrics"]
+                                   [[title :level :level2 :label "Lyrics"]
                                     [title :level :level4 :label
                                      "Put a comma between beats. E.g. Ae,ri,aa,li"]
                                     [gap :size "2vh"]
@@ -816,7 +825,7 @@
                           [[box :child
                             [:p "Octave: "
                              [:b (cstring/capitalize
-                                  (name @(subscribe[::subs/note-octave])))]]]
+                                  (name @(subscribe [::subs/note-octave])))]]]
                            [gap :size "2vw"]
                            [button :label "View Keyboard Help "
                             :class "btn-lg btn btn-secondary "
@@ -1031,27 +1040,27 @@
                                             ;;if play mode, add all rects
                                          r3
                                          (if (and play-mode?
-                                                  (not @(subscribe [::subs/youtube-sync])))
+                                                  (not @(subscribe [::subs/youtube-sync?])))
                                            (update-in
-                                              r3 [:images1] conj
-                                              (let [phi @(subscribe [::subs/play-head-position])]
-                                                [:rect
-                                                 {:width "3px" :height @font-size
-                                                  :fill "black"
-                                                  :fill-opacity 0
-                                                  :ref
-                                                  #(when (identity %)
-                                                     (let [opac (str "fill-opacity:"
-                                                                     (if (= phi
-                                                                            (assoc cursor-map
-                                                                                   :note-index note-index
-                                                                                   :nsi nsi))
-                                                                       "1" "0"))]
-                                                       (set! (.-style %) opac)
-                                                       (dispatch [::events/register-elem
-                                                                  nseq-index note-xy-map %])))
-                                                  :x (+ x1 (int (* 0.2 @font-size)))
-                                                  :y (int (* 0.2 @font-size))}]))
+                                            r3 [:images1] conj
+                                            (let [phi @(subscribe [::subs/play-head-position])]
+                                              [:rect
+                                               {:width "3px" :height @font-size
+                                                :fill "black"
+                                                :fill-opacity 0
+                                                :ref
+                                                #(when (identity %)
+                                                   (let [opac (str "fill-opacity:"
+                                                                   (if (= phi
+                                                                          (assoc cursor-map
+                                                                                 :note-index note-index
+                                                                                 :nsi nsi))
+                                                                     "1" "0"))]
+                                                     (set! (.-style %) opac)
+                                                     (dispatch [::events/register-elem
+                                                                nseq-index note-xy-map %])))
+                                                :x (+ x1 (int (* 0.2 @font-size)))
+                                                :y (int (* 0.2 @font-size))}]))
                                            (let [curpos @(subscribe [::subs/get-click-index])]
                                              (if (and (= note-xy-map curpos) (not @sahitya-editing?))
                                                (do
@@ -1202,9 +1211,9 @@
                                                       {:class "bhaag-item"
                                                        :ref #(when %
                                                                (dispatch [::events/register-bhaag-element cursor-map %]))
-                                                            :style
-                                                            {:min-width (* @font-size multiplier)
-                                                             :max-height (int (* (if show-lyrics? 2.8 2) @font-size))}}
+                                                       :style
+                                                       {:min-width (* @font-size multiplier)
+                                                        :max-height (utils/bhaag-item-height show-lyrics? @font-size)}}
                                                       (reduce conj
                                                               [:svg {:xmlns "http://www.w3.org/2000/svg"
                                                                      :width (+ x (int (* @font-size 0.6)))}]
@@ -1726,88 +1735,87 @@
 (defn youtube-iframe-box
   []
   (let [show-change-video-modal? (reagent/atom false)
-        new-video-url (reagent/atom "") ]
+        new-video-url (reagent/atom "")]
     (fn []
       (let [video-id @(subscribe [::subs/youtube-video-id])]
         [:div
          [h-box
-          :justify :end
+          :justify :center
+          :align :center
           :children
-          [[button
-            :label "Change Video"
-            :style {:font-size "small" :margin-bottom "5px"}
-            :on-click #(reset! show-change-video-modal? true)]
-           [youtube-box video-id] ]]
-         
+          [(when-not (= :play @(subscribe [::subs/mode]))
+                     [button :label "Change Video"
+                      :style {:font-size "small" :margin-bottom "5px"}
+                      :on-click #(reset! show-change-video-modal? true)])
+           [youtube-box video-id]]]
+
          (when @show-change-video-modal?
            [modal-panel
             :backdrop-on-click #(reset! show-change-video-modal? false)
             :child [:div {:style {:min-width "min(80vw,400px)"}}
-                     [v-box
-                      :gap "2vh"
-                      :class "body"
-                      :align :center
-                      :children
-                      [[title :level :level3 :label "Change YouTube Video"]
-                       [gap :size "2vh"]
-                       [input-text
-                        :model new-video-url
-                        :on-change #(reset! new-video-url %)
-                        :style {:width "100%"
-                                :justify-content "center"
-                                :text-align "center"}]
-                       [gap :size "2vh"]
-                       (when (and (not (empty? @new-video-url))
-                                  (not (utils/extract-youtube-video-id @new-video-url)))
-                         [title :level :level4 :label "Invalid YouTube URL"
-                          :style {:color "red"}])
-                       [gap :size "2vh"]
-                       [h-box
-                        :gap "2vw"
-                        :children
-                        [[button
-                          :label "OK"
-                          :class "btn-hc-lg btn-primary"
-                          :on-click #(let [extracted-id (utils/extract-youtube-video-id @new-video-url)]
+                    [v-box
+                     :gap "2vh"
+                     :class "body"
+                     :align :center
+                     :children
+                     [[title :level :level3 :label "Change YouTube Video"]
+                      [gap :size "2vh"]
+                      [input-text
+                       :model new-video-url
+                       :on-change #(reset! new-video-url %)
+                       :style {:width "100%"
+                               :justify-content "center"
+                               :text-align "center"}]
+                      [gap :size "2vh"]
+                      (when (and (not (empty? @new-video-url))
+                                 (not (utils/extract-youtube-video-id @new-video-url)))
+                        [title :level :level4 :label "Invalid YouTube URL"
+                         :style {:color "red"}])
+                      [gap :size "2vh"]
+                      [h-box
+                       :gap "2vw"
+                       :children
+                       [[button
+                         :label "OK"
+                         :class "btn-hc-lg btn-primary"
+                         :on-click #(let [extracted-id (utils/extract-youtube-video-id @new-video-url)]
                                       (if extracted-id
                                         (do
-                                          (println" extracted ytid " extracted-id)
+                                          (println " extracted ytid " extracted-id)
                                           (dispatch [::events/set-youtube-video-id extracted-id])
                                           (reset! show-change-video-modal? false)
                                           (reset! new-video-url ""))
                                         (println "Invalid YouTube URL")))]
-                         [button
-                          :label "Cancel"
-                          :class "btn-default"
-                          :on-click #(do
+                        [button
+                         :label "Cancel"
+                         :class "btn-default"
+                         :on-click #(do
                                       (reset! show-change-video-modal? false)
                                       (reset! new-video-url ""))]]]]]]])]))))
 
 
 (defn show-editor
   []
-  (let [youtube-sync @(subscribe [::subs/youtube-sync])]
+  (let [youtube-sync @(subscribe [::subs/youtube-sync?])]
     [:div
      (if youtube-sync
        [v-box
         :gap "1vw"
         :style {:width "100%"}
-        :children [
-          [v-box
-           :gap "5px"
-           :children [
-             [youtube-iframe-box]
-             [timeline-view]
-             [swara-display-area] ]]
-          ]])
+        :children [[v-box
+                    :gap "5px"
+                    :children [[youtube-iframe-box]
+                               [timeline-view]
+                               [swara-display-area]]]]]
+       [swara-display-area])
      [:div {:class "keyboard wow fadeInUp"
-                 :ref #(when (identity %)
-                         (let [ch (.-offsetHeight %)]
-                           (reset! editor-height ch)))}
-           (let [istate @(subscribe [::subs/mode])]
-             (if (= :play istate)
-               [play-keyboard-footer]
-               [swara-buttons]))]]))
+            :ref #(when (identity %)
+                    (let [ch (.-offsetHeight %)]
+                      (reset! editor-height ch)))}
+      (let [istate @(subscribe [::subs/mode])]
+        (if (= :play istate)
+          [play-keyboard-footer]
+          [swara-buttons]))]]))
 
 (defn wait-for
   [msg]

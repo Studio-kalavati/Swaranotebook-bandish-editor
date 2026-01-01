@@ -84,7 +84,7 @@
 
     (fn []
       (let [segments @(subscribe [::subs/timeline-segments])
-            youtube-sync @(subscribe [::subs/youtube-sync])
+            youtube-sync @(subscribe [::subs/youtube-sync?])
             part-titles @(subscribe [::subs/part-titles])
             segment-parts @(subscribe [::subs/timeline-segment-parts])
             visible-dropdown @(subscribe [::subs/visible-timeline-dropdown])]

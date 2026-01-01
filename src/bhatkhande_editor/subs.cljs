@@ -234,7 +234,7 @@
     (count (:avartan-first-note db))))
 
 (reg-sub
-  ::youtube-sync
+  ::youtube-sync?
   :<- [::props]
   (fn [props [_ _]]
     (:youtube-sync props)))

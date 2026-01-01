@@ -209,6 +209,24 @@
     noteseq
     (into noteseq (full-avartan-notes taal))))
 
+(defn trim-to-avartan
+  "if the noteseq has excess empty notes that extend beyond an avartan, trim those notes if the notes
+  in the last avartan are empty.
+  If its not empty and doesn't fill an avartan, pad notes to fill an avartan"
+  [{:keys [noteseq] :as score-part} taal]
+  (let [num-beats (:num-beats (taal-def taal))
+        iremainder (rem (count noteseq) num-beats)
+        remaining-notes (drop (- (count noteseq) iremainder) noteseq)]
+    (assoc score-part
+           :noteseq (cond
+                      (every? #(= db/empty-note %) remaining-notes)
+                      ;;all the remaining notes are empty,so delete it.
+                      (subvec noteseq 0 (- (count noteseq) iremainder))
+                      ;;no extra notes
+                      (= 0 iremainder) noteseq
+                      ;;the remainder is not empty, then fill the rest of the avartan
+                      :default (into noteseq (vec (repeat (- num-beats iremainder) db/empty-note)))))))
+
 (defn update-noteseq
   "inserts a note into the noteseq and return a 2-tuple,
   the updated noteseq and the next note cursor"
@@ -575,7 +593,10 @@
  ::set-taal
  [log-event]
  (fn [{:keys [db]} [_ taal]]
-   (let [ncomp (db/add-indexes (assoc (get-in db [:composition]) :taal taal))]
+   (let [new-score-parts (mapv #(trim-to-avartan % taal) (get-in db [:composition :score-parts]))
+         ncomp (db/add-indexes (assoc (get-in db [:composition])
+                                      :taal taal
+                                      :score-parts new-score-parts))]
      {:db (update-in db [:composition] (constantly ncomp))
       :dispatch [::save-to-localstorage]})))
 
@@ -1297,6 +1318,12 @@
           [::clock-tick-event])}))))
 
 (reg-event-fx
+ ::set-youtube-sync
+ [log-event]
+ (fn [{:keys [db]} [_ sync]]
+   {:db (update-in db [:props :youtube-sync] (constantly sync))}))
+
+(reg-event-fx
  ::pause
  [log-event]
  (fn [{:keys [db]} [_ _]]
@@ -1411,10 +1438,13 @@
            (when-not same-blink-elem?
              (let [blink-elem (get-in db
                                       [:blink-bhaag-index cur-score-part-index
-                                       avartan-index bhaag-index])]
+                                       avartan-index bhaag-index])
+                   show-lyrics? (get-in db [:props :show-lyrics])
+                   font-size (get-in db [:dispinfo :font-size])]
                (println " setting blink - elemn "
                         [cur-score-part-index avartan-index bhaag-index])
-               (set! (.-style blink-elem) "border-width: 5px")))
+               (set! (.-style blink-elem)
+                     (str "border-bottom-width: 3px;border-top-width: 3px;" "max-height: " (utils/bhaag-item-height show-lyrics? font-size) "px"))))
            {:db (if same-blink-elem? db
                     (update-in db [:current-blink-cursor]
                                (constantly [cur-score-part-index avartan-index bhaag-index])))})))

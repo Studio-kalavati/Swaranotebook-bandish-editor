@@ -191,6 +191,7 @@
       {:part-num 3 :part-title ptitle
        :noteseq noteseq}))
 
+(def empty-note {:notes [{:svara [:madhyam :_]}]})
 (def part-noteseq [
                    {:notes [{:svara [:madhyam :s]}] :lyrics "a"}
                    {:notes [{:svara [:madhyam :r]}] :lyrics "b"}
