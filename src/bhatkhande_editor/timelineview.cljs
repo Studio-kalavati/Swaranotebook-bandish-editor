@@ -47,13 +47,9 @@
 
         format-time (fn [seconds]
                       (let [mins (int (/ seconds 60))
-                            secs (mod (int seconds) 60)]
-                        (str mins ":" (when (< secs 10) "0") secs)))
-
-        handle-document-click (fn [e]
-                                (when-let [container @container-ref]
-                                  (when-not (.contains container (.-target e))
-                                    (dispatch [::events/hide-timeline-dropdown]))))]
+                            secs (mod (int seconds) 60)
+                            ms (int (* (mod seconds 1) 100))]
+                        (str mins ":" (when (< secs 10) "0") secs ":" (when (< ms 10) "0") ms)))]
 
     (fn []
       (let [segments @(subscribe [::subs/timeline-segments])
@@ -79,8 +75,7 @@
              {:class "timeline-container"
               :ref #(when (identity %)
                       (reset! container-width (.-offsetWidth %))
-                      (reset! container-ref %)
-                      (.addEventListener js/document "click" handle-document-click))
+                      (reset! container-ref %))
               :on-mouse-up handle-mouse-up
               :on-mouse-leave handle-mouse-up
               :on-mouse-move handle-mouse-move}
