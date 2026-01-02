@@ -122,26 +122,32 @@
 
              [:div
               {:class "controls-container"}
-              (let [selected-part (get segment-parts selected-segment)
-                    [selected-start-time selected-end-time] (nth time-ranges selected-segment)
-                    part-choices (into [{:id "" :label "None"}]
-                                       (mapv (fn [pt] {:id pt :label pt}) part-titles))]
-                [h-box
-                 :align :center
-                 :justify :center
-                 :gap "5px"
-                 :children [[md-icon-button
-                             :md-icon-name "zmdi zmdi-play zmdi-hc-lg"
-                             :on-click #(dispatch [::events/start-youtube-video-from selected-start-time selected-end-time])]
-                            [md-icon-button
-                             :md-icon-name "zmdi zmdi-chevron-down zmdi-hc-lg"
-                             :on-click #(dispatch [::events/toggle-timeline-dropdown selected-segment])]
-                            [md-icon-button
-                             :md-icon-name "zmdi zmdi-plus zmdi-hc-lg"
-                             :on-click #(dispatch [::events/split-timeline-segment selected-segment])]
-                            [single-dropdown
-                             :choices part-choices
-                             :model selected-part
-                             :width "100px"
-                             :on-change
-                             #(dispatch [::events/set-timeline-segment-part selected-segment %])]]])]]))))))
+               (let [selected-part (get segment-parts selected-segment)
+                     [selected-start-time selected-end-time] (nth time-ranges selected-segment)
+                     part-choices (into [{:id "" :label "None"}]
+                                        (mapv (fn [pt] {:id pt :label pt}) part-titles))
+                     can-delete? (and (> (count segments) 1) (> selected-segment 0))]
+                 [h-box
+                  :align :center
+                  :justify :center
+                  :gap "5px"
+                  :children (concat
+                            [[md-icon-button
+                              :md-icon-name "zmdi zmdi-play zmdi-hc-lg"
+                              :on-click #(dispatch [::events/start-youtube-video-from selected-start-time selected-end-time])]
+                             #_[md-icon-button
+                              :md-icon-name "zmdi zmdi-chevron-down zmdi-hc-lg"
+                              :on-click #(dispatch [::events/toggle-timeline-dropdown selected-segment])]
+                             [md-icon-button
+                              :md-icon-name "zmdi zmdi-plus zmdi-hc-lg"
+                              :on-click #(dispatch [::events/split-timeline-segment selected-segment])]
+                             [single-dropdown
+                              :choices part-choices
+                              :model selected-part
+                              :width "100px"
+                              :on-change
+                              #(dispatch [::events/set-timeline-segment-part selected-segment %])]]
+                            (when can-delete?
+                              [[md-icon-button
+                                :md-icon-name "zmdi zmdi-delete zmdi-hc-lg"
+                                :on-click #(dispatch [::events/delete-timeline-segment selected-segment])]]))])]]))))))

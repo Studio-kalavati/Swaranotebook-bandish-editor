@@ -288,12 +288,6 @@
      (:timeline-segment-parts props)))
 
 (reg-sub
-   ::visible-timeline-dropdown
-   :<- [::props]
-   (fn [props _]
-     (:visible-timeline-dropdown props)))
-
-(reg-sub
    ::selected-timeline-segment
    :<- [::props]
    (fn [props _]

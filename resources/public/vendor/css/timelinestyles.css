@@ -12,7 +12,7 @@
 /* Segment */
 .timeline-segment {
   display: inline-block;
-  height: 4px;
+  height: 8px;
   position: relative;
   transition: opacity 0.15s ease;
   vertical-align: top;
@@ -49,10 +49,10 @@
 /* Time label */
 .time-label {
   position: absolute;
-  bottom: 0;
+  bottom: 5px;
   left: 5px;
   color: black;
-  font-size: 11px;
+  font-size: 15px;
   font-weight: bold;
   white-space: nowrap;
   pointer-events: none;
@@ -62,7 +62,8 @@
 .controls-container {
   position: absolute;
   bottom: 20px;
-  left: 0;
+  left: 50%;
+  transform: translateX(-50%);
   padding-left: 10px;
   z-index: 1000;
   pointer-events: auto;
