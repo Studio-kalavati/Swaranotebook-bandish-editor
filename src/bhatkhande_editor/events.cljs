@@ -84,11 +84,14 @@
      ;;dont read comp-str if not refresh.
      (-> (if comp-str
            (let [w (t/reader :json)
-                 comp (t/read w comp-str)
-                 {:keys [composition props]} (db/comp-decorator comp)]
+                 saved-data (t/read w comp-str)
+                 comp (get saved-data :composition)
+                 saved-props (get saved-data :props)
+                 {:keys [composition props]} (db/comp-decorator comp)
+                 merged-props (merge props saved-props)]
              (-> db/default-db
                  (update-in [:composition] (constantly composition))
-                 (update-in [:props] (constantly props))))
+                 (update-in [:props] (constantly merged-props))))
            db/default-db)
          (assoc :posthog ph)))))
 
@@ -304,11 +307,14 @@
 
 (reg-event-fx
  ::save-to-localstorage
- (fn[{:keys [db]} [_ _]]
+ (fn [{:keys [db]} [_ _]]
    (let [storage (.-sessionStorage js/window)
          w (t/writer :json)
-         out-string
-         (t/write w (-> db :composition))]
+         data-to-save (->
+                       (select-keys db [:composition :props])
+                       (update-in [:composition] select-keys [:score-parts :taal])
+                       (update-in [:props] #(select-keys % (keys db/timeline-props))))
+         out-string (t/write w data-to-save)]
      (.setItem storage "comp" out-string)
      {})))
 

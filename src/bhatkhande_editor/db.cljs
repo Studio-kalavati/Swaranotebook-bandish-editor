@@ -327,31 +327,37 @@
    :sam-khaali 35
    :font-size 32 :spacing 10 :text-align :left})
 
-(def default-props {:raga :bilawal
-                       :note-pos {}
-                       :mode :edit
-                       :currently-editing :svaras
-                       :lang :english
-                       :newline-on-avartan? false
-                       :show-lyrics false
-                       :bpm 120
-                       :beat-mode :metronome
-                       :note-octave :madhyam
-                       :onscreen-keyboard :show
-                       :highlighted-pos []
-                       :pitch "c"
-                       :tanpura? true
-                       :notes-per-beat 1
-                       :hidden-parts #{}
-                       :note-index []
-                         :youtube-sync true
-                        :youtube-video-id "dQw4w9WgXcQ"
-                        :youtube-video-duration nil
-                         :timeline-segments [50 50]
-                        :dragging-timeline-segment nil
-                        :timeline-colors [:blue :green]
-                        :timeline-segment-parts (->> init-comp :score-parts (mapv :part-title))
-                         :selected-timeline-segment 0})
+(def timeline-props
+  {:youtube-sync true
+   :youtube-video-id "dQw4w9WgXcQ"
+   :timeline-segments [50 50]
+   :timeline-colors [:blue :green]
+   :youtube-video-duration nil
+   :dragging-timeline-segment nil
+   :timeline-segment-parts (->> init-comp :score-parts (mapv :part-title))
+
+   :selected-timeline-segment 0})
+
+(def default-props
+  (merge
+   {:raga :bilawal
+    :note-pos {}
+    :mode :edit
+    :currently-editing :svaras
+    :lang :english
+    :newline-on-avartan? false
+    :show-lyrics false
+    :bpm 120
+    :beat-mode :metronome
+    :note-octave :madhyam
+    :onscreen-keyboard :show
+    :highlighted-pos []
+    :pitch "c"
+    :tanpura? true
+    :notes-per-beat 1
+    :hidden-parts #{}
+
+    :note-index []} timeline-props))
 
 (def pitch-sharps-list ["C" "C#" "D" "D#" "E" "F" "F#" "G" "G#" "A" "A#" "B"])
 (def pitch-s-list ["c" "cs" "d" "ds" "e" "f" "fs" "g" "gs" "a" "as" "b"])
@@ -360,7 +366,7 @@
   (mapv #(assoc {} :id %1 :label %2 :sample %3) (range 0 12) pitch-sharps-list
         pitch-s-list))
 (def cursor-index-keys
-   [:score-part-index :avartan-index :bhaag-index :note-index :nsi])
+  [:score-part-index :avartan-index :bhaag-index :note-index :nsi])
 
 (def min-segment-percent 1)
 (def max-segment-percent (- 100 min-segment-percent))
@@ -376,7 +382,7 @@
              [:cursor-pos]
              (constantly
               (let [in (->> comp :index (drop 8) first)]
-                (zipmap cursor-index-keys in ))))}))
+                (zipmap cursor-index-keys in))))}))
 
 (def default-db
   (let [icomp init-comp ;; (cvt-format test-comp)
