@@ -1743,7 +1743,7 @@
           :justify :center
           :align :center
           :children
-          [(when-not (= :play @(subscribe [::subs/mode]))
+          [#_(when-not (= :play @(subscribe [::subs/mode]))
                      [button :label "Change Video"
                       :style {:font-size "small" :margin-bottom "5px"}
                       :on-click #(reset! show-change-video-modal? true)])

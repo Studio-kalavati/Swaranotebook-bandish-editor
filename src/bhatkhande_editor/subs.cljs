@@ -246,6 +246,12 @@
      (:youtube-video-id props)))
 
 (reg-sub
+ ::youtube-player-state
+ :<- [::props]
+ (fn [props [_ _]]
+   (:youtube-player-state props)))
+
+(reg-sub
    ::youtube-player
    :<- [::props]
    (fn [props [_ _]]

@@ -30,21 +30,25 @@
     (destroy-player!))
   (if @api-ready?
     (let [player (js/YT.Player. dom-id
-                   #js {:height "50%"
-                        :width "100%"
-                        :videoId video-id
-                        :playerVars #js {:playsinline 1 :rel 0}
-                        :events #js {:onReady
-                                    (fn [event]
-                                      (let [player (.-target event)]
-                                        (println " onready event fired")
-                                        (set-player! player)
-                                        (dispatch-fn [::events/set-youtube-player player])
-                                        (let [duration (.getDuration ^js/YT.player player)]
-                                          (when (and duration (> duration 0))
-                                            (dispatch-fn [::events/set-youtube-video-duration duration])))))
-                                    :onError (fn[event]
-                                               (println " received on error"))}})]
+                                #js {:height "50%"
+                                     :width "100%"
+                                     :videoId video-id
+                                     :playerVars #js {:playsinline 1 :rel 0}
+                                     :events #js {:onReady
+                                                  (fn [event]
+                                                    (let [player (.-target event)]
+                                                      (set-player! player)
+                                                      (dispatch-fn [::events/set-youtube-player player])
+                                                      (let [duration (.getDuration ^js/YT.player player)]
+                                                        (when (and duration (> duration 0))
+                                                          (dispatch-fn [::events/set-youtube-video-duration duration])))))
+                                                   :onError (fn [event]
+                                                              (println " received on error"))
+                                                   :onStateChange (fn [e]
+                                                                    (let [state (.-data e)]
+                                                                      (dispatch-fn [::events/youtube-state-change state])))
+                                                  ;; -1 (unstarted) 0 (ended) 1 (playing) 2 (paused) 3 (buffering) 5 (video cued)
+                                                  }})]
       player)
     (do
       (swap! pending-create-requests conj [dom-id video-id dispatch-fn])

@@ -1370,6 +1370,17 @@
     (update-in db [:blink-bhaag-index score-part-index avartan-index bhaag-index]
                (constantly elem))}))
 
+(defn map-values [m]
+  (filter (complement map?)
+          (walk/postwalk identity m)))
+
+(reg-event-fx
+ ::reset-blink-style
+ (fn [{:keys [db]} [_ _]]
+   (mapv #(set! (.-style %) "background-color: originalcolor")
+         (map-values (:blink-bhaag-index db)))
+   {}))
+
 ;;change the play head to move ahead or behind
 ;;if there are 10 bhaags, the nth-bhaag-to-play from will have a value from 0-9
 (reg-event-fx
@@ -1411,49 +1422,47 @@
        (when (and player (= 1 (.getPlayerState ^js/YT.Player player)))
          (let [cur-yt-time (.getCurrentTime ^js/YT.Player player)
                cur-segment-index (->> db :props :time-ranges (get-current-segment-index cur-yt-time))
-               cur-part-title (get-in db [:props :timeline-segment-parts cur-segment-index])
-               cur-segment-setime (get-in db [:props :time-ranges cur-segment-index])
-               [start-time end-time] cur-segment-setime
-               cur-score-part-index (->> db :composition :score-parts (keep-indexed (fn [ind part] (when (= (name cur-part-title) (name (:part-title part))) ind))) first)
-               indexed-part (get-in db [:composition :indexed-noteseq cur-score-part-index])
-               num-avartans (count indexed-part)
-               avartan-playtime (/ (- end-time start-time) num-avartans)
-               avartan-index (->> (range num-avartans)
-                                  (keep-indexed
-                                   (fn [indx i]
-                                     (let [s (+ start-time (* avartan-playtime i))
-                                           e (+ s avartan-playtime)]
-                                       (when (and (>= cur-yt-time s) (< cur-yt-time e))
-                                         indx))))
-                                  first)
+               cur-part-title (get-in db [:props :timeline-segment-parts cur-segment-index])]
 
-               num-bhaags (count (for [x indexed-part y x] y))
-               bhaag-playtime (/ (- end-time start-time) num-bhaags)
-               bhaag-index (->> (range
-                                 (count (nth indexed-part avartan-index)))
-                                (keep-indexed
-                                 (fn [indx i]
-                                   (let [avartan-offset (* avartan-index avartan-playtime)
-                                         s (+ avartan-offset start-time (* bhaag-playtime i))
-                                         e (+ s bhaag-playtime)]
-                                     (when (and (>= cur-yt-time s) (< cur-yt-time e))
-                                       indx))))
-                                first)
-               same-blink-elem? (-> db :current-blink-cursor
-                                    (= [cur-score-part-index avartan-index bhaag-index]))]
-           (when-not same-blink-elem?
-             (let [blink-elem (get-in db
-                                      [:blink-bhaag-index cur-score-part-index
-                                       avartan-index bhaag-index])
-                   show-lyrics? (get-in db [:props :show-lyrics])
-                   font-size (get-in db [:dispinfo :font-size])]
-               (println " setting blink - elemn "
-                        [cur-score-part-index avartan-index bhaag-index])
-               (set! (.-style blink-elem)
-                     (str "border-bottom-width: 3px;border-top-width: 3px;" "max-height: " (utils/bhaag-item-height show-lyrics? font-size) "px"))))
-           {:db (if same-blink-elem? db
-                    (update-in db [:current-blink-cursor]
-                               (constantly [cur-score-part-index avartan-index bhaag-index])))})))
+           (println " csi " cur-segment-index " cpt " cur-part-title)
+           ;;if there is a part associated with the current segment
+           (when cur-part-title
+             (let [cur-segment-setime (get-in db [:props :time-ranges cur-segment-index])
+                   [start-time end-time] cur-segment-setime
+                   cur-score-part-index
+                   (->> db :composition
+                        :score-parts
+                        (keep-indexed
+                         (fn [ind part]
+                           (when (= (name cur-part-title) (name (:part-title part))) ind)))
+                        first)
+                   indexed-part (get-in db [:composition :indexed-noteseq cur-score-part-index])
+                   num-avartans (count indexed-part)
+                   avartan-playtime (/ (- end-time start-time) num-avartans)
+                   avartan-index (->> (range num-avartans)
+                                      (keep-indexed
+                                       (fn [indx i]
+                                         (let [s (+ start-time (* avartan-playtime i))
+                                               e (+ s avartan-playtime)]
+                                           (when (and (>= cur-yt-time s) (< cur-yt-time e))
+                                             indx))))
+                                      first)
+                   same-blink-elem? (-> db :current-blink-cursor
+                                        (= [cur-score-part-index avartan-index]))]
+               (when-not same-blink-elem?
+                 (let [blink-elems (get-in db
+                                           [:blink-bhaag-index cur-score-part-index
+                                            avartan-index])
+                       show-lyrics? (get-in db [:props :show-lyrics])
+                       font-size (get-in db [:dispinfo :font-size])]
+                   (mapv
+                    #(set! (.-style %)
+                           (str "background-color: antiquewhite;" "max-height: "
+                                (utils/bhaag-item-height show-lyrics? font-size) "px"))
+                    (vals blink-elems))))
+               {:db (if same-blink-elem? db
+                        (update-in db [:current-blink-cursor]
+                                   (constantly [cur-score-part-index avartan-index])))})))))
      (catch js/Error e
        (println " caught error in youtube-clock-tick-event" e)
        {}))))
@@ -1612,19 +1621,30 @@
    (fn [{:keys [db]} [_ from to]]
      (let [player (get-in db [:props :youtube-player] )
            youtube-video-id (get-in db [:props :youtube-video-id])
-           params #js {:videoId youtube-video-id 
+           params #js {:videoId youtube-video-id
                        :startSeconds from :endSeconds to}]
-       (println " player " player " from " from)
-      (when player 
-  (.loadVideoById ^js/YT.player player params)
-        #_(.seekTo ^js/YT.Player player from) 
+      (when player
+        (.loadVideoById ^js/YT.player player params)
         (.playVideo  ^js/YT.Player player)))
      {}))
 
 (reg-event-db
-   ::set-youtube-video-duration
-   (fn [db [_ duration]]
-     (assoc-in db [:props :youtube-video-duration] duration)))
+    ::set-youtube-video-duration
+    (fn [db [_ duration]]
+      (assoc-in db [:props :youtube-video-duration] duration)))
+
+(reg-event-db
+  ::youtube-state-change
+  (fn [db [_ state]]
+    (let [state-keyword (case state
+                         -1 :unstarted
+                         0 :ended
+                         1 :playing
+                         2 :paused
+                         3 :buffering
+                         5 :video-cued
+                         :unknown)]
+      (assoc-in db [:props :youtube-player-state] state-keyword))))
 
 (reg-event-db
    ::set-timeline-segment-part
