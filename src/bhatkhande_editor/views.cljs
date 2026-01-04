@@ -891,6 +891,31 @@
     (set! (.-font context) font)
     (.-width (.measureText context text))))
 
+(defn get-editor-style
+  []
+  (let [play-mode? (= :play @(subscribe [::subs/mode]))
+        winhgt (.-innerHeight js/window)
+        myhgt (- winhgt
+                 @editor-height)]
+    {:class "edit-composition"
+     :style {:overflow-y "scroll"
+             :height myhgt
+             :min-height myhgt
+             :flex-flow "column" :flex "1 0 0px"}
+           ;;this code sets the scroll bar to the bottom, so that the last type text is seen.
+     :ref
+     #(when (identity %)
+        (dispatch [::events/set-music-notes-element %])
+        (if play-mode?
+          (set! (.-scrollTop %) 0)
+          (when (> (.-scrollHeight %) myhgt)
+            (let [sctop  (- (.-scrollHeight %) myhgt)
+                  curpos (+ @cursor-y (.-scrollTop %))]
+              #_(println " setting sctop to  "  sctop " cursor-y " @cursor-y " myhgt " myhgt
+                         " sctop " (.-scrollHeight %) " cur sroll top " (.-scrollTop %))
+              (when (> curpos sctop)
+                (set! (.-scrollTop %) sctop))))))}))
+
 (defn swara-display-area
   []
   (let [edit-part-index (reagent/atom nil)
@@ -898,9 +923,8 @@
         sahitya-editing? (reagent/atom false)
         delete-confirm (reagent/atom false)]
     (fn []
-      (let [winhgt (.-innerHeight js/window)
-            myhgt (- winhgt
-                     @editor-height)
+      (let [;;winhgt (.-innerHeight js/window)
+            ;;myhgt (- winhgt @editor-height)
             show-lyrics? @(subscribe [::subs/show-lyrics?])
             font-size (reagent/atom @(subscribe [::subs/font-size]))
             newline-on-avartan? @(subscribe [::subs/newline-on-avartan?])
@@ -908,25 +932,6 @@
             play-mode? (= :play @(subscribe [::subs/mode]))
             _ @(subscribe [::subs/onscreen-keyboard])]
         [:div
-         [:div
-          {:class "edit-composition"
-           :style {:overflow-y "scroll"
-                   :height myhgt
-                   :min-height myhgt
-                   :flex-flow "column" :flex "1 0 0px"}
-           ;;this code sets the scroll bar to the bottom, so that the last type text is seen.
-           :ref
-           #(when (identity %)
-              (dispatch [::events/set-music-notes-element %])
-              (if play-mode?
-                (set! (.-scrollTop %) 0)
-                (when (> (.-scrollHeight %) myhgt)
-                  (let [sctop  (- (.-scrollHeight %) myhgt)
-                        curpos (+ @cursor-y (.-scrollTop %))]
-                    #_(println " setting sctop to  "  sctop " cursor-y " @cursor-y " myhgt " myhgt
-                               " sctop " (.-scrollHeight %) " cur sroll top " (.-scrollTop %))
-                    (when (> curpos sctop)
-                      (set! (.-scrollTop %) sctop))))))}
           (when @delete-confirm
             [modal-panel
              :backdrop-on-click #(reset! delete-confirm false)
@@ -1328,7 +1333,7 @@
                   (map-indexed disp-score-part)
                   vec
                   (reduce conj [:div {:class "score-parts"} comp-title]))]
-             fin)]]]))))
+             fin)]]))))
 
 
 (defn play-keyboard-footer
@@ -1796,18 +1801,16 @@
 
 (defn show-editor
   []
-  (let [youtube-sync @(subscribe [::subs/youtube-sync?])]
+  (let [youtube-sync @(subscribe [::subs/youtube-sync?])
+        editor-style (get-editor-style)]
     [:div
-     (if youtube-sync
-       [v-box
-        :gap "1vw"
-        :style {:width "100%"}
-        :children [[v-box
-                    :gap "5px"
-                    :children [[youtube-iframe-box]
-                               [timeline-view]
-                               [swara-display-area]]]]]
-       [swara-display-area])
+     [:div editor-style
+      [v-box
+       :style {:width "100%"}
+       :children
+       (if youtube-sync
+         [[youtube-iframe-box] [timeline-view] [swara-display-area]]
+         [[swara-display-area]])]]
      [:div {:class "keyboard wow fadeInUp"
             :ref #(when (identity %)
                     (let [ch (.-offsetHeight %)]
