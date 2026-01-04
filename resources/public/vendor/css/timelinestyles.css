@@ -2,7 +2,7 @@
 .timeline-container {
   width: 100%;
   max-width: 100%;
-  padding: 40px 0 50px 0;
+  padding: 30px 0 30px 0;
   margin-top: 10px;
   position: relative;
   border-radius: 8px;
@@ -61,7 +61,7 @@
 /* Controls container */
 .controls-container {
   position: absolute;
-  bottom: 20px;
+  bottom: 0px;
   left: 50%;
   transform: translateX(-50%);
   padding-left: 10px;

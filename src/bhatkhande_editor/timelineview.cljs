@@ -1,10 +1,10 @@
 (ns bhatkhande-editor.timelineview
   (:require
-   [re-frame.core :as re-frame :refer [subscribe dispatch dispatch-sync]]
-   [re-com.core :as re-com :refer [v-box h-box
+   [re-frame.core :as re-frame :refer [subscribe dispatch]]
+   [re-com.core :as re-com :refer [h-box
+                                   title
                                    single-dropdown
-                                   md-icon-button
-                                   ]]
+                                   md-icon-button]]
    [reagent.core :as reagent]
      [bhatkhande-editor.events :as events]
      [bhatkhande-editor.db :as db]
@@ -54,6 +54,7 @@
     (fn []
       (let [segments @(subscribe [::subs/timeline-segments])
             youtube-sync @(subscribe [::subs/youtube-sync?])
+            play-mode? (and youtube-sync (= :play @(subscribe [::subs/mode])))
             part-titles @(subscribe [::subs/part-titles])
             segment-parts @(subscribe [::subs/timeline-segment-parts])
             selected-segment @(subscribe [::subs/selected-timeline-segment])]
@@ -78,7 +79,7 @@
                       (reset! container-ref %))
               :on-mouse-up handle-mouse-up
               :on-mouse-leave handle-mouse-up
-              :on-mouse-move (if (= :play @(subscribe [::subs/mode])) (fn [] )
+              :on-mouse-move (if (= :play @(subscribe [::subs/mode])) (fn [])
                                  handle-mouse-move)}
 
              (doall
@@ -128,19 +129,34 @@
                  :justify :center
                  :gap "5px"
                  :children (concat
-                            [[md-icon-button
-                              :md-icon-name "zmdi zmdi-play zmdi-hc-lg"
-                              :on-click #(dispatch [::events/start-youtube-video-from selected-start-time selected-end-time])]
-                             [md-icon-button
-                              :md-icon-name "zmdi zmdi-plus zmdi-hc-lg"
-                              :on-click #(dispatch [::events/split-timeline-segment selected-segment])]
+                            [(if (= :playing @(subscribe [::subs/youtube-player-state]))
+                               [md-icon-button
+                                :md-icon-name "zmdi zmdi-pause zmdi-hc-lg"
+                                :on-click #(dispatch [::events/pause-youtube-video])]
+                               [md-icon-button
+                                :md-icon-name "zmdi zmdi-play zmdi-hc-lg"
+                                :on-click
+                                #(dispatch [::events/start-youtube-video-from
+                                            selected-start-time selected-end-time])])
+                             (when play-mode?
+                               [md-icon-button
+                                :md-icon-name "zmdi zmdi-collection-case-play zmdi-hc-lg"
+                                :on-click
+                                #(dispatch [::events/play-youtube-video-from-start])])
+                             (when-not play-mode?
+                               [md-icon-button
+                                :md-icon-name "zmdi zmdi-plus zmdi-hc-lg"
+                                :on-click #(dispatch [::events/split-timeline-segment selected-segment])])
+                             (when (and (not play-mode?) can-delete?)
+                               [md-icon-button
+                                :md-icon-name "zmdi zmdi-delete zmdi-hc-lg"
+                                :on-click #(dispatch [::events/delete-timeline-segment
+                                                      selected-segment])])
                              [single-dropdown
                               :choices part-choices
                               :model selected-part
+                              :disabled? play-mode?
                               :width "100px"
                               :on-change
-                              #(dispatch [::events/set-timeline-segment-part selected-segment %])]]
-                            (when can-delete?
-                              [[md-icon-button
-                                :md-icon-name "zmdi zmdi-delete zmdi-hc-lg"
-                                :on-click #(dispatch [::events/delete-timeline-segment selected-segment])]]))])]]))))))
+                              #(dispatch [::events/set-timeline-segment-part selected-segment %])]
+                             [title :level :level3 :label (str "From: " (format-time selected-start-time))]])])]]))))))

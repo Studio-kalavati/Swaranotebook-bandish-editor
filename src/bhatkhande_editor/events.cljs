@@ -1617,15 +1617,36 @@
      (assoc-in db [:props :youtube-player] player)))
 
 (reg-event-fx
+ ::pause-youtube-video
+ (fn [{:keys [db]} _]
+   (let [player (get-in db [:props :youtube-player])]
+     (when player
+       (.pauseVideo ^js/YT.Player player)))
+   {}))
+
+(defn play-yt-video
+  [player params]
+  (when player
+    (.loadVideoById ^js/YT.player player params)
+    (.playVideo  ^js/YT.Player player)))
+
+(reg-event-fx
+ ::play-youtube-video-from-start
+ (fn [{:keys [db]} _]
+   (let [player (get-in db [:props :youtube-player])
+         youtube-video-id (get-in db [:props :youtube-video-id])
+         params #js {:videoId youtube-video-id :startSeconds 0}]
+     (play-yt-video player params))
+   {}))
+
+(reg-event-fx
    ::start-youtube-video-from
    (fn [{:keys [db]} [_ from to]]
      (let [player (get-in db [:props :youtube-player] )
            youtube-video-id (get-in db [:props :youtube-video-id])
            params #js {:videoId youtube-video-id
                        :startSeconds from :endSeconds to}]
-      (when player
-        (.loadVideoById ^js/YT.player player params)
-        (.playVideo  ^js/YT.Player player)))
+     (play-yt-video player params))
      {}))
 
 (reg-event-db
