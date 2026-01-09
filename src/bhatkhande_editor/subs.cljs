@@ -298,3 +298,9 @@
    :<- [::props]
    (fn [props _]
      (:selected-timeline-segment props)))
+
+(reg-sub
+ ::show-video-change-modal
+ :<- [::props]
+ (fn [props _]
+   (:show-video-change-modal props)))

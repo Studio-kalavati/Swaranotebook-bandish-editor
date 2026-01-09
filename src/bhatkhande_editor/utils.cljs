@@ -84,6 +84,7 @@
 
 (defn json-onload
   [ijson]
+  (println " json-onload "ijson)
   (let [kw-json (parse-json ijson)
         isvalid? (s/valid? :snb/composition kw-json)]
     (if isvalid?

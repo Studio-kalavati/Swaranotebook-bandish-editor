@@ -3,6 +3,7 @@
    [re-frame.core :as re-frame :refer [subscribe dispatch]]
    [re-com.core :as re-com :refer [h-box
                                    title
+                                   box
                                    single-dropdown
                                    md-icon-button]]
    [reagent.core :as reagent]
@@ -136,13 +137,16 @@
                                [md-icon-button
                                 :md-icon-name "zmdi zmdi-play zmdi-hc-lg"
                                 :on-click
-                                #(dispatch [::events/start-youtube-video-from
-                                            selected-start-time selected-end-time])])
+                                #(dispatch
+                                  [(if play-mode?
+                                     ::events/youtube-sync-play
+                                     ::events/start-youtube-video-from)
+                                   selected-start-time selected-end-time])])
                              (when play-mode?
                                [md-icon-button
                                 :md-icon-name "zmdi zmdi-collection-case-play zmdi-hc-lg"
                                 :on-click
-                                #(dispatch [::events/play-youtube-video-from-start])])
+                                #(dispatch [::events/youtube-sync-play])])
                              (when-not play-mode?
                                [md-icon-button
                                 :md-icon-name "zmdi zmdi-plus zmdi-hc-lg"
@@ -159,4 +163,19 @@
                               :width "100px"
                               :on-change
                               #(dispatch [::events/set-timeline-segment-part selected-segment %])]
-                             [title :level :level3 :label (str "From: " (format-time selected-start-time))]])])]]))))))
+                             [title :level :level3 :label (str "From: " (format-time selected-start-time))]
+                             (when (and play-mode?
+                                        (not= :playing @(subscribe [::subs/youtube-player-state])))
+                               [box :align :end
+                                :child [md-icon-button
+                                        :md-icon-name "zmdi zmdi-edit"
+                                        :on-click
+                                        #(do
+                                           (dispatch [::events/reset-blink-style])
+                                           (dispatch [::events/set-mode :edit]))]])
+                             (when-not play-mode?
+                               [box :align :end
+                                :child [md-icon-button
+                                        :md-icon-name "zmdi zmdi-youtube"
+                                        :on-click
+                                        #(dispatch [::events/show-video-change-modal true])]])])])]]))))))
