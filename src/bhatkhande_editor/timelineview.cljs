@@ -7,10 +7,10 @@
                                    single-dropdown
                                    md-icon-button]]
    [reagent.core :as reagent]
-     [bhatkhande-editor.events :as events]
-     [bhatkhande-editor.db :as db]
-     [bhatkhande-editor.subs :as subs]
-     ))
+   [bhatkhande-editor.ytevents :as ytevents]
+   [bhatkhande-editor.events :as events]
+   [bhatkhande-editor.db :as db]
+   [bhatkhande-editor.subs :as subs]))
 
 (defn timeline-view
   []
@@ -37,12 +37,12 @@
                                 ;;(println " --  "[  orig-clamped-client-x clamped-client-x ])
                                 ;;(println " 22  "[  delta-percent (* 100.0 (/ (- orig-clamped-client-x @drag-start-x) @container-width))])
                                 ;;(println " 12 "[ max-client-x  delta-x delta-percent  (.-left container-rect) (.-width container-rect) (.-clientX e) @container-width])
-                                  (dispatch [::events/drag-segment @dragging-handle orig-delta-percent])
+                                  (dispatch [::ytevents/drag-segment @dragging-handle orig-delta-percent])
                                   (reset! drag-start-x orig-clamped-client-x)))))
 
         handle-mouse-up (fn []
                           (when @dragging-handle
-                            (dispatch [::events/end-drag-segment])
+                            (dispatch [::ytevents/end-drag-segment])
                             (reset! dragging-handle nil)
                             (reset! drag-start-x nil)))
 
@@ -72,7 +72,7 @@
                           [start-time end-time]))
                       cumulative-percentages)
                      vec)]
-            (dispatch [::events/set-time-ranges time-ranges])
+            (dispatch [::ytevents/set-time-ranges time-ranges])
             [:div
              {:class "timeline-container"
               :ref #(when (identity %)
@@ -91,7 +91,7 @@
                        [start-time end-time] (nth time-ranges segment-index)
                        is-dragging? (= @dragging-handle segment-index)
                        is-selected? (= segment-index selected-segment)
-                       on-click (fn [_] (dispatch [::events/select-timeline-segment segment-index]))]
+                       on-click (fn [_] (dispatch [::ytevents/select-timeline-segment segment-index]))]
                    [:div
                     {:key (str "segment-" segment-index)
                      :class (str "timeline-segment"
@@ -133,28 +133,28 @@
                             [(if (= :playing @(subscribe [::subs/youtube-player-state]))
                                [md-icon-button
                                 :md-icon-name "zmdi zmdi-pause zmdi-hc-lg"
-                                :on-click #(dispatch [::events/pause-youtube-video])]
+                                :on-click #(dispatch [::ytevents/pause-youtube-video])]
                                [md-icon-button
                                 :md-icon-name "zmdi zmdi-play zmdi-hc-lg"
                                 :on-click
                                 #(dispatch
                                   [(if play-mode?
-                                     ::events/youtube-sync-play
-                                     ::events/start-youtube-video-from)
+                                     ::ytevents/youtube-sync-play
+                                     ::ytevents/start-youtube-video-from)
                                    selected-start-time selected-end-time])])
                              (when play-mode?
                                [md-icon-button
                                 :md-icon-name "zmdi zmdi-collection-case-play zmdi-hc-lg"
                                 :on-click
-                                #(dispatch [::events/youtube-sync-play])])
+                                #(dispatch [::ytevents/youtube-sync-play])])
                              (when-not play-mode?
                                [md-icon-button
                                 :md-icon-name "zmdi zmdi-plus zmdi-hc-lg"
-                                :on-click #(dispatch [::events/split-timeline-segment selected-segment])])
+                                :on-click #(dispatch [::ytevents/split-timeline-segment selected-segment])])
                              (when (and (not play-mode?) can-delete?)
                                [md-icon-button
                                 :md-icon-name "zmdi zmdi-delete zmdi-hc-lg"
-                                :on-click #(dispatch [::events/delete-timeline-segment
+                                :on-click #(dispatch [::ytevents/delete-timeline-segment
                                                       selected-segment])])
                              [single-dropdown
                               :choices part-choices
@@ -162,7 +162,7 @@
                               :disabled? play-mode?
                               :width "100px"
                               :on-change
-                              #(dispatch [::events/set-timeline-segment-part selected-segment %])]
+                              #(dispatch [::ytevents/set-timeline-segment-part selected-segment %])]
                              [title :level :level3 :label (str "From: " (format-time selected-start-time))]
                              (when (and play-mode?
                                         (not= :playing @(subscribe [::subs/youtube-player-state])))

@@ -1,5 +1,6 @@
 (ns bhatkhande-editor.utils
   (:require [clojure.string :as istr]
+            [chronoid.core :as c]
             [clojure.walk :refer [prewalk]]
             [clojure.spec.alpha :as s]))
 
@@ -152,3 +153,10 @@
   [show-lyrics? font-size]
   (let [bih (int (* (if show-lyrics? 2.8 2) font-size))]
     bih))
+
+(defn get-clock
+  []
+  (let  [clock (c/clock)
+         _ (c/start! clock)
+         ctx (:context @clock)]
+    {:clock clock :audio-context ctx}))
