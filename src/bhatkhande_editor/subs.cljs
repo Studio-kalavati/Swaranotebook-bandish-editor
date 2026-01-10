@@ -102,6 +102,12 @@
    (-> comp :title)))
 
 (reg-sub
+ ::part-titles
+ :<- [::composition]
+ (fn [comp _]
+   (->> comp :score-parts (mapv :part-title))))
+
+(reg-sub
  ::save-possible?
  (fn [db [_ _]]
    (and (= (-> db :props :path) (-> db :user :uid))
@@ -223,6 +229,12 @@
 
 ;;number of bhaags to play in play mode
 (reg-sub
- ::max-num-avartans
- (fn [db [_ _]]
-   (count (:avartan-first-note db))))
+  ::max-num-avartans
+  (fn [db [_ _]]
+    (count (:avartan-first-note db))))
+
+(reg-sub
+ ::youtube-sync?
+ :<- [::props]
+ (fn [props [_ _]]
+   (:youtube-sync props)))

@@ -1,6 +1,7 @@
 (ns bhatkhande-editor.core
   (:require
    [reagent.dom :as rdom]
+   [reagent.dom.client :as rdc]
    [re-frame.core :as re-frame]
    [re-pressed.core :as rp]
    [breaking-point.core :as bp]
@@ -22,9 +23,9 @@
 
 (defn ^:dev/after-load mount-root []
   (re-frame/clear-subscription-cache!)
-  (let [root-el (.getElementById js/document "app")]
-    (rdom/unmount-component-at-node root-el)
-    (rdom/render [views/main-panel] root-el)))
+  (let [root-el (.getElementById js/document "app")
+        root-container (rdc/create-root root-el)]
+    (rdc/render root-container [views/main-panel])))
 
 (defonce firebase-app-info
   {:apiKey db/apiKey
