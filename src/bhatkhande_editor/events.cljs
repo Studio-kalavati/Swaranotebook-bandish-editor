@@ -1174,62 +1174,6 @@ the index"
                 (sort-by second))]
     a1))
 
-#_(defn youtube-start-event-fn
-  [{:keys [db]} now]
-  (let [time-range (-> db :props :time-ranges)
-        [start-time end-time] (first time-range)
-        note-interval (/ 60 bpm)
-        play-head-position
-        (->> db :composition :index
-             (keep-indexed
-              (fn[indx i]
-                (let [cursor-vals (mapv (:play-head-position db) cursor-index-keys)]
-                  (when (= i cursor-vals) indx))))
-             first)
-        ;;play-head-position refers to whole notes (e.g 5 /16)
-        ;;but if the notes have dugun/tigun, we need the number of actual notes.
-        ;;for each if each note is dugun,
-        ;;if play-head-position is 4, then play-head-subnotes-position is 8
-        ;;play-head-subnotes-position (->> db :composition :noteseq (take play-head-position) (map (comp count :notes)) (apply + ))
-        a1 (get-play-at-time-seq {:composition (->> db :composition)
-                                  :beat-mode :metronome
-                                  :bpm bpm
-                                  :play-head-position play-head-position
-                                  :now now})
-
-        ;;a sequence of vectors of the form [svara-index note-index]
-        ;;where svara-index is usually less than note-index because
-        ;;note index also contains beat & tanpura notes
-        svara2note-indexes
-        (->> a1
-             (map vector (range))
-             ;;select only notes encoded as [:mandra :s]
-             (filter (fn[[indx inote]] (vector? (first inote))))
-             (map vector (range))
-             (map (fn[[svara-index [note-index inote]]] [svara-index note-index inote])))
-        ;;a1 contains notes, tanpura, beat sounds.
-        ;;we need another index that translates a note index to the visual index which
-        ;;contains just the notes
-        noteindex-to-svaraindex-map (->> svara2note-indexes
-                                         (map (fn[[svara-index note-index inote]]
-                                                {note-index svara-index}))
-                                         (apply merge))
-        play-note-index 0
-        res
-        {:play-state :start
-         :play-at-time a1
-         :play-note-index play-note-index
-         :note-interval note-interval
-         :num-notes (count a1)
-         :bhaag-index 0
-         :elem-index (if (> play-head-position 0)
-                       (let [r (subvec (:elem-index db) play-head-position)]
-                         r)
-                       (:elem-index db))
-         ;;translates the play-note index to the view-note index
-         :play-to-view-map noteindex-to-svaraindex-map}]
-    res))
-
 (defn play-start-event-fn
   [{:keys [db]} now]
   (let [bpm (-> db :props :bpm)
