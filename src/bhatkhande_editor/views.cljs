@@ -29,10 +29,13 @@
    [reagent.core :as reagent]
    [cognitect.transit :as t]
    [clojure.string :as cstring]
-   [bhatkhande-editor.events :as events]
-   [bhatkhande-editor.routes :as routes]
-   [bhatkhande-editor.db :as db :refer [mswaras pitch-options-list get-sahitya]]
-   [bhatkhande-editor.subs :as subs]))
+     [bhatkhande-editor.events :as events]
+     [bhatkhande-editor.routes :as routes]
+     [bhatkhande-editor.timelineview :refer [timeline-view]]
+     [bhatkhande-editor.db :as db :refer [mswaras pitch-options-list get-sahitya]]
+     [bhatkhande-editor.subs :as subs]
+     [bhatkhande-editor.utils :as utils]
+     [bhatkhande-editor.youtube :as youtube]))
 
 (def editor-height (reagent/atom 0))
 (def cursor-y (reagent/atom 0))
@@ -239,6 +242,7 @@
         newsletter-signup? (reagent/atom true)
         show-lyrics? (reagent/atom @(subscribe [::subs/show-lyrics?]))
         newline-on-avartan? (reagent/atom @(subscribe [::subs/newline-on-avartan?]))
+        youtube-sync? (reagent/atom @(subscribe [::subs/youtube-sync?]))
         title-val (reagent/atom "")
         svaras-on @(subscribe [::subs/custom-svaras])
         font-size (reagent/atom @(subscribe [::subs/font-size]))
@@ -251,14 +255,14 @@
                 (take 12 us/i-note-seq))
           [true false true false true true false true
            false true false true])
-        octave-notes-list (mapv (fn[_ istate] (reagent/atom istate))
+        octave-notes-list (mapv (fn [_ istate] (reagent/atom istate))
                                 (range 12)
                                 ;;all shuddha svaras true
                                 default-custom-svaras)
         menu-btn [box
                   :size "auto"
                   :align-self :stretch
-                  :style {:flex "1 1 0px" }
+                  :style {:flex "1 1 0px"}
                   :child [:button
                           {:style {:width "100%"
                                    ;; :background-color "coral"
@@ -274,8 +278,8 @@
                              #(reset! show-file-popup? true))]
     (set-keydown-rules)
     (fn []
-      (let [speed-switch-fn (fn[i] {:disp-fn #(dispatch [::events/notes-per-beat i])
-                                    :state #(= i (or @(subscribe [::subs/notes-per-beat]) 1))})
+      (let [speed-switch-fn (fn [i] {:disp-fn #(dispatch [::events/notes-per-beat i])
+                                     :state #(= i (or @(subscribe [::subs/notes-per-beat]) 1))})
             rag-box-style {:align-items "normal" :background-color "unset"}
             but-style {:width (let [iw (.-innerWidth js/window)]
                                 (if (> iw 200)
@@ -301,7 +305,7 @@
                  (= :english lang)
                  "सा रे"))
              {:disp-fn
-              #(do (dispatch [::events/toggle-lang] ))
+              #(do (dispatch [::events/toggle-lang]))
               :state (constantly false)})
             taal-btn
             (box-button rag-box-style "Tal"
@@ -364,7 +368,7 @@
                              [gap :size "5vw"]])
                            [gap :size "2vh"]]]]])
                      (when @show-keyboard-help?
-                       (let [bfn (fn[text kys]
+                       (let [bfn (fn [text kys]
                                    (asjc-hbox {:width "550px"}
                                               [[box :style {:width "250px"}
                                                 :child [:p text]]
@@ -413,8 +417,7 @@
                               :style {:width "100px"}
                               :class "btn-hc-lg btn-primary "
                               :on-click #(do (reset! show-keyboard-help? false))]]
-                            [gap :size "2vh"]]]
-                          ]))
+                            [gap :size "2vh"]]]]))
                      (when @show-file-popup?
                        [modal-panel
                         :backdrop-on-click #(reset! show-file-popup? false)
@@ -481,7 +484,7 @@
                            (asjc-hbox
                             [[checkbox
                               :model show-lyrics?
-                              :style {:width "auto" :height "20px" }
+                              :style {:width "auto" :height "20px"}
                               :on-change
                               #(let [nval (not @show-lyrics?)]
                                  (reset! show-lyrics? nval)
@@ -492,7 +495,7 @@
                            (asjc-hbox
                             [[checkbox
                               :model newline-on-avartan?
-                              :style {:width "auto" :height "20px" }
+                              :style {:width "auto" :height "20px"}
                               :on-change
                               #(let [nval (not @newline-on-avartan?)]
                                  (reset! newline-on-avartan? nval)
@@ -500,6 +503,18 @@
                              [gap :size "20px"]
                              [title :label "One Avartan per row?"
                               :level :level3]])
+                           (asjc-hbox
+                            [[checkbox
+                              :model youtube-sync?
+                              :style {:width "auto" :height "20px"}
+                              :on-change
+                              #(let [nval (not @youtube-sync?)]
+                                 (reset! youtube-sync? nval)
+                                 (dispatch [::events/set-youtube-sync nval]))]
+                             [gap :size "20px"]
+                             [title :label "Sync to Youtube video"
+                              :level :level3]])
+
                            [gap :size "50px"]
                            [v-box
                             :align :center
@@ -525,7 +540,7 @@
                                 :model selected-pitch
                                 :width "100px"
                                 :on-change
-                                (fn[x]
+                                (fn [x]
                                   (reset! selected-pitch x)
                                   (dispatch
                                    [::events/init-note-buffers
@@ -572,11 +587,11 @@
                                           ;; if title has been edited, use title-val
                                           ;; if its not edited, then its empty, so use the default comp-title
                                           (if (= @title-val "")
-                                                      @(subscribe [::subs/comp-title])
-                                                      @title-val)
+                                            @(subscribe [::subs/comp-title])
+                                            @title-val)
                                           tv (cstring/replace use-title #" " "-")]
-                                                (reset! show-title-popup? false)
-                                                (dispatch [::events/upload-new-comp tv]))]]]]])
+                                      (reset! show-title-popup? false)
+                                      (dispatch [::events/upload-new-comp tv]))]]]]])
                      (when @show-login-popup?
                        [modal-panel
                         :backdrop-on-click #(reset! show-login-popup? false)
@@ -618,9 +633,9 @@
                                              (not @newsletter-signup?))]]]]]])
                      (when @show-taal-popup
                        (let [ta (:tala-labels (lang-labels @(subscribe [::subs/lang])))
-                             taal-labels (mapv (fn[[a b]] {:id a  :label b}) ta)
+                             taal-labels (mapv (fn [[a b]] {:id a  :label b}) ta)
 
-                             box-fn (fn[{:keys [id label]}]
+                             box-fn (fn [{:keys [id label]}]
                                       [button
                                        :label label
                                        :style but-style
@@ -647,7 +662,7 @@
                                      :align :center
                                      :children children]]]]]))
                      (when @show-select-svaras-popup
-                       (let [box-fn (fn[model-atom lab]
+                       (let [box-fn (fn [model-atom lab]
                                       [h-box
                                        :style  {:width "100px"}
                                        :align :center
@@ -660,8 +675,7 @@
                                          #(do
                                             (reset! model-atom (not @model-atom)))
                                          :style {:width "auto"
-                                                 :height "20px" }
-                                         ]
+                                                 :height "20px"}]
                                         [gap :size "20px"]
                                         [title :label lab :level :level2
                                          :style {:color (if @model-atom
@@ -695,7 +709,7 @@
                                        #(let [iargs (->>
                                                      (map vector (take 12 us/i-note-seq)
                                                           (map deref octave-notes-list))
-                                                     (filter (fn[[a b]] (when b a)))
+                                                     (filter (fn [[a b]] (when b a)))
                                                      (map first))]
                                           (dispatch [::events/set-custom-svaras iargs])
                                           (reset! show-select-svaras-popup
@@ -711,12 +725,11 @@
                                                   (not @show-select-svaras-popup))
                                           (reset! show-raga-popup
                                                   (not @show-raga-popup)))
-                                       :class "btn btn-default"]
-                                      ]]]]]]))
+                                       :class "btn btn-default"]]]]]]]))
                      (when @show-raga-popup
-                       (let [raga-labels (mapv (fn[[a b]] {:id a  :label b})
+                       (let [raga-labels (mapv (fn [[a b]] {:id a  :label b})
                                                (:raga-labels @(subscribe [::subs/lang-data])))
-                             box-fn (fn[{:keys [id label]}]
+                             box-fn (fn [{:keys [id label]}]
                                       [button
                                        :label label
                                        :style but-style
@@ -767,8 +780,7 @@
                                    :class "body"
                                    :align :center
                                    :children
-                                   [
-                                    [title :level :level2 :label "Lyrics"]
+                                   [[title :level :level2 :label "Lyrics"]
                                     [title :level :level4 :label
                                      "Put a comma between beats. E.g. Ae,ri,aa,li"]
                                     [gap :size "2vh"]
@@ -813,7 +825,7 @@
                           [[box :child
                             [:p "Octave: "
                              [:b (cstring/capitalize
-                                  (name @(subscribe[::subs/note-octave])))]]]
+                                  (name @(subscribe [::subs/note-octave])))]]]
                            [gap :size "2vw"]
                            [button :label "View Keyboard Help "
                             :class "btn-lg btn btn-secondary "
@@ -879,17 +891,40 @@
     (set! (.-font context) font)
     (.-width (.measureText context text))))
 
+(defn get-editor-style
+  []
+  (let [play-mode? (= :play @(subscribe [::subs/mode]))
+        winhgt (.-innerHeight js/window)
+        myhgt (- winhgt
+                 @editor-height)]
+    {:class "edit-composition"
+     :style {:overflow-y "scroll"
+             :height myhgt
+             :min-height myhgt
+             :flex-flow "column" :flex "1 0 0px"}
+           ;;this code sets the scroll bar to the bottom, so that the last type text is seen.
+     :ref
+     #(when (identity %)
+        (dispatch [::events/set-music-notes-element %])
+        (if play-mode?
+          (set! (.-scrollTop %) 0)
+          (when (> (.-scrollHeight %) myhgt)
+            (let [sctop  (- (.-scrollHeight %) myhgt)
+                  curpos (+ @cursor-y (.-scrollTop %))]
+              #_(println " setting sctop to  "  sctop " cursor-y " @cursor-y " myhgt " myhgt
+                         " sctop " (.-scrollHeight %) " cur sroll top " (.-scrollTop %))
+              (when (> curpos sctop)
+                (set! (.-scrollTop %) sctop))))))}))
+
 (defn swara-display-area
   []
-  (let [
-        edit-part-index (reagent/atom nil)
+  (let [edit-part-index (reagent/atom nil)
         edit-comp-title (reagent/atom nil)
         sahitya-editing? (reagent/atom false)
         delete-confirm (reagent/atom false)]
     (fn []
-      (let [winhgt (.-innerHeight js/window)
-            myhgt (- winhgt
-                     @editor-height)
+      (let [;;winhgt (.-innerHeight js/window)
+            ;;myhgt (- winhgt @editor-height)
             show-lyrics? @(subscribe [::subs/show-lyrics?])
             font-size (reagent/atom @(subscribe [::subs/font-size]))
             newline-on-avartan? @(subscribe [::subs/newline-on-avartan?])
@@ -897,423 +932,410 @@
             play-mode? (= :play @(subscribe [::subs/mode]))
             _ @(subscribe [::subs/onscreen-keyboard])]
         [:div
-         [:div
-          {:class "edit-composition"
-           :style {:overflow-y "scroll"
-                   :height myhgt
-                   :min-height myhgt
-                   :flex-flow "column" :flex "1 0 0px"}
-           ;;this code sets the scroll bar to the bottom, so that the last type text is seen.
-           :ref
-           #(when (identity %)
-              (dispatch [::events/set-music-notes-element %])
-              (if play-mode?
-                (set! (.-scrollTop %) 0)
-                (when (> (.-scrollHeight % ) myhgt)
-                  (let [sctop  (- (.-scrollHeight % ) myhgt)
-                        curpos (+ @cursor-y (.-scrollTop %))]
-                    #_(println " setting sctop to  "  sctop " cursor-y " @cursor-y " myhgt " myhgt
-                               " sctop "(.-scrollHeight % ) " cur sroll top "(.-scrollTop %))
-                    (when (> curpos sctop )
-                      (set! (.-scrollTop %) sctop))))))}
-          (when @delete-confirm
-            [modal-panel
-           :backdrop-on-click #(reset! delete-confirm false)
-             :child
-             [:div {:style {:min-width "min(80vw,400px)"
-                            :display "flex"
-                            :justify-content "center"}}
-              [v-box
-               :gap "4vh"
-               :align :center
-               :children
-               (if (> (->> @(subscribe [::subs/composition]) :score-parts count) 1)
-                 [[title :level :level2 :label "Delete Part?"]
-                  [h-box :gap "2vw" :children
-                   [[button :label "Cancel" :class "btn btn-default"
-                     :on-click (fn[_] (reset! delete-confirm nil))]
-                    [button :label "Delete" :class "btn btn-danger"
-                     :on-click (fn[_]
-                                 (do
-                                   (dispatch [::events/delete-part @delete-confirm])
-                                   (reset! delete-confirm nil)))]]]]
-                 [[title :level :level2 :label "The first part cannot be deleted"]
-                  [h-box :gap "2vw" :children
-                   [[button :label "OK" :class "btn btn-info"
-                     :on-click (fn[_] (reset! delete-confirm nil))]]]])]]])
+         (when @delete-confirm
+           [modal-panel
+            :backdrop-on-click #(reset! delete-confirm false)
+            :child
+            [:div {:style {:min-width "min(80vw,400px)"
+                           :display "flex"
+                           :justify-content "center"}}
+             [v-box
+              :gap "4vh"
+              :align :center
+              :children
+              (if (> (->> @(subscribe [::subs/composition]) :score-parts count) 1)
+                [[title :level :level2 :label "Delete Part?"]
+                 [h-box :gap "2vw" :children
+                  [[button :label "Cancel" :class "btn btn-default"
+                    :on-click (fn [_] (reset! delete-confirm nil))]
+                   [button :label "Delete" :class "btn btn-danger"
+                    :on-click (fn [_]
+                                (do
+                                  (dispatch [::events/delete-part @delete-confirm])
+                                  (reset! delete-confirm nil)))]]]]
+                [[title :level :level2 :label "The first part cannot be deleted"]
+                 [h-box :gap "2vw" :children
+                  [[button :label "OK" :class "btn btn-info"
+                    :on-click (fn [_] (reset! delete-confirm nil))]]]])]]])
 
-          [:div {:class "com-edit"}
-           (let
-               [comp @(subscribe [::subs/composition])
-                editing @(subscribe [::subs/currently-editing])
-                rect-style {:width 2 :height @font-size :y (int (* 0.3 @font-size))}
-                image-map (db/image-map
-                           (let [ilang @(subscribe [::subs/lang])]
-                             (if (or (= :bangla ilang) (= :hindi ilang))
-                               (name ilang)
-                               "english_SrR")))
-                draw-bhaag
-                (fn[score-part-index
-                    avartan-index
-                    bhaag-index
-                    note-map-seq]
-                  (let [cursor-map {:score-part-index score-part-index
-                                    :avartan-index avartan-index
-                                    :bhaag-index bhaag-index}
+         [:div {:class "com-edit"}
+          (let
+           [comp @(subscribe [::subs/composition])
+            editing @(subscribe [::subs/currently-editing])
+            rect-style {:width 2 :height @font-size :y (int (* 0.3 @font-size))}
+            image-map (db/image-map
+                       (let [ilang @(subscribe [::subs/lang])]
+                         (if (or (= :bangla ilang) (= :hindi ilang))
+                           (name ilang)
+                           "english_SrR")))
+            draw-bhaag
+            (fn [score-part-index
+                 avartan-index
+                 bhaag-index
+                 note-map-seq]
+              (let [cursor-map {:score-part-index score-part-index
+                                :avartan-index avartan-index
+                                :bhaag-index bhaag-index}
 
-                        sahitya (->> (get-in comp [:indexed-noteseq score-part-index avartan-index bhaag-index]))
-                        r3
-                        (->>
-                         note-map-seq
-                         (map vector (range))
-                         (reduce
-                          (fn[{:keys [x _] :as acc} [note-index note]]
-                            (let [;;this is the flat noteseq index.
+                    sahitya (->> (get-in comp [:indexed-noteseq score-part-index avartan-index bhaag-index]))
+                    r3
+                    (->>
+                     note-map-seq
+                     (map vector (range))
+                     (reduce
+                      (fn [{:keys [x _] :as acc} [note-index note]]
+                        (let [;;this is the flat noteseq index.
                                   ;;example: at position 11, we find
                                   ;;11  --  {:notes [{:svara [:madhyam :m+], :npb 3} {:svara [:madhyam :g], :npb 3} {:svara [:madhyam :r], :npb 3}]}
                                   ;;which can have multiple notes in it.
-                                  nseq-index
-                                  (db/get-noteseq-index
-                                   cursor-map
-                                   (:taal comp))
-                                  r2
-                                  (->>
-                                   note
-                                   :notes
-                                   (map vector (range))
-                                   (reduce
-                                    (fn[{:keys [x1 _] :as acc1}
-                                        [nsi {:keys [svara]}]]
+                              nseq-index
+                              (db/get-noteseq-index
+                               cursor-map
+                               (:taal comp))
+                              r2
+                              (->>
+                               note
+                               :notes
+                               (map vector (range))
+                               (reduce
+                                (fn [{:keys [x1 _] :as acc1}
+                                     [nsi {:keys [svara]}]]
                                       ;;create all notes in a single beat.
-                                      (let [note-xy-map (assoc cursor-map :nsi nsi :note-index note-index)
-                                            ith-note
-                                            (if-let [ival (image-map svara)]
-                                              [:image
-                                               {:height @font-size :width @font-size
-                                                :href ival
-                                                :class
-                                                (let [highlight-v
+                                  (let [note-xy-map (assoc cursor-map :nsi nsi :note-index note-index)
+                                        ith-note
+                                        (if-let [ival (image-map svara)]
+                                          [:image
+                                           {:height @font-size :width @font-size
+                                            :href ival
+                                            :class
+                                            (let [highlight-v
                                                       ;;don't match note sub index because only the
                                                       ;;first (or single) note is present in the highlight vector
-                                                      (map #(dissoc % :nsi)
-                                                           @(subscribe [::subs/highlighted-pos-set]))]
-                                                  (if (some #(= (dissoc note-xy-map :nsi) %)
-                                                            highlight-v)
-                                                    "highlight-color" ""))
-                                                :on-click
-                                                (fn[i]
-                                                  (reset! cursor-y (.-pageY i))
-                                                  (dispatch [::events/currently-editing :svaras])
-                                                  (dispatch [::events/set-click-index
+                                                  (map #(dissoc % :nsi)
+                                                       @(subscribe [::subs/highlighted-pos-set]))]
+                                              (if (some #(= (dissoc note-xy-map :nsi) %)
+                                                        highlight-v)
+                                                "highlight-color" ""))
+                                            :on-click
+                                            (fn [i]
+                                              (reset! cursor-y (.-pageY i))
+                                              (dispatch [::events/currently-editing :svaras])
+                                              (dispatch [::events/set-click-index
                                                              ;;for multi-note, always show on the first
-                                                             (assoc note-xy-map
-                                                                    :nsi 0)]))
-                                                :x x1 :y 5}]
+                                                         (assoc note-xy-map
+                                                                :nsi 0)]))
+                                            :x x1 :y 5}]
                                               ;;- and S
-                                              [:text {:x (+ (int (* 0.3 @font-size)) x1)
-                                                      :y (cond
-                                                           (> @font-size 32) 32
-                                                           (< @font-size 24) 24
-                                                           :else @font-size)
-                                                      :on-click
-                                                      (fn[_]
-                                                        (dispatch [::events/currently-editing :svaras])
-                                                        (dispatch [::events/set-click-index
-                                                                   note-xy-map]))}
-                                               (name (second svara))])
-                                            r3 (-> acc1
-                                                   (update-in [:images1] conj ith-note)
-                                                   (update-in [:x1] + (int (* 0.7 @font-size))))
+                                          [:text {:x (+ (int (* 0.3 @font-size)) x1)
+                                                  :y (cond
+                                                       (> @font-size 32) 32
+                                                       (< @font-size 24) 24
+                                                       :else @font-size)
+                                                  :on-click
+                                                  (fn [_]
+                                                    (dispatch [::events/currently-editing :svaras])
+                                                    (dispatch [::events/set-click-index
+                                                               note-xy-map]))}
+                                           (name (second svara))])
+                                        r3 (-> acc1
+                                               (update-in [:images1] conj ith-note)
+                                               (update-in [:x1] + (int (* 0.7 @font-size))))
 
                                             ;;if edit mode, a single cursor
                                             ;;if play mode, add all rects
-                                            r3
-                                            (if play-mode?
-                                              (update-in
-                                               r3 [:images1] conj
-                                               (let [phi @(subscribe [::subs/play-head-position])]
+                                        r3
+                                        (if (and play-mode?
+                                                 (not @(subscribe [::subs/youtube-sync?])))
+                                          (update-in
+                                           r3 [:images1] conj
+                                           (let [phi @(subscribe [::subs/play-head-position])]
+                                             [:rect
+                                              {:width "3px" :height @font-size
+                                               :fill "black"
+                                               :fill-opacity 0
+                                               :ref
+                                               #(when (identity %)
+                                                  (let [opac (str "fill-opacity:"
+                                                                  (if (= phi
+                                                                         (assoc cursor-map
+                                                                                :note-index note-index
+                                                                                :nsi nsi))
+                                                                    "1" "0"))]
+                                                    (set! (.-style %) opac)
+                                                    (dispatch [::events/register-elem
+                                                               nseq-index note-xy-map %])))
+                                               :x (+ x1 (int (* 0.2 @font-size)))
+                                               :y (int (* 0.2 @font-size))}]))
+                                          (let [curpos @(subscribe [::subs/get-click-index])]
+                                            (if (and (= note-xy-map curpos)
+                                                     (not play-mode?)
+                                                     (not @sahitya-editing?))
+                                              (do
+                                                (update-in
+                                                 r3 [:images1] conj
                                                  [:rect
-                                                  {:width "3px" :height @font-size
-                                                   :fill "black"
-                                                   :fill-opacity 0
-                                                   :ref
-                                                   #(when (identity %)
-                                                      (let [opac (str "fill-opacity:"
-                                                                      (if (= phi
-                                                                             (assoc cursor-map
-                                                                                    :note-index note-index
-                                                                                    :nsi nsi))
-                                                                        "1" "0"))]
-                                                        (set! (.-style %) opac)
-                                                        (dispatch [::events/register-elem
-                                                                   nseq-index note-xy-map %])))
-                                                   :x (+ x1 (int (* 0.2 @font-size)))
-                                                   :y (int (* 0.2 @font-size))}]))
-                                              (let [curpos @(subscribe [::subs/get-click-index])]
-                                                (if (and (= note-xy-map curpos) (not @sahitya-editing?))
-                                                  (do
-                                                      (update-in
-                                                       r3 [:images1] conj
-                                                       [:rect
-                                                        (assoc rect-style
-                                                               :x (+ x1 5)
-                                                               :y (if (= editing :sahitya) 25 5)
-                                                               :height (int (* 1.3 @font-size))
-                                                               :ref #(when (identity %)
-                                                                       ;;when moving, don't blink
-                                                                       ;;after its stationary start blinking
-                                                                       (js/setTimeout
-                                                                        (fn[]
-                                                                          (.add (.-classList %)
-                                                                                "blinking-cursor"))
-                                                                        1000)))]))
-                                                  r3)))
-                                            r3
-                                            (let [sah (get-in comp
-                                                              [:indexed-noteseq score-part-index
-                                                               avartan-index bhaag-index 
-                                                               note-index :lyrics])]
-                                              (if (> (count sah) 2)
-                                                (let [new-x (int (* (* 0.5 (count sah))
-                                                                    (* 0.333 @font-size)))
-                                                      old-x (get-in r3 [:x1]) ]
-                                                  #_(println sah "xswe" new-x " oldx-inc " old-x "now " (+ old-x new-x) 
-                                                           " (vector (* 0.5 (count sah)) (* 0.7 @font-size)) " 
-                                                           (vector (* 0.5 (count sah)) (* 0.7 @font-size))
-                                                           " ith " [note-index note])
-                                                  (update-in r3 [:x1] + 0 #_new-x))
-                                                r3))]
-                                        r3))
-                                    {:x1 x :images1 []}))
-                                  r5(-> acc
-                                        (update-in [:x] (constantly (:x1 r2)))
-                                        (update-in [:images] into (:images1 r2)))
+                                                  (assoc rect-style
+                                                         :x (+ x1 5)
+                                                         :y (if (= editing :sahitya) 25 5)
+                                                         :height (int (* 1.3 @font-size))
+                                                         :ref #(when (identity %)
+                                                                 ;;when moving, don't blink
+                                                                 ;;after its stationary start blinking
+                                                                     (js/setTimeout
+                                                                      (fn []
+                                                                        (.add (.-classList %)
+                                                                              "blinking-cursor"))
+                                                                      1000)))]))
+                                              r3)))
+                                        r3
+                                        (let [sah (get-in comp
+                                                          [:indexed-noteseq score-part-index
+                                                           avartan-index bhaag-index
+                                                           note-index :lyrics])]
+                                          (if (> (count sah) 2)
+                                            (let [new-x (int (* (* 0.5 (count sah))
+                                                                (* 0.333 @font-size)))
+                                                  old-x (get-in r3 [:x1])]
+                                              #_(println sah "xswe" new-x " oldx-inc " old-x "now " (+ old-x new-x)
+                                                         " (vector (* 0.5 (count sah)) (* 0.7 @font-size)) "
+                                                         (vector (* 0.5 (count sah)) (* 0.7 @font-size))
+                                                         " ith " [note-index note])
+                                              (update-in r3 [:x1] + 0 #_new-x))
+                                            r3))]
+                                    r3))
+                                {:x1 x :images1 []}))
+                              r5 (-> acc
+                                     (update-in [:x] (constantly (:x1 r2)))
+                                     (update-in [:images] into (:images1 r2)))
                                   ;;if more than 1 note in a single beat,
                                   ;;draw the ellipse under the notes
-                                  r6 (if (> (count (:notes note)) 1)
-                                       (update-in r5 [:images]
-                                                  conj
-                                                  [:polyline
-                                                   {:points
-                                                    (let [y0 (int (* 1 @font-size))
-                                                          sl (int (* 0.2 @font-size))]
+                              r6 (if (> (count (:notes note)) 1)
+                                   (update-in r5 [:images]
+                                              conj
+                                              [:polyline
+                                               {:points
+                                                (let [y0 (int (* 1 @font-size))
+                                                      sl (int (* 0.2 @font-size))]
                                                       ;;line with ends curved up
-                                                      (str (+ sl x) "," y0 " "
-                                                           (+ x ( * 2 sl)) "," (+ y0 sl) " "
-                                                           (:x1 r2) "," (+ y0 sl) " "
-                                                           (+ sl (:x1 r2)) "," y0))
-                                                    :stroke "black"
-                                                    :fill "none"}])
-                                       r5)
+                                                  (str (+ sl x) "," y0 " "
+                                                       (+ x (* 2 sl)) "," (+ y0 sl) " "
+                                                       (:x1 r2) "," (+ y0 sl) " "
+                                                       (+ sl (:x1 r2)) "," y0))
+                                                :stroke "black"
+                                                :fill "none"}])
+                                   r5)
                                   ;;add sam-khaali
-                                  r7 (if (= 0 note-index)
-                                       (update-in r6
-                                                  [:images] conj
-                                                  [:text {:x (int (* 0.5 @font-size))
-                                                          :y  (if (and show-lyrics? sahitya)
-                                                                (int (* 2.6 @font-size))
-                                                                (int (* 1.8 @font-size)))
-                                                          :style {:font-size (* 0.5 @font-size)}}
-                                                   (let [t @(subscribe [::subs/taal])
-                                                         sk-index
-                                                         (->> taal-def t :bhaags
-                                                              (take bhaag-index)
-                                                              (apply +)
-                                                              inc)]
-                                                     (get (-> taal-def t :sam-khaali )
-                                                          sk-index))])
-                                       r6)
+                              r7 (if (= 0 note-index)
+                                   (update-in r6
+                                              [:images] conj
+                                              [:text {:x (int (* 0.5 @font-size))
+                                                      :y  (if (and show-lyrics? sahitya)
+                                                            (int (* 2.6 @font-size))
+                                                            (int (* 1.8 @font-size)))
+                                                      :style {:font-size (* 0.5 @font-size)}}
+                                               (let [t @(subscribe [::subs/taal])
+                                                     sk-index
+                                                     (->> taal-def t :bhaags
+                                                          (take bhaag-index)
+                                                          (apply +)
+                                                          inc)]
+                                                 (get (-> taal-def t :sam-khaali)
+                                                      sk-index))])
+                                   r6)
 
-                                  r8 (update-in
-                                      r7
-                                      [:images] conj)]
-                              r8))
-                          {:x 5 :images []}))
-                        images
-                        (:images r3)
-                        x-end (:x r3)]
+                              r8 (update-in
+                                  r7
+                                  [:images] conj)]
+                          r8))
+                      {:x 5 :images []}))
+                    images
+                    (:images r3)
+                    x-end (:x r3)]
                     ;;add vertical bars for bhaag
                     ;;2 bars if the avartan starts
-                    {:images
-                     (let [pfn (fn[i] (int (* i @font-size)))
-                           line-style {:y2 (+ @font-size (pfn 0.3))
-                                       :y1 (pfn 0.3)
-                                       :stroke-width (pfn 0.05)
-                                       :stroke :black}]
-                       (if (= 0 bhaag-index)
-                         (into images
-                               [[:line (assoc line-style :x1 1 :x2 1)]
-                                [:line (assoc line-style :x1 (pfn 0.1) :x2 (pfn 0.1))]])
-                         (conj images [:line (assoc line-style :x1 1 :x2 1)])))
-                     :x x-end}))
-                comp-title
-                [v-box :align :center :children
-                 [[h-box
-                   :align :center
-                   :justify :center
-                   :children
-                   (if (and (not play-mode?) @edit-comp-title)
-                     [[gap :size "1vw"]
-                      [input-text
-                       :style {:font-size "x-large"}
-                       :model edit-comp-title
-                       :on-change (fn[x] (reset! edit-comp-title x))]
-                      [md-icon-button :md-icon-name "zmdi zmdi-check-circle"
-                       :on-click (fn[] (do
-                                         (dispatch [::events/update-comp-title @edit-comp-title])
-                                         (reset! edit-comp-title nil)))]]
-                     [[title :label :level3 :label (-> comp :title)]
-                      (when-not play-mode?
-                        [md-icon-button :md-icon-name "zmdi zmdi-edit"
-                         :on-click (fn[] (reset! edit-comp-title (-> comp :title)))])])]]]
+                {:images
+                 (let [pfn (fn [i] (int (* i @font-size)))
+                       line-style {:y2 (+ @font-size (pfn 0.3))
+                                   :y1 (pfn 0.3)
+                                   :stroke-width (pfn 0.05)
+                                   :stroke :black}]
+                   (if (= 0 bhaag-index)
+                     (into images
+                           [[:line (assoc line-style :x1 1 :x2 1)]
+                            [:line (assoc line-style :x1 (pfn 0.1) :x2 (pfn 0.1))]])
+                     (conj images [:line (assoc line-style :x1 1 :x2 1)])))
+                 :x x-end}))
+            comp-title
+            [v-box :align :center :children
+             [[h-box
+               :align :center
+               :justify :center
+               :children
+               (if (and (not play-mode?) @edit-comp-title)
+                 [[gap :size "1vw"]
+                  [input-text
+                   :style {:font-size "x-large"}
+                   :model edit-comp-title
+                   :on-change (fn [x] (reset! edit-comp-title x))]
+                  [md-icon-button :md-icon-name "zmdi zmdi-check-circle"
+                   :on-click (fn [] (do
+                                      (dispatch [::events/update-comp-title @edit-comp-title])
+                                      (reset! edit-comp-title nil)))]]
+                 [[title :label :level3 :label (-> comp :title)]
+                  (when-not play-mode?
+                    [md-icon-button :md-icon-name "zmdi zmdi-edit"
+                     :on-click (fn [] (reset! edit-comp-title (-> comp :title)))])])]]]
                 ;;returns  list of lists
                 ;;each element is one avartan
                 ;;each subelement is one bhaag.
-                disp-score-part
-                (fn[score-part-index score-part]
-                  (let [score-res
-                        (->> score-part
-                             (map-indexed
-                              (fn[avartan-index row]
-                                (let [res0
-                                      (->> (map-indexed
-                                            (fn[bhaag-index bhaag]
-                                              (let [{:keys [images x] :as bag}
-                                                    (draw-bhaag score-part-index avartan-index bhaag-index bhaag)
-                                                    cursor-map {:score-part-index score-part-index
-                                                                :avartan-index avartan-index
-                                                                :bhaag-index bhaag-index}
-                                                    sahitya (get-sahitya comp cursor-map)
-                                                    num-char-sahitya (apply + (map count sahitya))
-                                                    base-multiplier 3.25
+            disp-score-part
+            (fn [score-part-index score-part]
+              (let [score-res
+                    (->> score-part
+                         (map-indexed
+                          (fn [avartan-index row]
+                            (let [res0
+                                  (->> (map-indexed
+                                        (fn [bhaag-index bhaag]
+                                          (let [{:keys [images x] :as bag}
+                                                (draw-bhaag score-part-index avartan-index bhaag-index bhaag)
+                                                cursor-map {:score-part-index score-part-index
+                                                            :avartan-index avartan-index
+                                                            :bhaag-index bhaag-index}
+                                                sahitya (get-sahitya comp cursor-map)
+                                                num-char-sahitya (apply + (map count sahitya))
+                                                base-multiplier 3.25
                                                     ;;find the max width required for the lyrics and notes
                                                     ;;sometimes there are far more notes, and sometimes far more lyrics.
                                                     ;;the min-width should the wide enough to show the wider one (lyrics or notes)
-                                                    lyrics-multiplier (if (= 4 num-char-sahitya) base-multiplier
-                                                                 (+ base-multiplier (* 0.45 (- num-char-sahitya 4))))
-                                                    notes-in-bhaag (count (flatten (map :notes bhaag)))
-                                                    notes-multiplier (if (= 4 notes-in-bhaag) base-multiplier
-                                                                 (+ base-multiplier (* 0.7 (- notes-in-bhaag 4))))
-                                                    multiplier (if (> lyrics-multiplier notes-multiplier) lyrics-multiplier notes-multiplier)
-                                                    res [:div {:class "bhaag-item" :style
-                                                                { :min-width (* @font-size multiplier) 
-                                                                 :max-height (int (* (if show-lyrics? 2.8 2) @font-size))}}
-                                                         (reduce conj
-                                                                 [:svg {:xmlns "http://www.w3.org/2000/svg"
-                                                                        :width (+ x (int (* @font-size 0.6)))}]
-                                                                 images)
+                                                lyrics-multiplier (if (= 4 num-char-sahitya) base-multiplier
+                                                                      (+ base-multiplier (* 0.45 (- num-char-sahitya 4))))
+                                                notes-in-bhaag (count (flatten (map :notes bhaag)))
+                                                notes-multiplier (if (= 4 notes-in-bhaag) base-multiplier
+                                                                     (+ base-multiplier (* 0.7 (- notes-in-bhaag 4))))
+                                                multiplier (if (> lyrics-multiplier notes-multiplier) lyrics-multiplier notes-multiplier)
+                                                res [:div
+                                                     {:class "bhaag-item"
+                                                      :ref #(when %
+                                                              (dispatch [::events/register-bhaag-element cursor-map %]))
+                                                      :style
+                                                      {:min-width (* @font-size multiplier)
+                                                       :max-height (utils/bhaag-item-height show-lyrics? @font-size)}}
+                                                     (reduce conj
+                                                             [:svg {:xmlns "http://www.w3.org/2000/svg"
+                                                                    :width (+ x (int (* @font-size 0.6)))}]
+                                                             images)
 
-                                                         (let [xs (->> bhaag (map :notes) (map count))
-                                                               topsize (str (* 1.3 @font-size) "px")
-                                                               sah-list
-                                                               (->>
-                                                                (map vector (get-sahitya comp cursor-map) xs)
-                                                                (map
-                                                                 (fn[[s svara-count]]
-                                                                   (if (and s (> svara-count 1))
-                                                                     (str (clojure.string/trim s) (clojure.string/join
-                                                                             "" (repeat svara-count " ")))
-                                                                     s)))
-                                                                (clojure.string/join ","))]
-                                                           (when show-lyrics?
-                                                             [input-text
-                                                               :model sah-list
-                                                               :class "overlay-text"
-                                                               :style {:top topsize :font-size (* 0.8 @font-size)
-                                                                       :height (* 1 @font-size)
-                                                                       :border "1px dotted gray"
-                                                                       :caret-color "black"
-                                                                       :width "96%"
-                                                                       }
-                                                                       :disabled? play-mode?
-                                                              :change-on-blur? true
+                                                     (let [xs (->> bhaag (map :notes) (map count))
+                                                           topsize (str (* 1.3 @font-size) "px")
+                                                           sah-list
+                                                           (->>
+                                                            (map vector (get-sahitya comp cursor-map) xs)
+                                                            (map
+                                                             (fn [[s svara-count]]
+                                                               (if (and s (> svara-count 1))
+                                                                 (str (clojure.string/trim s) (clojure.string/join
+                                                                                               "" (repeat svara-count " ")))
+                                                                 s)))
+                                                            (clojure.string/join ","))]
+                                                       (when show-lyrics?
+                                                         [input-text
+                                                          :model sah-list
+                                                          :class "overlay-text"
+                                                          :style {:top topsize :font-size (* 0.8 @font-size)
+                                                                  :height (* 1 @font-size)
+                                                                  :border "1px dotted gray"
+                                                                  :caret-color "black"
+                                                                  :width "96%"}
+                                                          :disabled? play-mode?
+                                                          :change-on-blur? true
                                                               ;;when the sahitya text box is clicked,
                                                               ;;stop showing the cursor for svaras
-                                                              :attr {:on-focus
-                                                                     #(reset! sahitya-editing? true)
-                                                                     :on-blur
-                                                                     #(let [new-sahitya
-                                                                            (->> (clojure.string/split (.-value (.-target %)) #",")
-                                                                                           (map clojure.string/trim))]
-                                                                        
-                                                                        (dispatch [::events/conj-sahitya
-                                                                                   (assoc cursor-map :text-val new-sahitya)])
-                                                                        (reset! sahitya-editing? false))}
-                                                               :on-change (fn[x]
-                                                                            (let [new-sahitya
-                                                                                  (clojure.string/split x #",")]
-                                                                              (dispatch [::events/conj-sahitya
-                                                                                         (assoc cursor-map :text-val new-sahitya)])))]))]]
-                                                res))
-                                            row)
-                                           vec)]
-                                  res0)))
-                             vec)
-                        part-header
+                                                          :attr {:on-focus
+                                                                 #(reset! sahitya-editing? true)
+                                                                 :on-blur
+                                                                 #(let [new-sahitya
+                                                                        (->> (clojure.string/split (.-value (.-target %)) #",")
+                                                                             (map clojure.string/trim))]
+
+                                                                    (dispatch [::events/conj-sahitya
+                                                                               (assoc cursor-map :text-val new-sahitya)])
+                                                                    (reset! sahitya-editing? false))}
+                                                          :on-change (fn [x]
+                                                                       (let [new-sahitya
+                                                                             (clojure.string/split x #",")]
+                                                                         (dispatch [::events/conj-sahitya
+                                                                                    (assoc cursor-map :text-val new-sahitya)])))]))]]
+                                            res))
+                                        row)
+                                       vec)]
+                              res0)))
+                         vec)
+                    part-header
+                    [h-box
+                     :style {:justify-content "space-between"}
+                     :children
+                     [(let [edited-part-name (reagent/atom
+                                              (get-in comp [:score-parts score-part-index :part-title]))]
                         [h-box
-                         :style {:justify-content "space-between"}
+                         :gap "1vw"
+                         :align :center :justify :center
                          :children
-                         [(let [edited-part-name (reagent/atom
-                                                  (get-in comp [:score-parts score-part-index :part-title]))]
-                            [h-box
-                             :gap "1vw"
-                             :align :center :justify :center
-                             :children
-                             (if (and (not play-mode?) (= @edit-part-index score-part-index))
-                               [[gap :size "1vw"]
-                                [input-text :model edited-part-name
-                                 :style {:font-size "large"}
-                                 :on-change (fn[x] (reset! edited-part-name x))]
-                                [md-icon-button :md-icon-name "zmdi zmdi-check-circle"
-                                 :on-click (fn[] (do
-                                                   (dispatch [::events/update-part-title score-part-index
-                                                              @edited-part-name])
-                                                   (reset! edit-part-index nil)))]]
-                               [[gap :size "1vw"]
-                                [title :level :level3
-                                 :label (get-in comp [:score-parts score-part-index :part-title])]
-                                (when-not play-mode?
-                                  [md-icon-button :md-icon-name "zmdi zmdi-edit"
-                                   :on-click (fn[] (reset! edit-part-index score-part-index))])])])
-                          (when-not play-mode?
-                            [h-box
-                             :gap "1vw"
-                             :align :center :justify :center
-                             :children
-                             [(if (hidden-parts score-part-index)
-                                [md-icon-button :md-icon-name "zmdi zmdi-chevron-down zmdi-hc-lg"
-                                 :on-click (fn[] (dispatch [::events/unhide-part score-part-index]))]
-                                [md-icon-button :md-icon-name "zmdi zmdi-chevron-up zmdi-hc-lg"
-                                 :on-click (fn[] (dispatch [::events/hide-part score-part-index]))])
-                              [md-icon-button :md-icon-name "zmdi zmdi-delete zmdi-hc-lg"
-                               :on-click (fn[]
-                                           (reset! delete-confirm score-part-index))]
-                              [gap :size "0.5vw"]]])]]
-                        part-footer
-                        [v-box :align :center :children
-                         [[md-icon-button :md-icon-name "zmdi zmdi-plus-circle-o"
-                           :on-click (fn[] (dispatch [::events/insert-empty-part "abcd"]))]]]
-                        score-fin
-                        (let [rows (if newline-on-avartan?
-                                     (reduce conj [:div]
-                                             (mapv #(reduce conj [:div {:class "box-row"}] %) score-res))
-                                     (reduce conj [:div {:class "box-row"}] (reduce into score-res)))
-                              score-ret
-                              [:div {:class "part-wrapper part-border"}
-                               part-header
-                               (when-not (and (not play-mode? )
-                                              (hidden-parts score-part-index)) rows)
-                               [gap :size "1vh"]]]
-                          [:div {:class "wrapper"} score-ret
-                           (when-not play-mode? part-footer)])]
-                    score-fin))
-                fin
-                (->> comp
-                     :indexed-noteseq
-                     (map-indexed disp-score-part)
-                     vec
-                     (reduce conj [:div {:class "score-parts"} comp-title]))]
-             fin)]]]))))
+                         (if (and (not play-mode?) (= @edit-part-index score-part-index))
+                           [[gap :size "1vw"]
+                            [input-text :model edited-part-name
+                             :style {:font-size "large"}
+                             :on-change (fn [x] (reset! edited-part-name x))]
+                            [md-icon-button :md-icon-name "zmdi zmdi-check-circle"
+                             :on-click (fn [] (do
+                                                (dispatch [::events/update-part-title score-part-index
+                                                           @edited-part-name])
+                                                (reset! edit-part-index nil)))]]
+                           [[gap :size "1vw"]
+                            [title :level :level3
+                             :label (get-in comp [:score-parts score-part-index :part-title])]
+                            (when-not play-mode?
+                              [md-icon-button :md-icon-name "zmdi zmdi-edit"
+                               :on-click (fn [] (reset! edit-part-index score-part-index))])])])
+                      (when-not play-mode?
+                        [h-box
+                         :gap "1vw"
+                         :align :center :justify :center
+                         :children
+                         [(if (hidden-parts score-part-index)
+                            [md-icon-button :md-icon-name "zmdi zmdi-chevron-down zmdi-hc-lg"
+                             :on-click (fn [] (dispatch [::events/unhide-part score-part-index]))]
+                            [md-icon-button :md-icon-name "zmdi zmdi-chevron-up zmdi-hc-lg"
+                             :on-click (fn [] (dispatch [::events/hide-part score-part-index]))])
+                          [md-icon-button :md-icon-name "zmdi zmdi-delete zmdi-hc-lg"
+                           :on-click (fn []
+                                       (reset! delete-confirm score-part-index))]
+                          [gap :size "0.5vw"]]])]]
+                    part-footer
+                    [v-box :align :center :children
+                     [[md-icon-button :md-icon-name "zmdi zmdi-plus-circle-o"
+                       :on-click (fn [] (dispatch [::events/insert-empty-part "abcd"]))]]]
+                    score-fin
+                    (let [rows (if newline-on-avartan?
+                                 (reduce conj [:div]
+                                         (mapv #(reduce conj [:div {:class "box-row"}] %) score-res))
+                                 (reduce conj [:div {:class "box-row"}] (reduce into score-res)))
+                          score-ret
+                          [:div {:class "part-wrapper part-border"}
+                           part-header
+                           (when-not (and (not play-mode?)
+                                          (hidden-parts score-part-index)) rows)
+                           [gap :size "1vh"]]]
+                      [:div {:class "wrapper"} score-ret
+                       (when-not play-mode? part-footer)])]
+                score-fin))
+            fin
+            (->> comp
+                 :indexed-noteseq
+                 (map-indexed disp-score-part)
+                 vec
+                 (reduce conj [:div {:class "score-parts"} comp-title]))]
+            fin)]]))))
 
 
 (defn play-keyboard-footer
@@ -1676,18 +1698,51 @@
                 (conj bbox share-panel)
                 :else bbox)]]))))
 
+(defn set-editor-height
+  [ref]
+  (when (identity ref)
+    (let [ch (.-offsetHeight ref)]
+      (reset! editor-height ch))))
+
+(defn show-youtube-sync-editor
+  []
+  (let [editor-style (get-editor-style)]
+    [:div
+     [:div editor-style
+      [v-box
+       :style {:width "100%"}
+       :children
+       [[youtube/youtube-iframe-box]
+        [swara-display-area]]]]
+     [:div {:class "keyboard wow fadeInUp"
+            :ref set-editor-height}
+      [timeline-view]
+      (let [istate @(subscribe [::subs/mode])]
+        (when (= :edit istate)
+          [swara-buttons]))]]))
+
+(defn show-swaranotebook-editor
+  []
+  (let [editor-style (get-editor-style)]
+    [:div
+     [:div editor-style
+      [v-box
+       :style {:width "100%"}
+       :children [[swara-display-area]]]]
+     [:div {:class "keyboard wow fadeInUp"
+            :ref set-editor-height}
+      (let [istate @(subscribe [::subs/mode])]
+        (if (= :play istate)
+          [play-keyboard-footer]
+          [swara-buttons]))]]))
+
 (defn show-editor
   []
-  [:div
-   [swara-display-area]
-   [:div {:class "keyboard wow fadeInUp"
-          :ref #(when (identity %)
-                  (let [ch (.-offsetHeight %)]
-                    (reset! editor-height ch)))}
-    (let [istate @(subscribe [::subs/mode])]
-      (if (= :play istate)
-        [play-keyboard-footer]
-        [swara-buttons]))]])
+  (let [youtube-sync @(subscribe [::subs/youtube-sync?])]
+    (println "yt sync " youtube-sync)
+    (if youtube-sync
+      [show-youtube-sync-editor]
+      [show-swaranotebook-editor])))
 
 (defn wait-for
   [msg]
