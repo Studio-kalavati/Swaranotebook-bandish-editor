@@ -1174,62 +1174,6 @@ the index"
                 (sort-by second))]
     a1))
 
-#_(defn youtube-start-event-fn
-  [{:keys [db]} now]
-  (let [time-range (-> db :props :time-ranges)
-        [start-time end-time] (first time-range)
-        note-interval (/ 60 bpm)
-        play-head-position
-        (->> db :composition :index
-             (keep-indexed
-              (fn[indx i]
-                (let [cursor-vals (mapv (:play-head-position db) cursor-index-keys)]
-                  (when (= i cursor-vals) indx))))
-             first)
-        ;;play-head-position refers to whole notes (e.g 5 /16)
-        ;;but if the notes have dugun/tigun, we need the number of actual notes.
-        ;;for each if each note is dugun,
-        ;;if play-head-position is 4, then play-head-subnotes-position is 8
-        ;;play-head-subnotes-position (->> db :composition :noteseq (take play-head-position) (map (comp count :notes)) (apply + ))
-        a1 (get-play-at-time-seq {:composition (->> db :composition)
-                                  :beat-mode :metronome
-                                  :bpm bpm
-                                  :play-head-position play-head-position
-                                  :now now})
-
-        ;;a sequence of vectors of the form [svara-index note-index]
-        ;;where svara-index is usually less than note-index because
-        ;;note index also contains beat & tanpura notes
-        svara2note-indexes
-        (->> a1
-             (map vector (range))
-             ;;select only notes encoded as [:mandra :s]
-             (filter (fn[[indx inote]] (vector? (first inote))))
-             (map vector (range))
-             (map (fn[[svara-index [note-index inote]]] [svara-index note-index inote])))
-        ;;a1 contains notes, tanpura, beat sounds.
-        ;;we need another index that translates a note index to the visual index which
-        ;;contains just the notes
-        noteindex-to-svaraindex-map (->> svara2note-indexes
-                                         (map (fn[[svara-index note-index inote]]
-                                                {note-index svara-index}))
-                                         (apply merge))
-        play-note-index 0
-        res
-        {:play-state :start
-         :play-at-time a1
-         :play-note-index play-note-index
-         :note-interval note-interval
-         :num-notes (count a1)
-         :bhaag-index 0
-         :elem-index (if (> play-head-position 0)
-                       (let [r (subvec (:elem-index db) play-head-position)]
-                         r)
-                       (:elem-index db))
-         ;;translates the play-note index to the view-note index
-         :play-to-view-map noteindex-to-svaraindex-map}]
-    res))
-
 (defn play-start-event-fn
   [{:keys [db]} now]
   (let [bpm (-> db :props :bpm)
@@ -1314,15 +1258,6 @@ the index"
         :dispatch [::clock-tick-event]}))))
 
 (reg-event-fx
- ::set-youtube-sync
- [log-event]
- (fn [{:keys [db]} [_ sync]]
-   (let [ndb {:db (update-in db [:props :youtube-sync] (constantly sync))}]
-     (if sync
-       (assoc ndb :dispatch [::hide-onscreen-keyboard])
-       ndb))))
-
-(reg-event-fx
  ::pause
  [log-event]
  (fn [{:keys [db]} [_ _]]
@@ -1398,67 +1333,6 @@ the index"
             (let [[_ iat _] (play-at-time i)]
               (>= at (time-change-fn iat)))))
      (iterate inc play-note-index))))
-
-(defn get-current-segment-index
-  "returns the current segment index given the play-head of the youtube player"
-  [cur-yt-time time-ranges]
-  (->> time-ranges
-       (keep-indexed (fn [ind [s e]]
-                       (when (and (>= cur-yt-time s) (< cur-yt-time e)) ind)))
-       first))
-
-(reg-event-fx
- ::youtube-clock-tick-event
- (fn [{:keys [db]} [_ _]]
-   (try
-     (let [player (get-in db [:props :youtube-player])]
-       (when (and player (= 1 (.getPlayerState ^js/YT.Player player)))
-         (let [cur-yt-time (.getCurrentTime ^js/YT.Player player)
-               cur-segment-index (->> db :props :time-ranges (get-current-segment-index cur-yt-time))
-               cur-part-title (get-in db [:props :timeline-segment-parts cur-segment-index])]
-
-           (println " csi " cur-segment-index " cpt " cur-part-title)
-           ;;if there is a part associated with the current segment
-           (when cur-part-title
-             (let [cur-segment-setime (get-in db [:props :time-ranges cur-segment-index])
-                   [start-time end-time] cur-segment-setime
-                   cur-score-part-index
-                   (->> db :composition
-                        :score-parts
-                        (keep-indexed
-                         (fn [ind part]
-                           (when (= (name cur-part-title) (name (:part-title part))) ind)))
-                        first)
-                   indexed-part (get-in db [:composition :indexed-noteseq cur-score-part-index])
-                   num-avartans (count indexed-part)
-                   avartan-playtime (/ (- end-time start-time) num-avartans)
-                   avartan-index (->> (range num-avartans)
-                                      (keep-indexed
-                                       (fn [indx i]
-                                         (let [s (+ start-time (* avartan-playtime i))
-                                               e (+ s avartan-playtime)]
-                                           (when (and (>= cur-yt-time s) (< cur-yt-time e))
-                                             indx))))
-                                      first)
-                   same-blink-elem? (-> db :current-blink-cursor
-                                        (= [cur-score-part-index avartan-index]))]
-               (when-not same-blink-elem?
-                 (let [blink-elems (get-in db
-                                           [:blink-bhaag-index cur-score-part-index
-                                            avartan-index])
-                       show-lyrics? (get-in db [:props :show-lyrics])
-                       font-size (get-in db [:dispinfo :font-size])]
-                   (mapv
-                    #(set! (.-style %)
-                           (str "background-color: antiquewhite;" "max-height: "
-                                (utils/bhaag-item-height show-lyrics? font-size) "px"))
-                    (vals blink-elems))))
-               {:db (if same-blink-elem? db
-                        (update-in db [:current-blink-cursor]
-                                   (constantly [cur-score-part-index avartan-index])))})))))
-     (catch js/Error e
-       (println " caught error in youtube-clock-tick-event" e)
-       {}))))
 
 (reg-event-fx
  ::clock-tick-event
@@ -1566,42 +1440,6 @@ the index"
   ::currently-editing
   (fn [{:keys [db]} [_ editing]]
     {:db (update-in db [:props :currently-editing] (constantly editing))}))
-
-(reg-event-db
-   ::set-youtube-video-id
-   (fn [db [_ video-id]]
-     (assoc-in db [:props :youtube-video-id] video-id)))
-
-(reg-event-db
-   ::set-youtube-player
-   (fn [db [_ player]]
-     (assoc-in db [:props :youtube-player] player)))
-
-
-
-
-
-
-
-
-
-(reg-event-db
-    ::set-youtube-video-duration
-    (fn [db [_ duration]]
-      (assoc-in db [:props :youtube-video-duration] duration)))
-
-(reg-event-db
-  ::youtube-state-change
-  (fn [db [_ state]]
-    (let [state-keyword (case state
-                         -1 :unstarted
-                         0 :ended
-                         1 :playing
-                         2 :paused
-                         3 :buffering
-                         5 :video-cued
-                         :unknown)]
-      (assoc-in db [:props :youtube-player-state] state-keyword))))
 
 #_(reg-event-fx
   ::pitch-shift

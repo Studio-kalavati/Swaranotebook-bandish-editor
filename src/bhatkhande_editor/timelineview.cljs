@@ -179,4 +179,4 @@
                                 :child [md-icon-button
                                         :md-icon-name "zmdi zmdi-youtube"
                                         :on-click
-                                        #(dispatch [::events/show-video-change-modal true])]])])])]]))))))
+                                        #(dispatch [::ytevents/show-video-change-modal true])]])])])]]))))))
