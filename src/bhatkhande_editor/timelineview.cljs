@@ -10,6 +10,7 @@
    [bhatkhande-editor.ytevents :as ytevents]
    [bhatkhande-editor.events :as events]
    [bhatkhande-editor.db :as db]
+   [bhatkhande-editor.ytsubs :as ytsubs]
    [bhatkhande-editor.subs :as subs]))
 
 (defn timeline-view
@@ -53,14 +54,14 @@
                         (str mins ":" (when (< secs 10) "0") secs ":" (when (< ms 10) "0") ms)))]
 
     (fn []
-      (let [segments @(subscribe [::subs/timeline-segments])
-            youtube-sync @(subscribe [::subs/youtube-sync?])
+      (let [segments @(subscribe [::ytsubs/timeline-segments])
+            youtube-sync @(subscribe [::ytsubs/youtube-sync?])
             play-mode? (and youtube-sync (= :play @(subscribe [::subs/mode])))
             part-titles @(subscribe [::subs/part-titles])
-            segment-parts @(subscribe [::subs/timeline-segment-parts])
-            selected-segment @(subscribe [::subs/selected-timeline-segment])]
+            segment-parts @(subscribe [::ytsubs/timeline-segment-parts])
+            selected-segment @(subscribe [::ytsubs/selected-timeline-segment])]
         (when youtube-sync
-          (let [total-duration (or @(subscribe [::subs/youtube-video-duration]) 0)
+          (let [total-duration (or @(subscribe [::ytsubs/youtube-video-duration]) 0)
                 cumulative-percentages (reductions + segments)
                 time-ranges
                 (->> (map-indexed
@@ -130,7 +131,7 @@
                  :justify :center
                  :gap "5px"
                  :children (concat
-                            [(if (= :playing @(subscribe [::subs/youtube-player-state]))
+                            [(if (= :playing @(subscribe [::ytsubs/youtube-player-state]))
                                [md-icon-button
                                 :md-icon-name "zmdi zmdi-pause zmdi-hc-lg"
                                 :on-click #(dispatch [::ytevents/pause-youtube-video])]
@@ -165,7 +166,7 @@
                               #(dispatch [::ytevents/set-timeline-segment-part selected-segment %])]
                              [title :level :level3 :label (str "From: " (format-time selected-start-time))]
                              (when (and play-mode?
-                                        (not= :playing @(subscribe [::subs/youtube-player-state])))
+                                        (not= :playing @(subscribe [::ytsubs/youtube-player-state])))
                                [box :align :end
                                 :child [md-icon-button
                                         :md-icon-name "zmdi zmdi-edit"
