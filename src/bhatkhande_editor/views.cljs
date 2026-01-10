@@ -31,11 +31,9 @@
    [clojure.string :as cstring]
      [bhatkhande-editor.events :as events]
      [bhatkhande-editor.routes :as routes]
-     [bhatkhande-editor.timelineview :refer [timeline-view]]
      [bhatkhande-editor.db :as db :refer [mswaras pitch-options-list get-sahitya]]
      [bhatkhande-editor.subs :as subs]
-     [bhatkhande-editor.utils :as utils]
-     [bhatkhande-editor.youtube :as youtube]))
+     [bhatkhande-editor.utils :as utils]))
 
 (def editor-height (reagent/atom 0))
 (def cursor-y (reagent/atom 0))
@@ -1044,49 +1042,48 @@
                                             ;;if edit mode, a single cursor
                                             ;;if play mode, add all rects
                                         r3
-                                        (if (and play-mode?
-                                                 (not @(subscribe [::subs/youtube-sync?])))
-                                          (update-in
-                                           r3 [:images1] conj
-                                           (let [phi @(subscribe [::subs/play-head-position])]
-                                             [:rect
-                                              {:width "3px" :height @font-size
-                                               :fill "black"
-                                               :fill-opacity 0
-                                               :ref
-                                               #(when (identity %)
-                                                  (let [opac (str "fill-opacity:"
-                                                                  (if (= phi
-                                                                         (assoc cursor-map
-                                                                                :note-index note-index
-                                                                                :nsi nsi))
-                                                                    "1" "0"))]
-                                                    (set! (.-style %) opac)
-                                                    (dispatch [::events/register-elem
-                                                               nseq-index note-xy-map %])))
-                                               :x (+ x1 (int (* 0.2 @font-size)))
-                                               :y (int (* 0.2 @font-size))}]))
-                                          (let [curpos @(subscribe [::subs/get-click-index])]
-                                            (if (and (= note-xy-map curpos)
-                                                     (not play-mode?)
-                                                     (not @sahitya-editing?))
-                                              (do
-                                                (update-in
-                                                 r3 [:images1] conj
-                                                 [:rect
-                                                  (assoc rect-style
-                                                         :x (+ x1 5)
-                                                         :y (if (= editing :sahitya) 25 5)
-                                                         :height (int (* 1.3 @font-size))
-                                                         :ref #(when (identity %)
+                                        (if play-mode?
+                                            (update-in
+                                             r3 [:images1] conj
+                                             (let [phi @(subscribe [::subs/play-head-position])]
+                                               [:rect
+                                                {:width "3px" :height @font-size
+                                                 :fill "black"
+                                                 :fill-opacity 0
+                                                 :ref
+                                                 #(when (identity %)
+                                                    (let [opac (str "fill-opacity:"
+                                                                    (if (= phi
+                                                                           (assoc cursor-map
+                                                                                  :note-index note-index
+                                                                                  :nsi nsi))
+                                                                      "1" "0"))]
+                                                      (set! (.-style %) opac)
+                                                      (dispatch [::events/register-elem
+                                                                 nseq-index note-xy-map %])))
+                                                 :x (+ x1 (int (* 0.2 @font-size)))
+                                                 :y (int (* 0.2 @font-size))}]))
+                                            (let [curpos @(subscribe [::subs/get-click-index])]
+                                              (if (and (= note-xy-map curpos)
+                                                       (not play-mode?)
+                                                       (not @sahitya-editing?))
+                                                (do
+                                                  (update-in
+                                                   r3 [:images1] conj
+                                                   [:rect
+                                                    (assoc rect-style
+                                                           :x (+ x1 5)
+                                                           :y (if (= editing :sahitya) 25 5)
+                                                           :height (int (* 1.3 @font-size))
+                                                           :ref #(when (identity %)
                                                                  ;;when moving, don't blink
                                                                  ;;after its stationary start blinking
-                                                                     (js/setTimeout
-                                                                      (fn []
-                                                                        (.add (.-classList %)
-                                                                              "blinking-cursor"))
-                                                                      1000)))]))
-                                              r3)))
+                                                                   (js/setTimeout
+                                                                    (fn []
+                                                                      (.add (.-classList %)
+                                                                            "blinking-cursor"))
+                                                                    1000)))]))
+                                                r3)))
                                         r3
                                         (let [sah (get-in comp
                                                           [:indexed-noteseq score-part-index
@@ -1704,23 +1701,6 @@
     (let [ch (.-offsetHeight ref)]
       (reset! editor-height ch))))
 
-(defn show-youtube-sync-editor
-  []
-  (let [editor-style (get-editor-style)]
-    [:div
-     [:div editor-style
-      [v-box
-       :style {:width "100%"}
-       :children
-       [[youtube/youtube-iframe-box]
-        [swara-display-area]]]]
-     [:div {:class "keyboard wow fadeInUp"
-            :ref set-editor-height}
-      [timeline-view]
-      (let [istate @(subscribe [::subs/mode])]
-        (when (= :edit istate)
-          [swara-buttons]))]]))
-
 (defn show-swaranotebook-editor
   []
   (let [editor-style (get-editor-style)]
@@ -1735,14 +1715,6 @@
         (if (= :play istate)
           [play-keyboard-footer]
           [swara-buttons]))]]))
-
-(defn show-editor
-  []
-  (let [youtube-sync @(subscribe [::subs/youtube-sync?])]
-    (println "yt sync " youtube-sync)
-    (if youtube-sync
-      [show-youtube-sync-editor]
-      [show-swaranotebook-editor])))
 
 (defn wait-for
   [msg]
@@ -1769,7 +1741,7 @@
 (defmethod routes/panels :load-sounds-panel []
   (wait-for "Loading Santoor and Tabla sounds"))
 
-(defmethod routes/panels :home-panel [] [show-editor])
+(defmethod routes/panels :home-panel [] [show-swaranotebook-editor])
 
 (defmethod routes/panels :list-comps-panel [] [list-comps])
 

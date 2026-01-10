@@ -232,3 +232,9 @@
   ::max-num-avartans
   (fn [db [_ _]]
     (count (:avartan-first-note db))))
+
+(reg-sub
+ ::youtube-sync?
+ :<- [::props]
+ (fn [props [_ _]]
+   (:youtube-sync props)))
