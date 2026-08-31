@@ -272,3 +272,41 @@
          [0 0 3 0 0] [0 0 2 3 0],
          [1 0 3 3 0] [1 0 3 2 0]}})
       (add-indexes init-comp)))
+
+(def ^:private marks-in-order
+  "sam/khaali labels in the order they are drawn across the avartan.
+  This is the exact call views.cljs makes for each bhaag."
+  db/bhaag-marks)
+
+(deftest bhaag-start-beats-test
+  (is (= [1 5 9 13] (db/bhaag-start-beats [4 4 4 4])))
+  (is (= [1 3 6 8] (db/bhaag-start-beats [2 3 2 3])))
+  (is (= [1 4 6] (db/bhaag-start-beats [3 2 2]))))
+
+(deftest skip-khaali-numbering-test
+  ;;khaali is not counted, so the bhaag after it is 3 and not 4
+  (is (= ["x" "2" "o" "3"] (marks-in-order :teentaal false)))
+  (is (= ["x" "2" "0" "3"] (marks-in-order :jhaptaal false))))
+
+(deftest count-khaali-numbering-test
+  ;;the sargam-spec numbering, kept for anyone taught that way
+  (is (= ["x" "2" "o" "4"] (marks-in-order :teentaal true)))
+  (is (= ["x" "2" "0" "4"] (marks-in-order :jhaptaal true))))
+
+(deftest taals-already-skipping-khaali-are-unchanged-test
+  ;;these taals are numbered without counting khaali upstream too,
+  ;;so toggling must not move their labels
+  (doseq [taal [:ektaal :rupak :dadra :kehrwa :adachautaal]]
+    (is (= (marks-in-order taal true) (marks-in-order taal false))
+        (str (name taal) " changed when it should not have"))))
+
+(deftest sam-and-khaali-marks-preserved-test
+  ;;every taal keeps one label per bhaag, and sam/khaali glyphs survive
+  (doseq [taal (keys taal-def)]
+    (doseq [count-khaali? [true false]]
+      (let [marks (marks-in-order taal count-khaali?)]
+        (is (= (count (:bhaags (taal-def taal))) (count marks))
+            (str (name taal) " lost a bhaag label"))
+        (is (= (filterv db/khaali-marks (marks-in-order taal true))
+               (filterv db/khaali-marks marks))
+            (str (name taal) " khaali markers moved"))))))
