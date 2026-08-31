@@ -1045,6 +1045,11 @@ the index"
    {:db (update-in db [:props :newline-on-avartan?] (constantly ival))}))
 
 (reg-event-fx
+ ::count-khaali?
+ (fn [{:keys [db]} [_ ival]]
+   {:db (update-in db [:props :count-khaali?] (constantly ival))}))
+
+(reg-event-fx
  ::set-bpm
  [log-event]
  (fn [{:keys [db]} [_ ival]]

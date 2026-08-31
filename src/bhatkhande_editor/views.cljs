@@ -240,6 +240,7 @@
         newsletter-signup? (reagent/atom true)
         show-lyrics? (reagent/atom @(subscribe [::subs/show-lyrics?]))
         newline-on-avartan? (reagent/atom @(subscribe [::subs/newline-on-avartan?]))
+        count-khaali? (reagent/atom @(subscribe [::subs/count-khaali?]))
         youtube-sync? (reagent/atom @(subscribe [::subs/youtube-sync?]))
         title-val (reagent/atom "")
         svaras-on @(subscribe [::subs/custom-svaras])
@@ -500,6 +501,17 @@
                                  (dispatch [::events/newline-on-avartan? nval]))]
                              [gap :size "20px"]
                              [title :label "One Avartan per row?"
+                              :level :level3]])
+                           (asjc-hbox
+                            [[checkbox
+                              :model count-khaali?
+                              :style {:width "auto" :height "20px"}
+                              :on-change
+                              #(let [nval (not @count-khaali?)]
+                                 (reset! count-khaali? nval)
+                                 (dispatch [::events/count-khaali? nval]))]
+                             [gap :size "20px"]
+                             [title :label "Count khaali when numbering talis?"
                               :level :level3]])
                            (asjc-hbox
                             [[checkbox
@@ -926,6 +938,7 @@
             show-lyrics? @(subscribe [::subs/show-lyrics?])
             font-size (reagent/atom @(subscribe [::subs/font-size]))
             newline-on-avartan? @(subscribe [::subs/newline-on-avartan?])
+            count-khaali? @(subscribe [::subs/count-khaali?])
             hidden-parts @(subscribe [::subs/hidden-parts])
             play-mode? (= :play @(subscribe [::subs/mode]))
             _ @(subscribe [::subs/onscreen-keyboard])]
@@ -966,6 +979,7 @@
                          (if (or (= :bangla ilang) (= :hindi ilang))
                            (name ilang)
                            "english_SrR")))
+            bhaag-marks (db/bhaag-marks (:taal comp) count-khaali?)
             draw-bhaag
             (fn [score-part-index
                  avartan-index
@@ -1130,14 +1144,7 @@
                                                             (int (* 2.6 @font-size))
                                                             (int (* 1.8 @font-size)))
                                                       :style {:font-size (* 0.5 @font-size)}}
-                                               (let [t @(subscribe [::subs/taal])
-                                                     sk-index
-                                                     (->> taal-def t :bhaags
-                                                          (take bhaag-index)
-                                                          (apply +)
-                                                          inc)]
-                                                 (get (-> taal-def t :sam-khaali)
-                                                      sk-index))])
+                                               (get bhaag-marks bhaag-index)])
                                    r6)
 
                               r8 (update-in

@@ -34,6 +34,57 @@
         res (+ a1 a2 note-index)]
     res))
 
+(def khaali-marks
+  "Markers that denote a khaali bhaag. sargam-spec is inconsistent about which
+  glyph it uses, so both are recognised."
+  #{"o" "0"})
+
+(def sam-mark "x")
+
+(defn bhaag-start-beats
+  "1 based beat number on which each bhaag of the taal starts."
+  [bhaags]
+  (->> bhaags (reductions + 0) butlast (mapv inc)))
+
+(defn skip-khaali-marks
+  "Renumber the tali markers so khaali bhaags are not counted.
+  sargam-spec numbers teentaal as x 2 o 4, as though the khaali took a number of
+  its own. Counting only the talis gives x 2 o 3, which is how the taal is
+  recited. Sam and khaali markers are carried over untouched."
+  [{:keys [bhaags sam-khaali]}]
+  (->> (bhaag-start-beats bhaags)
+       (reduce
+        (fn [{:keys [tali] :as acc} beat]
+          (let [mark (get sam-khaali beat)]
+            (cond
+              (nil? mark) acc
+              (= sam-mark mark) (-> acc
+                                    (assoc :tali 1)
+                                    (assoc-in [:marks beat] mark))
+              (khaali-marks mark) (assoc-in acc [:marks beat] mark)
+              :else (-> acc
+                        (assoc :tali (inc tali))
+                        (assoc-in [:marks beat] (str (inc tali)))))))
+        {:tali 0 :marks {}})
+       :marks))
+
+(defn sam-khaali-marks
+  "Map of 1 based beat number to the tali/khaali label drawn under that beat.
+  When count-khaali? is true the taal definition is used as-is, otherwise khaali
+  bhaags are skipped while numbering the talis."
+  [taal count-khaali?]
+  (let [td (taal-def taal)]
+    (if count-khaali?
+      (:sam-khaali td)
+      (skip-khaali-marks td))))
+
+(defn bhaag-marks
+  "Tali/khaali label for each bhaag of the taal, in display order, so a bhaag
+  label is a lookup by bhaag-index rather than a beat count at render time."
+  [taal count-khaali?]
+  (let [marks (sam-khaali-marks taal count-khaali?)]
+    (mapv marks (bhaag-start-beats (:bhaags (taal-def taal))))))
+
 (defn get-avartan-index
   "Assume a comp has 4 avartans in Teentaal.
   Return a seq of 0,16, 32, 48 indicate the note numbers if they were played in succession. "
@@ -357,6 +408,7 @@
     :tanpura? true
     :notes-per-beat 1
     :hidden-parts #{}
+    :count-khaali? false
 
     :note-index []} timeline-props))
 

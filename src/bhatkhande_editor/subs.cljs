@@ -178,6 +178,12 @@
    (:newline-on-avartan? props)))
 
 (reg-sub
+ ::count-khaali?
+ :<- [::props]
+ (fn [props [_ _]]
+   (:count-khaali? props)))
+
+(reg-sub
  ::playing?
  (fn [db [_ _]]
    (= :start (:play-state db))))
